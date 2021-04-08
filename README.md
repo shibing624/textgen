@@ -79,7 +79,6 @@ import textgen
 a = '你这么早就睡呀，'
 b = textgen.erniegen(a)
 print(b)
-
 ```
 
 output:
@@ -87,6 +86,16 @@ output:
 你这么早就睡呀，我还没写完作业呢，你陪我看看这个题怎么写吧。求求你了！
 ```
 
+## TODO
+
+* seq2seq
+* bert
+* ernie-gen
+* xlnet
+
+## License
+
+Apache License 2.0
 
 ## Reference
 
