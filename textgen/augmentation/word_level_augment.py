@@ -1,42 +1,27 @@
-# coding=utf-8
-# Copyright 2019 The Google UDA Team Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# -*- coding: utf-8 -*-
 """
 @author:XuMing(xuming624@qq.com)
 @description: Word level augmentations including Replace words with uniform
 random words or TF-IDF based word replacement.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import collections
 import copy
 import math
 
 import numpy as np
+from text2vec import Vector
 
 from textgen.utils.logger import logger
 
 
-def filter_unicode(st):
-    return "".join([c for c in st if c])
-
-
 class EfficientRandomGen(object):
     """A base class that generate multiple random numbers at the same time."""
+
+    def __init__(self):
+        vec = Vector()
+        vec.load_model()
+        self.word2vec_model = vec.model.w2v
 
     def reset_random_prob(self):
         """Generate many random numbers at the same time and cache them."""
@@ -52,8 +37,27 @@ class EfficientRandomGen(object):
             self.reset_random_prob()
         return value
 
+    def get_replace_token(self, word):
+        """Get a replace token."""
+        token = word
+        # Similar choose
+        if word in self.word2vec_model.wv.vocab:
+            target_candidate = self.word2vec_model.similar_by_word(word, topn=3)
+            target_words = [w for w, p in target_candidate if w]
+            if len(target_words) > 1:
+                token = np.random.choice(target_words, size=1).tolist()[0]
+                return token
+        # Insert
+
+        # Delete
+
+        # Random replace
+        else:
+            token = self.get_random_token()
+        return token
+
     def get_random_token(self):
-        """Get a random token."""
+        """Get a Random token."""
         token = self.token_list[self.token_ptr]
         self.token_ptr -= 1
         if self.token_ptr == -1:
@@ -61,7 +65,7 @@ class EfficientRandomGen(object):
         return token
 
 
-class UnifRep(EfficientRandomGen):
+class UnifReplace(EfficientRandomGen):
     """Uniformly replace word with random words in the vocab."""
 
     def __init__(self, token_prob, vocab, show_example=False):
@@ -83,13 +87,13 @@ class UnifRep(EfficientRandomGen):
         if len(tokens) >= 3:
             if self.show_example:
                 logger.debug("before Uniformly replace word augment: {:s}".format(
-                    filter_unicode(" ".join(tokens))))
+                    " ".join(tokens)))
             for i in range(len(tokens)):
                 if self.get_random_prob() < self.token_prob:
                     tokens[i] = self.get_random_token()
             if self.show_example:
-                logger.debug("after Uniformly replace word augment: {:s}".format(
-                    filter_unicode(" ".join(tokens))))
+                logger.debug("after  Uniformly replace word augment: {:s}".format(
+                    " ".join(tokens)))
         return tokens
 
     def reset_token_list(self):
@@ -118,7 +122,6 @@ def get_data_stats(examples):
     # Compute TF-IDF
     tf_idf = {}
     for i in range(len(examples)):
-        cur_word_dict = {}
         cur_sent = copy.deepcopy(examples[i].word_list_a)
         if examples[i].text_b:
             cur_sent += examples[i].word_list_b
@@ -132,11 +135,11 @@ def get_data_stats(examples):
     }
 
 
-class TfIdfWordRep(EfficientRandomGen):
+class TfIdfWordReplace(EfficientRandomGen):
     """TF-IDF Based Word Replacement."""
 
     def __init__(self, token_prob, data_stats, show_example=False):
-        super(TfIdfWordRep, self).__init__()
+        super(TfIdfWordReplace, self).__init__()
         self.token_prob = token_prob
         self.data_stats = data_stats
         self.idf = data_stats["idf"]
@@ -177,7 +180,7 @@ class TfIdfWordRep(EfficientRandomGen):
 
         if self.show_example:
             logger.debug("before tf_idf_unif aug: {:s}".format(
-                filter_unicode(" ".join(all_words))))
+                " ".join(all_words)))
 
         replace_prob = self.get_replace_prob(all_words)
         example.word_list_a = self.replace_tokens(
@@ -194,15 +197,16 @@ class TfIdfWordRep(EfficientRandomGen):
             all_words = copy.deepcopy(example.word_list_a)
             if example.text_b:
                 all_words += example.word_list_b
-            logger.debug("after tf_idf_unif aug: {:s}".format(
-                filter_unicode(" ".join(all_words))))
+            logger.debug("after  tf_idf_unif aug: {:s}".format(
+                " ".join(all_words)))
         return example
 
     def replace_tokens(self, word_list, replace_prob):
         """Replace tokens in a sentence."""
         for i in range(len(word_list)):
             if self.get_random_prob() < replace_prob[i]:
-                word_list[i] = self.get_random_token()
+                word_list[i] = self.get_replace_token(word_list[i])
+                # Use Random: word_list[i] = self.get_random_token()
         return word_list
 
     def reset_token_list(self):
@@ -213,8 +217,7 @@ class TfIdfWordRep(EfficientRandomGen):
         for idx in token_list_idx:
             self.token_list += [self.tf_idf_keys[idx]]
         self.token_ptr = len(self.token_list) - 1
-        logger.info("sampled token list: {:s}".format(
-            filter_unicode(" ".join(self.token_list))))
+        logger.info("sampled token list: {}".format(self.token_list))
 
 
 def word_level_augment(examples, aug_ops, vocab, data_stats, show_example=False):
@@ -223,13 +226,13 @@ def word_level_augment(examples, aug_ops, vocab, data_stats, show_example=False)
         if aug_ops.startswith("unif"):
             logger.info("\n>>Using augmentation {}".format(aug_ops))
             token_prob = float(aug_ops.split("-")[1])
-            op = UnifRep(token_prob, vocab, show_example)
+            op = UnifReplace(token_prob, vocab, show_example)
             for i in range(len(examples)):
                 examples[i] = op(examples[i])
         elif aug_ops.startswith("tf_idf"):
             logger.info("\n>>Using augmentation {}".format(aug_ops))
             token_prob = float(aug_ops.split("-")[1])
-            op = TfIdfWordRep(token_prob, data_stats, show_example)
+            op = TfIdfWordReplace(token_prob, data_stats, show_example)
             for i in range(len(examples)):
                 examples[i] = op(examples[i])
     return examples
