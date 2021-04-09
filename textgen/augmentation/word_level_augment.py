@@ -14,7 +14,8 @@
 # limitations under the License.
 """
 @author:XuMing(xuming624@qq.com)
-@description: Word level augmentations including Replace words with uniform random words or TF-IDF based word replacement.
+@description: Word level augmentations including Replace words with uniform
+random words or TF-IDF based word replacement.
 """
 
 from __future__ import absolute_import

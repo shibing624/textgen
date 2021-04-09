@@ -99,7 +99,7 @@ Apache License 2.0
 
 ## Reference
 
-1. [https://github.com/PaddlePaddle/ERNIE](https://github.com/PaddlePaddle/ERNIE)
+1. [ERNIE](https://github.com/PaddlePaddle/ERNIE)
 2. [textgenrnn](https://github.com/minimaxir/textgenrnn)
 3. [gpt-2-simple](https://github.com/minimaxir/gpt-2-simple)
 4. [texar](https://github.com/asyml/texar)
