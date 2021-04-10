@@ -4,99 +4,69 @@
 @description: Sentence level augmentations: back translation.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import math
 import random
 from codecs import open
 
 import numpy as np
 
-from textgen.augmentation import word_level_augment
 from textgen.augmentation.example import InputExample
 from textgen.utils.logger import logger
+from textgen.augmentation import translate_api
 
-back_translation_dir = ''
-
+use_min_length = 10
+use_max_length_diff_ratio = 0.5
 
 def replace_with_length_check(
-        ori_text, new_text,
+        ori_text,
+        new_text,
         use_min_length,
         use_max_length_diff_ratio):
     """Use new_text if the text length satisfies several constraints."""
     if len(ori_text) < use_min_length or len(new_text) < use_min_length:
         if random.random() < 0.001:
-            logger.info(
-                "not replacing due to short text: \n\tori: {:s}\n\tnew: {:s}\n".format(
-                    word_level_augment.filter_unicode(ori_text),
-                    word_level_augment.filter_unicode(new_text)))
+            logger.info("not replacing due to short text: \n\tori: {:s}\n\tnew: {:s}\n".format(
+                ori_text, new_text))
         return ori_text
     length_diff_ratio = 1.0 * (len(new_text) - len(ori_text)) / len(ori_text)
     if math.fabs(length_diff_ratio) > use_max_length_diff_ratio:
         if random.random() < 0.001:
-            logger.info(
-                ("not replacing due to too different text length:\n"
-                 "\tori: {:s}\n\tnew: {:s}\n".format(
-                    word_level_augment.filter_unicode(ori_text),
-                    word_level_augment.filter_unicode(new_text))))
+            logger.info("not replacing due to too different text length:\n"
+                        "\tori: {:s}\n\tnew: {:s}\n".format(ori_text, new_text))
         return ori_text
     return new_text
 
 
-def back_translation(examples, aug_ops, sub_set, aug_copy_num,
-                     start, end, data_total_size):
+def back_translation(examples, bt_prob=0.1, from_lang='zh'):
     """Run back translation."""
-    use_min_length = 10
-    use_max_length_diff_ratio = 0.5
     logger.info("running back_translation augmentation")
-    bt_args = aug_ops.split("-")
-    temp = float(bt_args[1])
-
-    if len(bt_args) > 2:
-        assert len(bt_args) == 3
-        assert float(bt_args[2]) == 1.
-
-    if examples[0].text_b is not None:
-        text_per_example = 2
-    else:
-        text_per_example = 1
-
-    back_translation_file = "{:s}/{:s}/sample_{:.1f}/para/para_{:d}.txt".format(
-        back_translation_dir, sub_set,
-        temp, aug_copy_num)
-    logger.info("Using back translation file: {:s}".format(
-        back_translation_file))
-
-    with open(back_translation_file, 'r', encoding='utf-8') as inf:
-        paraphrases = inf.readlines()
-    for i in range(len(paraphrases)):
-        paraphrases[i] = paraphrases[i].strip()
-    assert len(paraphrases) == data_total_size
-
-    paraphrases = paraphrases[start * text_per_example: end * text_per_example]
+    assert 0<=bt_prob <= 1, "prob must be float num"
     aug_examples = []
     aug_cnt = 0
     for i in range(len(examples)):
         ori_example = examples[i]
-        text_a = replace_with_length_check(
-            ori_example.text_a,
-            paraphrases[i * text_per_example],
-            use_min_length,
-            use_max_length_diff_ratio,
-        )
-        if text_a == paraphrases[i * text_per_example]:
-            aug_cnt += 1
-        if ori_example.text_b is not None:
-            text_b = replace_with_length_check(
-                ori_example.text_b,
-                paraphrases[i * text_per_example + 1],
-                use_min_length,
-                use_max_length_diff_ratio,
-            )
-        else:
-            text_b = None
+        text_a = ori_example.text_a
+        text_b = ori_example.text_b
+        if random.random() < bt_prob:
+            q = ori_example.text_a
+            if ori_example.text_b is not None:
+                q += '\n' + ori_example.text_b
+            bt_result = translate_api.back_translate(q, from_lang=from_lang)
+            if bt_result:
+                bt_text_a = bt_result[0]
+                text_a = replace_with_length_check(
+                    ori_example.text_a,
+                    bt_text_a,
+                    use_min_length,
+                    use_max_length_diff_ratio)
+                aug_cnt += 1
+                if ori_example.text_b is not None and len(bt_result) > 1:
+                    bt_text_b = bt_result[1]
+                    text_b = replace_with_length_check(
+                        ori_example.text_b,
+                        bt_text_b,
+                        use_min_length,
+                        use_max_length_diff_ratio)
 
         example = InputExample(
             guid=ori_example.guid,
@@ -117,14 +87,12 @@ def back_translation(examples, aug_ops, sub_set, aug_copy_num,
     return aug_examples
 
 
-def run_augment(
-        examples, aug_ops, sub_set, aug_copy_num,
-        start, end, dst_tot_size):
+def sent_augment(examples, aug_ops):
     """Sentence level augmentations. Used before augmentation."""
     if aug_ops:
         if aug_ops.startswith("bt"):
-            examples = back_translation(
-                examples, aug_ops, sub_set, aug_copy_num, start, end, dst_tot_size)
+            bt_prob = float(aug_ops.split("-")[1])
+            examples = back_translation(examples, bt_prob)
         else:
             pass
     return examples

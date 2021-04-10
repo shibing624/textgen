@@ -30,6 +30,17 @@ class InputExample(object):
         self.text_b = text_b
         self.label = label
 
+    def __repr__(self):
+        """print"""
+        res = str(self.guid) + self.text_a
+        if self.text_b:
+            res = str(self.guid) + self.text_a + self.text_b
+        if self.label:
+            res = str(self.guid) + self.text_a + str(self.label)
+        if self.text_b and self.label:
+            res = str(self.guid) + self.text_a + self.text_b + str(self.label)
+        return res
+
 
 def load_vocab(vocab_file):
     """Loads a vocabulary file into a dictionary."""
@@ -89,8 +100,8 @@ def convert_ids_to_tokens(inv_vocab, ids):
 
 
 if __name__ == '__main__':
-    aug_ops = 'tf_idf-0.2'
-    from textgen.augmentation.word_level_augment import word_level_augment, get_data_stats
+    from textgen.augmentation.word_level_augment import word_augment, get_data_stats
+    from textgen.augmentation.sent_level_augment import sent_augment
 
     a = '晚上一个人好孤单，想:找附近的人陪陪我.'
     a2 = '晚上一个人好孤单，.'
@@ -108,6 +119,26 @@ if __name__ == '__main__':
     tokenizer = Tokenizer()
     examples, word_vocab = tokenize_examples(examples, tokenizer)
     data_stats = get_data_stats(examples)
+    import copy
 
-    aug_examples = word_level_augment(examples, aug_ops, word_vocab, data_stats, show_example=True)
+    input_e = copy.deepcopy(examples)
+    input_e2 = copy.deepcopy(examples)
+    input_e3 = copy.deepcopy(examples)
+    input_e4 = copy.deepcopy(examples)
+    input_e5 = copy.deepcopy(examples)
+
+    aug_examples = word_augment(examples, 'random-0.2', word_vocab, data_stats, show_example=True)
     print(len(aug_examples))
+    aug_examples = word_augment(input_e, 'insert-0.2', word_vocab, data_stats, show_example=True)
+    print(len(aug_examples))
+    aug_examples = word_augment(input_e2, 'delete-0.2', word_vocab, data_stats, show_example=True)
+    print(len(aug_examples))
+    aug_ops = 'tfidf-0.2'
+    aug_examples = word_augment(input_e3, aug_ops, word_vocab, data_stats, show_example=True)
+    print(len(aug_examples))
+    aug_examples = word_augment(input_e4, 'mix-0.2', word_vocab, data_stats, show_example=True)
+    print(len(aug_examples))
+
+    logger.info("getting sent augmented examples")
+    aug_examples = sent_augment(input_e5, 'bt-0.2')
+    print(aug_examples)

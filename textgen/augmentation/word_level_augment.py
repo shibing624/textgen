@@ -10,18 +10,12 @@ import copy
 import math
 
 import numpy as np
-from text2vec import Vector
 
 from textgen.utils.logger import logger
 
 
 class EfficientRandomGen(object):
     """A base class that generate multiple random numbers at the same time."""
-
-    def __init__(self):
-        vec = Vector()
-        vec.load_model()
-        self.word2vec_model = vec.model.w2v
 
     def reset_random_prob(self):
         """Generate many random numbers at the same time and cache them."""
@@ -37,25 +31,6 @@ class EfficientRandomGen(object):
             self.reset_random_prob()
         return value
 
-    def get_replace_token(self, word):
-        """Get a replace token."""
-        token = word
-        # Similar choose
-        if word in self.word2vec_model.wv.vocab:
-            target_candidate = self.word2vec_model.similar_by_word(word, topn=3)
-            target_words = [w for w, p in target_candidate if w]
-            if len(target_words) > 1:
-                token = np.random.choice(target_words, size=1).tolist()[0]
-                return token
-        # Insert
-
-        # Delete
-
-        # Random replace
-        else:
-            token = self.get_random_token()
-        return token
-
     def get_random_token(self):
         """Get a Random token."""
         token = self.token_list[self.token_ptr]
@@ -64,8 +39,18 @@ class EfficientRandomGen(object):
             self.reset_token_list()
         return token
 
+    def get_insert_token(self, word):
+        """Get a replace token."""
+        # Insert word choose
+        return ' '.join([word] * 2)
 
-class UnifReplace(EfficientRandomGen):
+    def get_delete_token(self):
+        """Get a replace token."""
+        # Insert word choose
+        return ''
+
+
+class RandomReplace(EfficientRandomGen):
     """Uniformly replace word with random words in the vocab."""
 
     def __init__(self, token_prob, vocab, show_example=False):
@@ -86,19 +71,95 @@ class UnifReplace(EfficientRandomGen):
         """Replace tokens randomly."""
         if len(tokens) >= 3:
             if self.show_example:
-                logger.debug("before Uniformly replace word augment: {:s}".format(
+                logger.debug("before Random replace word augment: {:s}".format(
                     " ".join(tokens)))
             for i in range(len(tokens)):
                 if self.get_random_prob() < self.token_prob:
                     tokens[i] = self.get_random_token()
             if self.show_example:
-                logger.debug("after  Uniformly replace word augment: {:s}".format(
+                logger.debug("after  Random replace word augment: {:s}".format(
                     " ".join(tokens)))
         return tokens
 
     def reset_token_list(self):
         """Generate many random tokens at the same time and cache them."""
-        self.token_list = self.vocab.keys()
+        self.token_list = list(self.vocab.keys())
+        self.token_ptr = len(self.token_list) - 1
+        np.random.shuffle(self.token_list)
+
+
+class InsertReplace(EfficientRandomGen):
+    """Uniformly replace word with insert repeat words in the vocab."""
+
+    def __init__(self, token_prob, vocab, show_example=False):
+        self.token_prob = token_prob
+        self.vocab_size = len(vocab)
+        self.vocab = vocab
+        self.reset_token_list()
+        self.reset_random_prob()
+        self.show_example = show_example
+
+    def __call__(self, example):
+        example.word_list_a = self.replace_tokens(example.word_list_a)
+        if example.text_b:
+            example.word_list_b = self.replace_tokens(example.word_list_b)
+        return example
+
+    def replace_tokens(self, tokens):
+        """Replace tokens randomly."""
+        if len(tokens) >= 3:
+            if self.show_example:
+                logger.debug("before Insert replace word augment: {:s}".format(
+                    " ".join(tokens)))
+            for i in range(len(tokens)):
+                if self.get_random_prob() < self.token_prob:
+                    tokens[i] = self.get_insert_token(tokens[i])
+            if self.show_example:
+                logger.debug("after  Insert replace word augment: {:s}".format(
+                    " ".join(tokens)))
+        return tokens
+
+    def reset_token_list(self):
+        """Generate many random tokens at the same time and cache them."""
+        self.token_list = list(self.vocab.keys())
+        self.token_ptr = len(self.token_list) - 1
+        np.random.shuffle(self.token_list)
+
+
+class DeleteReplace(EfficientRandomGen):
+    """Uniformly replace word with delete words in the vocab."""
+
+    def __init__(self, token_prob, vocab, show_example=False):
+        self.token_prob = token_prob
+        self.vocab_size = len(vocab)
+        self.vocab = vocab
+        self.reset_token_list()
+        self.reset_random_prob()
+        self.show_example = show_example
+
+    def __call__(self, example):
+        example.word_list_a = self.replace_tokens(example.word_list_a)
+        if example.text_b:
+            example.word_list_b = self.replace_tokens(example.word_list_b)
+        return example
+
+    def replace_tokens(self, tokens):
+        """Replace tokens randomly."""
+        if len(tokens) >= 3:
+            if self.show_example:
+                logger.debug("before Delete replace word augment: {:s}".format(
+                    " ".join(tokens)))
+            for i in range(len(tokens)):
+                if self.get_random_prob() < self.token_prob:
+                    tokens[i] = self.get_delete_token()
+            if self.show_example:
+                logger.debug("after  Delete replace word augment: {:s}".format(
+                    " ".join(tokens)))
+        return tokens
+
+    def reset_token_list(self):
+        """Generate many random tokens at the same time and cache them."""
+        self.token_list = list(self.vocab.keys())
         self.token_ptr = len(self.token_list) - 1
         np.random.shuffle(self.token_list)
 
@@ -135,11 +196,68 @@ def get_data_stats(examples):
     }
 
 
-class TfIdfWordReplace(EfficientRandomGen):
+class MixEfficientRandomGen(EfficientRandomGen):
+    """Add word2vec to Random Gen"""
+
+    def __init__(self,
+                 similar_prob=0.7,
+                 random_prob=0.1,
+                 delete_prob=0.1,
+                 insert_prob=0.1):
+        from text2vec import Vector
+        super(MixEfficientRandomGen, self).__init__()
+        vec = Vector()
+        vec.load_model()
+        self.word2vec_model = vec.model.w2v
+        # Insert replace prob
+        self.insert_prob = insert_prob
+        # Delete replace prob
+        self.delete_prob = delete_prob
+        # Random replace prob
+        self.random_prob = random_prob
+        # Similar replace prob
+        self.similar_prob = similar_prob
+
+    def get_similar_token(self, word):
+        """Get a Similar replace token."""
+        if word in self.word2vec_model.wv.vocab:
+            target_candidate = self.word2vec_model.similar_by_word(word, topn=3)
+            target_words = [w for w, p in target_candidate if w]
+            if len(target_words) > 1:
+                word = np.random.choice(target_words, size=1).tolist()[0]
+                return word
+        return word
+
+    def get_replace_token(self, word):
+        """Get a replace token."""
+        r_prob = np.random.rand()
+        # Similar choose prob
+        if r_prob < self.similar_prob:
+            word = self.get_similar_token(word)
+        elif r_prob - self.similar_prob < self.random_prob:
+            word = self.get_random_token()
+        elif r_prob - self.similar_prob - self.random_prob < self.delete_prob:
+            word = self.get_delete_token()
+        else:
+            word = self.get_insert_token(word)
+        return word
+
+
+class TfIdfWordReplace(MixEfficientRandomGen):
     """TF-IDF Based Word Replacement."""
 
-    def __init__(self, token_prob, data_stats, show_example=False):
-        super(TfIdfWordReplace, self).__init__()
+    def __init__(self, token_prob,
+                 data_stats,
+                 show_example=False,
+                 similar_prob=0.7,
+                 random_prob=0.1,
+                 delete_prob=0.1,
+                 insert_prob=0.1):
+        super(TfIdfWordReplace,
+              self).__init__(similar_prob=similar_prob,
+                             random_prob=random_prob,
+                             delete_prob=delete_prob,
+                             insert_prob=insert_prob)
         self.token_prob = token_prob
         self.data_stats = data_stats
         self.idf = data_stats["idf"]
@@ -179,7 +297,7 @@ class TfIdfWordReplace(EfficientRandomGen):
             all_words += example.word_list_b
 
         if self.show_example:
-            logger.debug("before tf_idf_unif aug: {:s}".format(
+            logger.debug("before tfidf aug: {:s}".format(
                 " ".join(all_words)))
 
         replace_prob = self.get_replace_prob(all_words)
@@ -197,7 +315,7 @@ class TfIdfWordReplace(EfficientRandomGen):
             all_words = copy.deepcopy(example.word_list_a)
             if example.text_b:
                 all_words += example.word_list_b
-            logger.debug("after  tf_idf_unif aug: {:s}".format(
+            logger.debug("after  tfidf aug: {:s}".format(
                 " ".join(all_words)))
         return example
 
@@ -205,8 +323,8 @@ class TfIdfWordReplace(EfficientRandomGen):
         """Replace tokens in a sentence."""
         for i in range(len(word_list)):
             if self.get_random_prob() < replace_prob[i]:
-                word_list[i] = self.get_replace_token(word_list[i])
                 # Use Random: word_list[i] = self.get_random_token()
+                word_list[i] = self.get_similar_token(word_list[i])
         return word_list
 
     def reset_token_list(self):
@@ -220,19 +338,48 @@ class TfIdfWordReplace(EfficientRandomGen):
         logger.info("sampled token list: {}".format(self.token_list))
 
 
-def word_level_augment(examples, aug_ops, vocab, data_stats, show_example=False):
+class MixWordReplace(TfIdfWordReplace):
+    """Multi Method Based Word Replacement."""
+
+    def __init__(self, token_prob,
+                 data_stats,
+                 show_example=False,
+                 similar_prob=0.7,
+                 random_prob=0.1,
+                 delete_prob=0.1,
+                 insert_prob=0.1):
+        super(MixWordReplace,
+              self).__init__(token_prob,
+                             data_stats,
+                             show_example=show_example,
+                             similar_prob=similar_prob,
+                             random_prob=random_prob,
+                             delete_prob=delete_prob,
+                             insert_prob=insert_prob)
+
+    def replace_tokens(self, word_list, replace_prob):
+        """Replace tokens in a sentence."""
+        for i in range(len(word_list)):
+            if self.get_random_prob() < replace_prob[i]:
+                word_list[i] = self.get_replace_token(word_list[i])
+        return word_list
+
+
+def word_augment(examples, aug_ops, vocab, data_stats, show_example=False):
     """Word level augmentations. Used before augmentation."""
     if aug_ops:
-        if aug_ops.startswith("unif"):
-            logger.info("\n>>Using augmentation {}".format(aug_ops))
-            token_prob = float(aug_ops.split("-")[1])
-            op = UnifReplace(token_prob, vocab, show_example)
-            for i in range(len(examples)):
-                examples[i] = op(examples[i])
-        elif aug_ops.startswith("tf_idf"):
-            logger.info("\n>>Using augmentation {}".format(aug_ops))
-            token_prob = float(aug_ops.split("-")[1])
+        logger.info("\n>>Using augmentation {}".format(aug_ops))
+        token_prob = float(aug_ops.split("-")[1])
+        if aug_ops.startswith("random"):
+            op = RandomReplace(token_prob, vocab, show_example)
+        elif aug_ops.startswith("insert"):
+            op = InsertReplace(token_prob, vocab, show_example)
+        elif aug_ops.startswith("delete"):
+            op = DeleteReplace(token_prob, vocab, show_example)
+        elif aug_ops.startswith("tfidf"):
             op = TfIdfWordReplace(token_prob, data_stats, show_example)
-            for i in range(len(examples)):
-                examples[i] = op(examples[i])
+        else:
+            op = MixWordReplace(token_prob, data_stats, show_example)
+        for i in range(len(examples)):
+            examples[i] = op(examples[i])
     return examples
