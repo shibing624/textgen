@@ -220,7 +220,7 @@ class MixEfficientRandomGen(EfficientRandomGen):
 
     def get_similar_token(self, word):
         """Get a Similar replace token."""
-        if word in self.word2vec_model.wv.vocab:
+        if word in self.word2vec_model.key_to_index:
             target_candidate = self.word2vec_model.similar_by_word(word, topn=3)
             target_words = [w for w, p in target_candidate if w]
             if len(target_words) > 1:

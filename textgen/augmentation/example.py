@@ -32,13 +32,11 @@ class InputExample(object):
 
     def __repr__(self):
         """print"""
-        res = str(self.guid) + self.text_a
+        res = 'guid:' + str(self.guid) + ' text_a:' + self.text_a
         if self.text_b:
-            res = str(self.guid) + self.text_a + self.text_b
+            res += ' text_b:' + self.text_b
         if self.label:
-            res = str(self.guid) + self.text_a + str(self.label)
-        if self.text_b and self.label:
-            res = str(self.guid) + self.text_a + self.text_b + str(self.label)
+            res += ' label:' + str(self.label)
         return res
 
 
@@ -140,5 +138,5 @@ if __name__ == '__main__':
     print(len(aug_examples))
 
     logger.info("getting sent augmented examples")
-    aug_examples = sent_augment(input_e5, 'bt-0.2')
+    aug_examples = sent_augment(input_e5, 'bt-0.2', from_lang='zh')
     print(aug_examples)

@@ -1,3 +1,4 @@
 jieba>=0.39
 numpy>=1.17.4
+gensim>=4.0.0
 text2vec

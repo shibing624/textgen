@@ -6,16 +6,16 @@
 
 import math
 import random
-from codecs import open
 
 import numpy as np
 
+from textgen.augmentation import translate_api
 from textgen.augmentation.example import InputExample
 from textgen.utils.logger import logger
-from textgen.augmentation import translate_api
 
 use_min_length = 10
 use_max_length_diff_ratio = 0.5
+
 
 def replace_with_length_check(
         ori_text,
@@ -40,7 +40,7 @@ def replace_with_length_check(
 def back_translation(examples, bt_prob=0.1, from_lang='zh'):
     """Run back translation."""
     logger.info("running back_translation augmentation")
-    assert 0<=bt_prob <= 1, "prob must be float num"
+    assert 0 <= bt_prob <= 1, "prob must be float num"
     aug_examples = []
     aug_cnt = 0
     for i in range(len(examples)):
@@ -87,12 +87,12 @@ def back_translation(examples, bt_prob=0.1, from_lang='zh'):
     return aug_examples
 
 
-def sent_augment(examples, aug_ops):
+def sent_augment(examples, aug_ops, from_lang='zh'):
     """Sentence level augmentations. Used before augmentation."""
     if aug_ops:
         if aug_ops.startswith("bt"):
             bt_prob = float(aug_ops.split("-")[1])
-            examples = back_translation(examples, bt_prob)
+            examples = back_translation(examples, bt_prob, from_lang=from_lang)
         else:
             pass
     return examples
