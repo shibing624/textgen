@@ -47,11 +47,11 @@ log_config = {
 
 
 class Logger(object):
-    '''
-    Deafult logger in PaddleHub
+    """
+    Default logger
     Args:
-        name(str) : Logger name, default is 'PaddleHub'
-    '''
+        name(str) : Logger name, default is 'log'
+    """
 
     def __init__(self, name: str = None):
         name = 'log' if not name else name
@@ -100,12 +100,12 @@ class Logger(object):
 
     @contextlib.contextmanager
     def processing(self, msg: str, interval: float = 0.1):
-        '''
+        """
         Continuously print a progress bar with rotating special effects.
         Args:
             msg(str): Message to be printed.
             interval(float): Rotation interval. Default to 0.1.
-        '''
+        """
         end = False
 
         def _printer():
@@ -126,7 +126,7 @@ class Logger(object):
 
 
 def get_file_logger(log_file):
-    '''
+    """
     Set logger.handler to FileHandler.
     Args:
         log_file(str): filename to logging
@@ -134,7 +134,7 @@ def get_file_logger(log_file):
     .. code-block:: python
         logger = get_file_logger('test.log')
         logger.logger.info('test_1')
-    '''
+    """
     log_name = log_file
     if log_name in loggers:
         return loggers[log_name]
@@ -147,7 +147,6 @@ def get_file_logger(log_file):
     logger.logger.addHandler(sh)
     logger.logger.setLevel(logging.INFO)
     loggers.update({log_name: logger})
-
     return logger
 
 
