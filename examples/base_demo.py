@@ -11,8 +11,6 @@ import numpy as np
 sys.path.append('..')
 import text2vec
 
-text2vec.set_log_level('INFO')
-
 if __name__ == '__main__':
     char = '卡'
     result = text2vec.encode(char)
