@@ -11,7 +11,7 @@ import numpy as np
 
 from textgen.augmentation import translate_api
 from textgen.augmentation.example import InputExample
-from textgen.utils.logger import logger
+from textgen.utils.log import logger
 
 use_min_length = 10
 use_max_length_diff_ratio = 0.5

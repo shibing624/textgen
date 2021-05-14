@@ -11,7 +11,7 @@ import math
 
 import numpy as np
 
-from textgen.utils.logger import logger
+from textgen.utils.log import logger
 
 
 class EfficientRandomGen(object):

@@ -7,7 +7,7 @@
 import collections
 from codecs import open
 
-from textgen.utils.logger import logger
+from textgen.utils.log import logger
 from textgen.utils.tokenization import Tokenizer
 
 
