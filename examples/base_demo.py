@@ -6,34 +6,20 @@
 
 import sys
 
-import numpy as np
-
 sys.path.append('..')
-import text2vec
+import textgen
+from textgen.utils.log import logger
+
 
 if __name__ == '__main__':
     char = '卡'
-    result = text2vec.encode(char)
-    print(type(result))
-    print(char, result)
-    s = np.sum(result)
-    print(s)
+    logger.debug("hill1")
+    logger.info("hill2")
+    logger.warning("hill3")
+    logger.error("hill4")
 
-    word = '银行卡'
-    print(word, text2vec.encode(word))
-
-    a = '如何更换花呗绑定银行卡'
-    emb = text2vec.encode(a)
-    print(a, emb)
-
-    b = ['卡',
-         '银行卡',
-         '如何更换花呗绑定银行卡',
-         '如何更换花呗绑定银行卡,如何更换花呗绑定银行卡。如何更换花呗绑定银行卡？。。。这个，如何更换花呗绑定银行卡！']
-    result = []
-    for i in b:
-        r = text2vec.encode(i)
-        result.append(r)
-    print(b, result)
-
-    print(np.array(result).shape)
+    from textgen.utils import log
+    log.set_log_level('info')
+    logger.debug("hill5")
+    logger.info("hill6")
+    logger.error("hill7")

@@ -3,16 +3,9 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-
-import contextlib
-import functools
 import logging
-import threading
-import time
 
 import colorlog
-
-loggers = {}
 
 log_config = {
     'DEBUG': {
@@ -46,108 +39,45 @@ log_config = {
 }
 
 
-class Logger(object):
+def get_logger(name, log_file=None, log_level='DEBUG'):
     """
-    Default logger
-    Args:
-        name(str) : Logger name, default is 'log'
+    logger
+    :param name: 模块名称
+    :param log_file: 日志文件，如无则输出到标准输出
+    :param log_level: 日志级别
+    :return:
     """
-
-    def __init__(self, name: str = None):
-        name = 'log' if not name else name
-        self.logger = logging.getLogger(name)
-
-        for key, conf in log_config.items():
-            logging.addLevelName(conf['level'], key)
-            self.__dict__[key] = functools.partial(self.__call__, conf['level'])
-            self.__dict__[key.lower()] = functools.partial(self.__call__, conf['level'])
-
-        self.format = colorlog.ColoredFormatter(
-            '%(log_color)s[%(asctime)-15s] [%(levelname)8s %(module)s:%(lineno)d]%(reset)s - %(message)s',
-            log_colors={key: conf['color']
-                        for key, conf in log_config.items()})
-
-        self.handler = logging.StreamHandler()
-        self.handler.setFormatter(self.format)
-
-        self.logger.addHandler(self.handler)
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.propagate = False
-        self._is_enable = True
-
-    def disable(self):
-        self._is_enable = False
-
-    def enable(self):
-        self._is_enable = True
-
-    @property
-    def is_enable(self) -> bool:
-        return self._is_enable
-
-    def __call__(self, log_level: str, msg: str):
-        if not self.is_enable:
-            return
-
-        self.logger.log(log_level, msg)
-
-    @contextlib.contextmanager
-    def use_terminator(self, terminator: str):
-        old_terminator = self.handler.terminator
-        self.handler.terminator = terminator
-        yield
-        self.handler.terminator = old_terminator
-
-    @contextlib.contextmanager
-    def processing(self, msg: str, interval: float = 0.1):
-        """
-        Continuously print a progress bar with rotating special effects.
-        Args:
-            msg(str): Message to be printed.
-            interval(float): Rotation interval. Default to 0.1.
-        """
-        end = False
-
-        def _printer():
-            index = 0
-            flags = ['\\', '|', '/', '-']
-            while not end:
-                flag = flags[index % len(flags)]
-                with self.use_terminator('\r'):
-                    self.info('{}: {}'.format(msg, flag))
-                time.sleep(interval)
-                index += 1
-
-        t = threading.Thread(target=_printer)
-        t.daemon = True
-        t.start()
-        yield
-        end = True
-
-
-def get_file_logger(log_file):
-    """
-    Set logger.handler to FileHandler.
-    Args:
-        log_file(str): filename to logging
-    Examples:
-    .. code-block:: python
-        logger = get_file_logger('test.log')
-        logger.logger.info('test_1')
-    """
-    log_name = log_file
-    if log_name in loggers:
-        return loggers[log_name]
-
-    logger = Logger()
-    logger.logger.handlers = []
-    format = logging.Formatter('[%(asctime)-15s] [%(levelname)8s] - %(message)s')
-    sh = logging.FileHandler(filename=log_name, mode='a')
-    sh.setFormatter(format)
-    logger.logger.addHandler(sh)
-    logger.logger.setLevel(logging.INFO)
-    loggers.update({log_name: logger})
+    logger = logging.getLogger(name)
+    logger.propagate = False
+    logger.setLevel(log_level.upper())
+    formatter = colorlog.ColoredFormatter(
+        '%(log_color)s[%(levelname)7s %(asctime)s %(module)s:%(lineno)4d] %(message)s',
+        log_colors={key: conf['color'] for key, conf in log_config.items()},
+        datefmt='%Y%m%d %I:%M:%S')
+    if log_file:
+        f_handle = logging.FileHandler(log_file)
+        f_handle.setFormatter(formatter)
+        logger.addHandler(f_handle)
+    handle = logging.StreamHandler()
+    handle.setFormatter(formatter)
+    logger.addHandler(handle)
     return logger
 
 
-logger = Logger()
+logger = get_logger(__name__, log_file=None, log_level='DEBUG')
+
+
+def set_log_level(log_level='INFO'):
+    logger.setLevel(log_level.upper())
+
+
+if __name__ == '__main__':
+    logger.debug('hi-debug')
+    logger.info('hi-info')
+    logger.error('hi-error')
+    logger.warning('hi-warn')
+    set_log_level('info')
+    logger.debug('hi2-debug')  # ignore
+    logger.info('hi2-info')
+    logger.error('hi2-error')
+    logger.warning('hi2-warn')
