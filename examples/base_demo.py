@@ -23,3 +23,11 @@ if __name__ == '__main__':
     logger.debug("hill5")
     logger.info("hill6")
     logger.error("hill7")
+
+    import warnings
+    warnings.warn("hi warn")
+    warnings.warn(
+        "This model was trained using a custom dataset_class."
+        "This cannot be loaded automatically and must be specified in the model args"
+        "when loading the model."
+    )
