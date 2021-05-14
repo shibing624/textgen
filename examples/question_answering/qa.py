@@ -7,7 +7,6 @@ import json
 import os
 
 from tqdm.auto import tqdm
-
 from textgen.question_answering import QuestionAnsweringModel
 
 # Create dummy data to use for training.
@@ -46,38 +45,31 @@ train_data = [
     },
 ]  # noqa: ignore flake8"
 
-for i in range(20):
-    train_data.extend(train_data)
 
 # Save as a JSON file
 os.makedirs("data", exist_ok=True)
 with open("data/train.json", "w") as f:
     json.dump(train_data, f)
 
-# Save as a JSONL file
-with open("data/train.jsonl", "w") as outfile:
-    for entry in tqdm(train_data):
-        json.dump(entry, outfile)
-        outfile.write("\n")
 
 print("data processed.")
 
 train_args = {
     "reprocess_input_data": True,
     "overwrite_output_dir": True,
-    "evaluate_during_training": True,
-    "evaluate_during_training_steps": 10000,
-    "train_batch_size": 8,
-    "num_train_epochs": 1,
+    # "evaluate_during_training": False,
+    # "evaluate_during_training_steps": 10000,
+    # "train_batch_size": 1,
+    # "num_train_epochs": 1,
     # 'wandb_project': 'test-new-project',
     # "use_early_stopping": True,
-    "n_best_size": 3,
-    "fp16": False,
-    "no_save": True,
-    "manual_seed": 4,
-    "max_seq_length": 512,
-    "lazy_loading": True,
-    # "use_multiprocessing": False,
+    # "n_best_size": 3,
+    # "fp16": False,
+    # "no_save": True,
+    # "manual_seed": 4,
+    # "max_seq_length": 128,
+    # "lazy_loading": True,
+    # "use_multiprocessing": True,
 }
 
 # Create the QuestionAnsweringModel
@@ -87,8 +79,14 @@ model = QuestionAnsweringModel("bert", "bert-base-cased", args=train_args,
                                )
 
 # Train the model with JSON file
-model.train_model("data/train.jsonl", eval_data="data/train.json")
+model.train_model("data/train.json")
+# Evaluate the model. (Being lazy and evaluating on the train data itself)
+result, text = model.eval_model("data/train.json")
 
+print(result)
+print(text)
+
+print("-------------------")
 # Making predictions using the model.
 to_predict = [
     {

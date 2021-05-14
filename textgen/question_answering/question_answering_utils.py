@@ -1902,8 +1902,10 @@ class LazyQuestionAnsweringDataset(Dataset):
         line = linecache.getline(self.data_file, idx)
         qa_sample = json.loads(line)
         example = get_examples([qa_sample])[0]
+        # example, max_seq_length, doc_stride, max_query_length, padding_strategy, is_training
         f = squad_convert_example_to_features(
-            example, self.args.max_seq_length, self.args.doc_stride, self.args.max_query_length, True
+            example, self.args.max_seq_length, self.args.doc_stride, self.args.max_query_length,
+            "max_length", True
         )[0]
 
         return (
