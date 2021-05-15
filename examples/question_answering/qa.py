@@ -6,9 +6,11 @@
 import json
 import os
 
-from tqdm.auto import tqdm
+import torch
+
 from textgen.question_answering import QuestionAnsweringModel
 
+use_cuda = torch.cuda.is_available()
 # Create dummy data to use for training.
 train_data = [
     {
@@ -45,12 +47,10 @@ train_data = [
     },
 ]  # noqa: ignore flake8"
 
-
 # Save as a JSON file
 os.makedirs("data", exist_ok=True)
 with open("data/train.json", "w") as f:
     json.dump(train_data, f)
-
 
 print("data processed.")
 
@@ -65,7 +65,7 @@ train_args = {
     # "use_early_stopping": True,
     # "n_best_size": 3,
     # "fp16": False,
-    # "no_save": True,
+    "no_save": True,
     # "manual_seed": 4,
     # "max_seq_length": 128,
     # "lazy_loading": True,
@@ -74,8 +74,7 @@ train_args = {
 
 # Create the QuestionAnsweringModel
 model = QuestionAnsweringModel("bert", "bert-base-cased", args=train_args,
-                               use_cuda=False
-                               # use_cuda=True, cuda_device=0
+                               use_cuda=use_cuda
                                )
 
 # Train the model with JSON file

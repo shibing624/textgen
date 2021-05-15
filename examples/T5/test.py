@@ -58,7 +58,6 @@ preds = model.predict(to_predict)
 
 # Saving the predictions if needed
 os.makedirs("predictions", exist_ok=True)
-
 with open(f"predictions/predictions_{datetime.now()}.txt", "w") as f:
     for i, text in enumerate(df["input_text"].tolist()):
         f.write(str(text) + "\n\n")

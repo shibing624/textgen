@@ -1,15 +1,15 @@
 # textgen
-textgen, Text Generation models. 文本生成，包括：非核心词替换，seq2seq，ernie-gen，bert，xlnet，gpt2等模型实现，开箱即用。
+textgen, Text Generation models. 文本生成，包括：UDA，Seq2Seq，ERNIE-GEN，BERT，XLNet，GPT-2等模型实现，开箱即用。
 
 ## Features
-### 非核心词替换
+### UDA(非核心词替换)
 
-基于Google提出的UDA算法，将文本中一定比例的不重要词替换为同义词，从而产生新的文本。
+基于Google提出的UDA(非核心词替换)算法，将文本中一定比例的不重要词替换为同义词，从而产生新的文本。
 
 
 ### Seq2Seq
 
-基于encoder-decoder结构，序列到序列生成新的文本。
+基于Encoder-Decoder结构，序列到序列生成新的文本。
 
 
 ## Install
@@ -29,11 +29,12 @@ python3 setup.py install
 
 1. download pretrained vector file
 
-以下词向量，任选一个：
 
-轻量版腾讯词向量，二进制，111MB放到 `~/.text2vec/datasets/light_Tencent_AILab_ChineseEmbedding.bin` 
+以下词向量，任选一个下载：
 
-腾讯词向量, 6.78G放到： `~/.text2vec/datasets/Tencent_AILab_ChineseEmbedding.txt`
+- 轻量版腾讯词向量 [百度云盘-密码:tawe](https://pan.baidu.com/s/1La4U4XNFe8s5BJqxPQpeiQ) 或 [谷歌云盘](https://drive.google.com/u/0/uc?id=1iQo9tBb2NgFOBxx0fA16AZpSgc-bG_Rp&export=download)，二进制，111MB放到 `~/.text2vec/datasets/light_Tencent_AILab_ChineseEmbedding.bin`
+- [腾讯词向量-官方全量](https://ai.tencent.com/ailab/nlp/data/Tencent_AILab_ChineseEmbedding.tar.gz), 6.78G放到： `~/.text2vec/datasets/Tencent_AILab_ChineseEmbedding.txt`
+
 
 2. download pretrained language model file
 

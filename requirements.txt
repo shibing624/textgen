@@ -1,10 +1,12 @@
 colorlog
 jieba>=0.39
 transformers
+datasets
 numpy>=1.17.4
 gensim>=4.0.0
 text2vec
 torch
 tensorboardX
-tqdm
-
+tqdm>=4.47.0
+pandas
+tokenizers

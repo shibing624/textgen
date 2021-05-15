@@ -53,7 +53,7 @@ class LanguageGenerationModel:
             use_cuda (optional): Use GPU if available. Setting to False will force model to use CPU only.
             cuda_device (optional): Specific GPU that should be used. Will use the first available GPU by default.
             **kwargs (optional): For providing proxies, force_download, resume_download, cache_dir and other options specific to the 'from_pretrained' implementation where this will be supplied.
-        """  # noqa: ignore flake8"
+        """  # noqa: ignore flake8
 
         MODEL_CLASSES = {
             "gpt2": (GPT2Config, GPT2LMHeadModel, GPT2Tokenizer),
@@ -163,7 +163,6 @@ class LanguageGenerationModel:
                 preprocessed_prompt_text,
                 add_special_tokens=False,
                 return_tensors="pt",
-                add_space_before_punct_symbol=True,
             )
         else:
             encoded_prompt = tokenizer.encode(prompt_text, add_special_tokens=False, return_tensors="pt")
