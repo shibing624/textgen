@@ -4,9 +4,10 @@
 @description:
 """
 
+import sys
+
 import pandas as pd
 import torch
-import sys
 
 sys.path.append('../..')
 from textgen.seq2seq import Seq2SeqModel
@@ -50,7 +51,7 @@ model_args = {
 }
 
 # encoder_type=None, encoder_name=None, decoder_name=None, encoder_decoder_type=None, encoder_decoder_name=None,
-model = Seq2SeqModel("bert", "bert-base-cased", "bert-base-cased", args=model_args, use_cuda=use_cuda, )
+model = Seq2SeqModel("bert", "bert-base-chinese", "bert-base-chinese", args=model_args, use_cuda=use_cuda, )
 
 
 def count_matches(labels, preds):

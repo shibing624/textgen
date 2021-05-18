@@ -7,7 +7,9 @@ import json
 import os
 
 import torch
+import sys
 
+sys.path.append('../..')
 from textgen.question_answering import QuestionAnsweringModel
 
 use_cuda = torch.cuda.is_available()

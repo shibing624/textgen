@@ -2,7 +2,9 @@ import logging
 
 import pandas as pd
 import torch
+import sys
 
+sys.path.append('../..')
 from textgen.t5 import T5Model, T5Args
 
 use_cuda = torch.cuda.is_available()

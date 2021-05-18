@@ -4,7 +4,11 @@
 @description: refer https://github.com/renmada/t5-pegasus-pytorch
 """
 
-from transformers.models.mt5 import MT5Config, MT5ForConditionalGeneration
+import sys
+
+from transformers.models.mt5 import MT5ForConditionalGeneration
+
+sys.path.append('../..')
 from textgen.t5.t5_utils import ZHTokenizer
 
 # config_path = 'D:\\BaiduNetdiskDownload\\chinese_t5_pegasus_base\\chinese_t5_pegasus_base\\config.json'

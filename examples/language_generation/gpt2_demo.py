@@ -5,7 +5,9 @@
 """
 
 import torch
+import sys
 
+sys.path.append('../..')
 from textgen.language_generation import LanguageGenerationModel
 from textgen.language_modeling import LanguageModelingModel
 

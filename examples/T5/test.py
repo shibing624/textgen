@@ -7,7 +7,9 @@ import pandas as pd
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import accuracy_score, f1_score
 from transformers.data.metrics.squad_metrics import compute_exact, compute_f1
+import sys
 
+sys.path.append('../..')
 from textgen.t5 import T5Args, T5Model
 
 

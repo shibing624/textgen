@@ -5,7 +5,9 @@
 """
 
 import torch
+import sys
 
+sys.path.append('../..')
 from textgen.seq2seq import Seq2SeqModel
 
 use_cuda = torch.cuda.is_available()
