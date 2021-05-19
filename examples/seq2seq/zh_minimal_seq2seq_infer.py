@@ -18,4 +18,4 @@ model = Seq2SeqModel("bert", "outputs/encoder", "outputs/decoder", use_cuda=use_
 
 print(model.predict(["one", "four", "five"]))
 print(model.predict(["two"]))
-print(model.predict(["什么是ai", "你是什么类型的计算机"]))
+print(model.predict(["你知道热力学", "你是什么类型的计算机"]))

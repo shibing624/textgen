@@ -32,7 +32,7 @@ class InputExample(object):
 
     def __repr__(self):
         """print"""
-        res = 'guid:' + str(self.guid) + ' text_a:' + self.text_a
+        res = self.text_a
         if self.text_b:
             res += ' text_b:' + self.text_b
         if self.label:
@@ -72,7 +72,7 @@ def tokenize_examples(examples, tokenizer, vocab_file=None):
             add_to_vocab(examples[i].word_list_b)
         if i % 10000 == 0:
             logger.debug("finished tokenizing example {:d}".format(i))
-    logger.info("finished tokenizing example {:d}".format(len(examples)))
+    logger.debug("finished tokenizing example {:d}".format(len(examples)))
     if vocab_file:
         with open(vocab_file, 'w', encoding='utf-8') as f:
             for w, idx in vocab.items():

@@ -53,7 +53,7 @@ model_args = {
     "overwrite_output_dir": True,
     "max_seq_length": 50,
     "train_batch_size": 8,
-    "num_train_epochs": 5,
+    "num_train_epochs": 25,
     "save_eval_checkpoints": False,
     "save_model_every_epoch": False,
     "silent": False,
