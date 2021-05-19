@@ -1,8 +1,7 @@
-import logging
+import sys
 
 import pandas as pd
 import torch
-import sys
 
 sys.path.append('../..')
 from textgen.t5 import T5Model, T5Args
@@ -48,6 +47,5 @@ model.train_model(train_df, eval_data=eval_df)
 # Optional: Evaluate the model. We'll test it properly anyway.
 results = model.eval_model(eval_df, verbose=True)
 print(results)
-
 
 print(model.predict(["four", "five"]))

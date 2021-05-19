@@ -13,6 +13,17 @@ sys.path.append('../..')
 from textgen.seq2seq import Seq2SeqModel
 
 use_cuda = torch.cuda.is_available()
+
+
+def load_data(file_path):
+    data = []
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            terms = line.strip().split()
+            data.append([terms[0], terms[1]])
+    return data
+
+
 train_data = [
     ["one", "1"],
     ["two", "2"],
@@ -23,6 +34,8 @@ train_data = [
     ["seven", "7"],
     ["eight", "8"],
 ]
+sub_train_data = load_data('chatterbot.tsv')
+train_data += sub_train_data
 
 train_df = pd.DataFrame(train_data, columns=["input_text", "target_text"])
 
@@ -30,6 +43,8 @@ eval_data = [
     ["nine", "9"],
     ["zero", "0"],
 ]
+sub_eval_data = load_data('chatterbot.tsv')[:10]
+eval_data += sub_eval_data
 
 eval_df = pd.DataFrame(eval_data, columns=["input_text", "target_text"])
 
@@ -37,8 +52,8 @@ model_args = {
     "reprocess_input_data": True,
     "overwrite_output_dir": True,
     "max_seq_length": 10,
-    "train_batch_size": 2,
-    "num_train_epochs": 10,
+    "train_batch_size": 8,
+    "num_train_epochs": 5,
     "save_eval_checkpoints": False,
     "save_model_every_epoch": False,
     "silent": False,
@@ -65,3 +80,4 @@ model.train_model(train_df, eval_data=eval_df, matches=count_matches)
 print(model.eval_model(eval_df, matches=count_matches))
 
 print(model.predict(["four", "five"]))
+print(model.predict(["什么是ai", "你是什么类型的计算机"]))
