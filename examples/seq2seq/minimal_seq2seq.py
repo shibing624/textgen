@@ -25,9 +25,8 @@ def load_data(file_path):
 def load_qa_data(file_path):
     data = []
     with open(file_path, 'r', encoding='utf-8') as f:
-        q = ''
-        a = ''
         for line in f:
+            q = ''
             line = line.strip()
             if line.startswith('='):
                 continue
@@ -49,7 +48,7 @@ train_data = [
     ["eight", "8"],
 ]
 
-sub_train_data = load_data('dialog_en.txt')
+sub_train_data = load_qa_data('dialog_en.txt')
 train_data += sub_train_data
 
 train_df = pd.DataFrame(train_data, columns=["input_text", "target_text"])
@@ -58,7 +57,7 @@ eval_data = [
     ["nine", "9"],
     ["zero", "0"],
 ]
-sub_eval_data = load_data('dialog_en.txt')[:10]
+sub_eval_data = load_qa_data('dialog_en.txt')[:10]
 eval_data += sub_eval_data
 
 eval_df = pd.DataFrame(eval_data, columns=["input_text", "target_text"])
