@@ -51,7 +51,7 @@ eval_df = pd.DataFrame(eval_data, columns=["input_text", "target_text"])
 model_args = {
     "reprocess_input_data": True,
     "overwrite_output_dir": True,
-    "max_seq_length": 10,
+    "max_seq_length": 50,
     "train_batch_size": 8,
     "num_train_epochs": 5,
     "save_eval_checkpoints": False,
@@ -62,7 +62,7 @@ model_args = {
     "evaluate_during_training_verbose": False,
     "use_multiprocessing": False,
     "save_best_model": True,
-    "max_length": 15,
+    "max_length": 50,
 }
 
 # encoder_type=None, encoder_name=None, decoder_name=None, encoder_decoder_type=None, encoder_decoder_name=None,
