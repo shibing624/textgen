@@ -297,26 +297,20 @@ class TfIdfWordReplace(MixEfficientRandomGen):
             all_words += example.word_list_b
 
         if self.show_example:
-            logger.debug("before tfidf aug: {:s}".format(
-                " ".join(all_words)))
+            logger.debug("before tfidf aug: {:s}".format(" ".join(all_words)))
 
         replace_prob = self.get_replace_prob(all_words)
-        example.word_list_a = self.replace_tokens(
-            example.word_list_a,
-            replace_prob[:len(example.word_list_a)]
-        )
+        example.word_list_a = self.replace_tokens(example.word_list_a, replace_prob[:len(example.word_list_a)])
+        example.text_a = ''.join(example.word_list_a)
         if example.text_b:
-            example.word_list_b = self.replace_tokens(
-                example.word_list_b,
-                replace_prob[len(example.word_list_a):]
-            )
+            example.word_list_b = self.replace_tokens(example.word_list_b, replace_prob[len(example.word_list_a):])
+            example.text_b = ''.join(example.word_list_b)
 
         if self.show_example:
             all_words = copy.deepcopy(example.word_list_a)
             if example.text_b:
                 all_words += example.word_list_b
-            logger.debug("after  tfidf aug: {:s}".format(
-                " ".join(all_words)))
+            logger.debug("after  tfidf aug: {:s}".format(" ".join(all_words)))
         return example
 
     def replace_tokens(self, word_list, replace_prob):
@@ -368,7 +362,7 @@ class MixWordReplace(TfIdfWordReplace):
 def word_augment(examples, aug_ops, vocab, data_stats, show_example=False):
     """Word level augmentations. Used before augmentation."""
     if aug_ops:
-        logger.info("\n>>Using augmentation {}".format(aug_ops))
+        logger.info("Using augmentation {}".format(aug_ops))
         token_prob = float(aug_ops.split("-")[1])
         if aug_ops.startswith("random"):
             op = RandomReplace(token_prob, vocab, show_example)

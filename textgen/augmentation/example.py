@@ -99,7 +99,7 @@ def convert_ids_to_tokens(inv_vocab, ids):
 
 if __name__ == '__main__':
     from textgen.augmentation.word_level_augment import word_augment, get_data_stats
-    from textgen.augmentation.sent_level_augment import sent_augment
+    from textgen.augmentation.sentence_level_augment import sent_augment
 
     a = '晚上一个人好孤单，想:找附近的人陪陪我.'
     a2 = '晚上一个人好孤单，.'
