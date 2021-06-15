@@ -1,18 +1,48 @@
 # textgen
 textgen, Text Generation models. 文本生成，包括：UDA，Seq2Seq，ERNIE-GEN，BERT，XLNet，GPT-2等模型实现，开箱即用。
 
-## Features
+
+**Guide**
+
+- [Question](#Question)
+- [Solution](#Solution)
+- [Feature](#Feature)
+- [Install](#install)
+- [Usage](#usage)
+- [Contact](#Contact)
+- [Cite](#Cite)
+- [Reference](#reference)
+
+# Question
+
+文本生成，文本数据增强怎么做？
+
+# Solution
+
+1. UDA，非核心词替换
+2. EDA，简单数据增广技术：相似词、同义词替换，随机词插入、删除、替换
+3. 回译（bt, back translate），中文-英文-中文
+4. 生成模型，seq2seq，gpt
+
+
+# Features
 ### UDA(非核心词替换)
 
 基于Google提出的UDA(非核心词替换)算法，将文本中一定比例的不重要词替换为同义词，从而产生新的文本。
 
+### BT(回译)
+
+基于百度翻译API，把中文句子翻译为英文，再把英文翻译为新的中文。
 
 ### Seq2Seq
 
 基于Encoder-Decoder结构，序列到序列生成新的文本。
 
+### GPT2
 
-## Install
+基于Transformer的decode结果的自回归生成模型。
+
+# Install
 ```
 pip3 install textgen
 ```
@@ -20,12 +50,12 @@ pip3 install textgen
 or
 
 ```
-git clone https://github.com/shibing624/text-generation.git
-cd text-generation
+git clone https://github.com/shibing624/textgeneration.git
+cd textgeneration
 python3 setup.py install
 ```
 
-## Usage
+# Usage
 
 1. download pretrained vector file
 
@@ -87,16 +117,50 @@ output:
 你这么早就睡呀，我还没写完作业呢，你陪我看看这个题怎么写吧。求求你了！
 ```
 
-## TODO
+# TODO
 
 * seq2seq
 * bert
 * ernie-gen
 * xlnet
 
-## License
+# Contact
 
-Apache License 2.0
+- Issue(建议)：[![GitHub issues](https://img.shields.io/github/issues/shibing624/textgen.svg)](https://github.com/shibing624/textgen/issues)
+- 邮件我：xuming: xuming624@qq.com
+- 微信我：
+加我*微信号：xuming624, 备注：个人名称-NLP* 进NLP交流群。
+
+<img src="docs/wechat.jpeg" width="200" />
+
+
+# Cite
+
+如果你在研究中使用了textgen，请按如下格式引用：
+
+```latex
+@software{textgen,
+  author = {Xu Ming},
+  title = {textgen: A Tool for Text generation},
+  year = {2021},
+  url = {https://github.com/shibing624/textgen},
+}
+```
+
+# License
+
+
+授权协议为 [The Apache License 2.0](/LICENSE)，可免费用做商业用途。请在产品说明中附加textgen的链接和授权协议。
+
+
+# Contribute
+项目代码还很粗糙，如果大家对代码有所改进，欢迎提交回本项目，在提交之前，注意以下两点：
+
+ - 在`tests`添加相应的单元测试
+ - 使用`python setup.py test`来运行所有单元测试，确保所有单测都是通过的
+
+之后即可提交PR。
+
 
 ## Reference
 
