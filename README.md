@@ -119,7 +119,6 @@ output:
 
 # TODO
 
-* seq2seq
 * bert
 * ernie-gen
 * xlnet
