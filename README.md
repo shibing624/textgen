@@ -163,11 +163,11 @@ output:
 
 ## Reference
 
-1. [ERNIE](https://github.com/PaddlePaddle/ERNIE)
-2. [textgenrnn](https://github.com/minimaxir/textgenrnn)
-3. [gpt-2-simple](https://github.com/minimaxir/gpt-2-simple)
-4. [texar](https://github.com/asyml/texar)
-5. [GPT2-chitchat](https://github.com/yangjianxin1/GPT2-chitchat)
-6. [TextGAN-PyTorch](https://github.com/williamSYSU/TextGAN-PyTorch)
-7. [TextBox](https://github.com/RUCAIBox/TextBox)
-8. [bert_score](https://github.com/Tiiiger/bert_score)
+- [ERNIE](https://github.com/PaddlePaddle/ERNIE)
+- [textgenrnn](https://github.com/minimaxir/textgenrnn)
+- [gpt-2-simple](https://github.com/minimaxir/gpt-2-simple)
+- [texar](https://github.com/asyml/texar)
+- [GPT2-chitchat](https://github.com/yangjianxin1/GPT2-chitchat)
+- [TextGAN-PyTorch](https://github.com/williamSYSU/TextGAN-PyTorch)
+- [TextBox](https://github.com/RUCAIBox/TextBox)
+- [bert_score](https://github.com/Tiiiger/bert_score)
