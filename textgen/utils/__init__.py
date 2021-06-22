@@ -4,6 +4,6 @@
 @description: 
 """
 
-from textgen.utils import tokenization
+from textgen.utils import tokenizer
 from textgen.utils.log import logger, set_log_level, get_logger
-from textgen.utils.tokenization import Tokenizer
+from textgen.utils.tokenizer import Tokenizer

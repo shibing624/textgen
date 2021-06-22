@@ -3,3 +3,4 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
+from .text_augment import TextAugment

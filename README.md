@@ -25,7 +25,7 @@ textgen, Text Generation models. 文本生成，包括：UDA，Seq2Seq，ERNIE-G
 4. 生成模型，seq2seq，gpt
 
 
-# Features
+# Feature
 ### UDA(非核心词替换)
 
 基于Google提出的UDA(非核心词替换)算法，将文本中一定比例的不重要词替换为同义词，从而产生新的文本。
@@ -70,21 +70,46 @@ python3 setup.py install
 
 bert模型
 
-3. text generation base rule
+3. EDA文本数据增强
 
 ```
-import textgen
+import sys
 
-a = '晚上一个人好孤单，想找附近人陪陪我'
-b = textgen.rule(a)
-print(b)
+sys.path.append('..')
+from textgen.augment import TextAugment
 
+docs = ['主要研究机器学习、深度学习、计算机视觉、智能对话系统相关内容',
+        '晚上肚子好难受',
+        '你会武功吗，我不会',
+        '组装标题质量受限于广告主自提物料的片段质量，且表达丰富度有限',
+        '晚上一个人好孤单，想:找附近的人陪陪我.',
+        ]
+m = TextAugment(sentence_list=docs)
+
+a = docs[0]
+print(a)
+b = m.augment(a, aug_ops='tfidf-0.2')
+print('tfidf-0.2', b)
+
+b = m.augment(a, aug_ops='insert-0.1')
+print('insert-0.1', b)
+
+b = m.augment(a, aug_ops='mix-0.1', similar_prob=0.1,
+              random_prob=0.4, delete_prob=0.3, insert_prob=0.2)
+print('mix-0.1', b)
+
+b = m.augment(a, aug_ops='bt')
+print('bt', b)
 ```
 
 output:
 
 ```
-晚上一个人好寂寞，想找附近人陪伴我
+主要研究机器学习、深度学习、计算机视觉、智能对话系统相关内容
+tfidf-0.2 主要研究机器努力学习、深度学习、计算机视觉、智能对话软件系统相关内容
+insert-0.1 主要研究机器学习、深度学习、计算机视觉、智能对话系统相关相关内容
+mix-0.1 主要研究机器学习、深度学习、计算机视觉、智能对话系统密切相关内容
+bt 主要研究机器学习、深度学习、计算机视觉和智能对话系统
 ```
 
 4. text generation base seq2seq
