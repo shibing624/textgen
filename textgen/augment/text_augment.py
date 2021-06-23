@@ -21,10 +21,10 @@ class TextAugment(object):
     Text Data Augmentation
     """
 
-    def __init__(self, sentence_list):
+    def __init__(self, sentence_list=None):
         """
         Init
-        :param from_lang: zh/en
+        :param sentence_list: list, docs
         """
         self.tokenizer = Tokenizer()
         vec = Vector()
@@ -37,22 +37,23 @@ class TextAugment(object):
             word_list.extend(i)
         self.vocab = build_vocab(word_list)
 
-    def augment(self, sentence, aug_ops='tfidf-0.2', **kwargs):
+    def augment(self, query, aug_ops='tfidf-0.2', **kwargs):
         """
         Augment data
-        :param sentence:
+        :param query:
         :param aug_ops: word_augment for "random-0.2, insert-0.2, delete-0.2, tfidf-0.2, mix-0.2"
                         sent_augment for "bt-0.2"
         :return: str, new_sentence
         """
         logger.debug('Use text augmentation operation: {}'.format(aug_ops))
+        details = []
         # Sentence augmentation
         if aug_ops.startswith("bt"):
-            res = back_translation(sentence, from_lang='zh', use_min_length=10,
+            new_query = back_translation(query, from_lang='zh', use_min_length=10,
                                    use_max_length_diff_ratio=0.5)
-            return res
+            return new_query, details
         # Word augmentation
-        tokens = self.tokenizer.tokenize(sentence)
+        tokens = self.tokenizer.tokenize(query)
 
         prob = float(aug_ops.split("-")[1])
         if aug_ops.startswith("random"):
@@ -69,5 +70,6 @@ class TextAugment(object):
                                 random_prob=0.1, delete_prob=0.1, insert_prob=0.1)
         else:
             raise ValueError('error aug_ops.')
-        res = ''.join(op(tokens))
-        return res
+        new_tokens, details = op(tokens)
+        new_query = ''.join(new_tokens)
+        return new_query, details

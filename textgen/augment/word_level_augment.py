@@ -66,14 +66,23 @@ class RandomReplace(EfficientRandomGen):
         return self.replace_tokens(tokens)
 
     def replace_tokens(self, tokens):
-        """Replace tokens randomly."""
+        """
+        Replace tokens randomly.
+        :param tokens: list
+        :return: tokens, details
+        tokens, list
+        details, list eg: [(old_token, new_token, start_idx, end_idx), ...]
+        """
+        details = []
+        idx = 0
         if len(tokens) >= min_token_num:
-            logger.debug("before Random replace word augment: {:s}".format(" ".join(tokens)))
-            for i in range(len(tokens)):
+            for token in tokens:
+                old_token = token
                 if self.get_random_prob() < self.token_prob:
-                    tokens[i] = self.get_random_token()
-            logger.debug("after  Random replace word augment: {:s}".format(" ".join(tokens)))
-        return tokens
+                    token = self.get_random_token()
+                    details.append((old_token, token, idx, idx + len(token)))
+                idx += len(token)
+        return tokens, details
 
     def reset_token_list(self):
         """Generate many random tokens at the same time and cache them."""
@@ -96,14 +105,23 @@ class InsertReplace(EfficientRandomGen):
         return self.replace_tokens(tokens)
 
     def replace_tokens(self, tokens):
-        """Replace tokens randomly."""
+        """
+        Replace tokens with insert data.
+        :param tokens: list
+        :return: tokens, details
+        tokens, list
+        details, list eg: [(old_token, new_token, start_idx, end_idx), ...]
+        """
+        details = []
+        idx = 0
         if len(tokens) >= min_token_num:
-            logger.debug("before Insert replace word augment: {:s}".format(" ".join(tokens)))
-            for i in range(len(tokens)):
+            for token in tokens:
+                old_token = token
                 if self.get_random_prob() < self.token_prob:
-                    tokens[i] = self.get_insert_token(tokens[i])
-            logger.debug("after  Insert replace word augment: {:s}".format(" ".join(tokens)))
-        return tokens
+                    token = self.get_insert_token(token)
+                    details.append((old_token, token, idx, idx + len(token)))
+                idx += len(token)
+        return tokens, details
 
     def reset_token_list(self):
         """Generate many random tokens at the same time and cache them."""
@@ -126,14 +144,23 @@ class DeleteReplace(EfficientRandomGen):
         return self.replace_tokens(tokens)
 
     def replace_tokens(self, tokens):
-        """Replace tokens randomly."""
+        """
+        Replace tokens with insert data.
+        :param tokens: list
+        :return: tokens, details
+        tokens, list
+        details, list eg: [(old_token, new_token, start_idx, end_idx), ...]
+        """
+        details = []
+        idx = 0
         if len(tokens) >= min_token_num:
-            logger.debug("before Delete replace word augment: {:s}".format(" ".join(tokens)))
-            for i in range(len(tokens)):
+            for token in tokens:
+                old_token = token
                 if self.get_random_prob() < self.token_prob:
-                    tokens[i] = self.get_delete_token()
-            logger.debug("after  Delete replace word augment: {:s}".format(" ".join(tokens)))
-        return tokens
+                    token = self.get_delete_token()
+                    details.append((old_token, token, idx, idx + len(token)))
+                idx += len(token)
+        return tokens, details
 
     def reset_token_list(self):
         """Generate many random tokens at the same time and cache them."""
@@ -232,6 +259,9 @@ class TfIdfWordReplace(MixEfficientRandomGen):
         self.token_prob = token_prob
         self.idf = data_idf["idf"]
         self.tf_idf = data_idf["tf_idf"]
+        if not self.idf:
+            logger.error('sentence_list must set in tfidf word replace.')
+            raise ValueError("idf is None.")
         data_idf = copy.deepcopy(data_idf)
         tf_idf_items = data_idf["tf_idf"].items()
         tf_idf_items = sorted(tf_idf_items, key=lambda item: -item[1])
@@ -261,20 +291,32 @@ class TfIdfWordReplace(MixEfficientRandomGen):
         return replace_prob
 
     def __call__(self, tokens):
+        """
+        Replace tokens with tfidf data.
+        :param tokens: list
+        :return: tokens, details
+        tokens, list
+        details, list eg: [(old_token, new_token, start_idx, end_idx), ...]
+        """
+        new_tokens = []
+        details = []
         if len(tokens) >= min_token_num:
-            logger.debug("before tfidf aug: {:s}".format(" ".join(tokens)))
             replace_prob = self.get_replace_prob(tokens)
-            tokens = self.replace_tokens(tokens, replace_prob[:len(tokens)])
-            logger.debug("after  tfidf aug: {:s}".format(" ".join(tokens)))
-        return tokens
+            new_tokens, details = self.replace_tokens(tokens, replace_prob[:len(tokens)])
+        return new_tokens, details
 
     def replace_tokens(self, word_list, replace_prob):
-        """Replace tokens in a sentence."""
+        """Replace tokens with tfidf similar word"""
+        details = []
+        idx = 0
         for i in range(len(word_list)):
+            old_token = word_list[i]
             if self.get_random_prob() < replace_prob[i]:
-                # Use Random: word_list[i] = self.get_random_token()
+                # Use Tfidf find similar token
                 word_list[i] = self.get_similar_token(word_list[i])
-        return word_list
+                details.append((old_token, word_list[i], idx, idx + len(word_list[i])))
+            idx += len(word_list[i])
+        return word_list, details
 
     def reset_token_list(self):
         cache_len = len(self.tf_idf_keys)
@@ -307,8 +349,13 @@ class MixWordReplace(TfIdfWordReplace):
                                              insert_prob=insert_prob)
 
     def replace_tokens(self, word_list, replace_prob):
-        """Replace tokens in a sentence."""
+        """Replace tokens with mix method."""
+        details = []
+        idx = 0
         for i in range(len(word_list)):
+            old_token = word_list[i]
             if self.get_random_prob() < replace_prob[i]:
                 word_list[i] = self.get_replace_token(word_list[i])
-        return word_list
+                details.append((old_token, word_list[i], idx, idx + len(word_list[i])))
+            idx += len(word_list[i])
+        return word_list, details

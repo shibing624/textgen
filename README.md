@@ -85,31 +85,35 @@ docs = ['主要研究机器学习、深度学习、计算机视觉、智能对�
         '晚上一个人好孤单，想:找附近的人陪陪我.',
         ]
 m = TextAugment(sentence_list=docs)
-
 a = docs[0]
 print(a)
-b = m.augment(a, aug_ops='tfidf-0.2')
-print('tfidf-0.2', b)
+
+b = m.augment(a, aug_ops='random-0.1')
+print('random-0.1:', b)
 
 b = m.augment(a, aug_ops='insert-0.1')
-print('insert-0.1', b)
+print('insert-0.1:', b)
+
+b = m.augment(a, aug_ops='tfidf-0.2')
+print('tfidf-0.2:', b)
 
 b = m.augment(a, aug_ops='mix-0.1', similar_prob=0.1,
               random_prob=0.4, delete_prob=0.3, insert_prob=0.2)
-print('mix-0.1', b)
+print('mix-0.1:', b)
 
 b = m.augment(a, aug_ops='bt')
-print('bt', b)
+print('bt:', b)
 ```
 
 output:
 
 ```
 主要研究机器学习、深度学习、计算机视觉、智能对话系统相关内容
-tfidf-0.2 主要研究机器努力学习、深度学习、计算机视觉、智能对话软件系统相关内容
-insert-0.1 主要研究机器学习、深度学习、计算机视觉、智能对话系统相关相关内容
-mix-0.1 主要研究机器学习、深度学习、计算机视觉、智能对话系统密切相关内容
-bt 主要研究机器学习、深度学习、计算机视觉和智能对话系统
+random-0.1: ('主要研究机器学习、深度学习、计算机视觉、智能对话系统相关内容', [('学习', '质量', 11, 13), ('视觉', '丰富', 17, 19)])
+insert-0.1: ('主要研究机器学习、深度学习、计算机视觉、智能对话系统相关内容', [('学习', '学习学习', 11, 15)])
+tfidf-0.2: ('主要原因研究机器学习、深度学、计算机视觉、智能对话系统相关信息内容', [('主要', '主要原因', 0, 4), ('学习', '学', 13, 14), ('内容', '信息内容', 29, 33)])
+mix-0.1: ('主要研究机器认真学习、深度认真学习、计算机视觉、智能对话系统相关具体内容', [('学习', '认真学习', 6, 10), ('学习', '认真学习', 13, 17), ('内容', '具体内容', 32, 36)])
+bt: ('主要研究机器学习、深度学习、计算机视觉和智能对话系统', [])
 ```
 
 4. text generation base seq2seq
