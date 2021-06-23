@@ -21,12 +21,12 @@ class TextAugment(object):
     Text Data Augmentation
     """
 
-    def __init__(self, sentence_list):
+    def __init__(self, sentence_list, tokenizer=None):
         """
         Init
         :param sentence_list: list, docs
         """
-        self.tokenizer = Tokenizer()
+        self.tokenizer = tokenizer if tokenizer else Tokenizer()
         vec = Vector()
         vec.load_model()
         self.w2v = vec.model.w2v
