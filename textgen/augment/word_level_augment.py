@@ -76,12 +76,12 @@ class RandomReplace(EfficientRandomGen):
         details = []
         idx = 0
         if len(tokens) >= min_token_num:
-            for token in tokens:
-                old_token = token
+            for i in range(len(tokens)):
+                old_token = tokens[i]
                 if self.get_random_prob() < self.token_prob:
-                    token = self.get_random_token()
-                    details.append((old_token, token, idx, idx + len(token)))
-                idx += len(token)
+                    tokens[i] = self.get_random_token()
+                    details.append((old_token, tokens[i], idx, idx + len(tokens[i])))
+                idx += len(tokens[i])
         return tokens, details
 
     def reset_token_list(self):
@@ -115,12 +115,12 @@ class InsertReplace(EfficientRandomGen):
         details = []
         idx = 0
         if len(tokens) >= min_token_num:
-            for token in tokens:
-                old_token = token
+            for i in range(len(tokens)):
+                old_token = tokens[i]
                 if self.get_random_prob() < self.token_prob:
-                    token = self.get_insert_token(token)
-                    details.append((old_token, token, idx, idx + len(token)))
-                idx += len(token)
+                    tokens[i] = self.get_insert_token(tokens[i])
+                    details.append((old_token, tokens[i], idx, idx + len(tokens[i])))
+                idx += len(tokens[i])
         return tokens, details
 
     def reset_token_list(self):
@@ -154,12 +154,12 @@ class DeleteReplace(EfficientRandomGen):
         details = []
         idx = 0
         if len(tokens) >= min_token_num:
-            for token in tokens:
-                old_token = token
+            for i in range(len(tokens)):
+                old_token = tokens[i]
                 if self.get_random_prob() < self.token_prob:
-                    token = self.get_delete_token()
-                    details.append((old_token, token, idx, idx + len(token)))
-                idx += len(token)
+                    tokens[i] = self.get_delete_token()
+                    details.append((old_token, tokens[i], idx, idx + len(tokens[i])))
+                idx += len(tokens[i])
         return tokens, details
 
     def reset_token_list(self):
@@ -305,18 +305,18 @@ class TfIdfWordReplace(MixEfficientRandomGen):
             new_tokens, details = self.replace_tokens(tokens, replace_prob[:len(tokens)])
         return new_tokens, details
 
-    def replace_tokens(self, word_list, replace_prob):
+    def replace_tokens(self, tokens, replace_prob):
         """Replace tokens with tfidf similar word"""
         details = []
         idx = 0
-        for i in range(len(word_list)):
-            old_token = word_list[i]
+        for i in range(len(tokens)):
+            old_token = tokens[i]
             if self.get_random_prob() < replace_prob[i]:
                 # Use Tfidf find similar token
-                word_list[i] = self.get_similar_token(word_list[i])
-                details.append((old_token, word_list[i], idx, idx + len(word_list[i])))
-            idx += len(word_list[i])
-        return word_list, details
+                tokens[i] = self.get_similar_token(tokens[i])
+                details.append((old_token, tokens[i], idx, idx + len(tokens[i])))
+            idx += len(tokens[i])
+        return tokens, details
 
     def reset_token_list(self):
         cache_len = len(self.tf_idf_keys)
