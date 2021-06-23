@@ -21,7 +21,7 @@ class TextAugment(object):
     Text Data Augmentation
     """
 
-    def __init__(self, sentence_list=None):
+    def __init__(self, sentence_list):
         """
         Init
         :param sentence_list: list, docs

@@ -25,6 +25,7 @@ if __name__ == '__main__':
     b = m.augment(a, aug_ops='insert-0.1')
     print('insert-0.1:', b)
 
+    # tfidf
     b = m.augment(a, aug_ops='tfidf-0.2')
     print('tfidf-0.2:', b)
 
