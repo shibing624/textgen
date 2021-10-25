@@ -209,11 +209,12 @@ output:
 
 ## Reference
 
-- [ERNIE](https://github.com/PaddlePaddle/ERNIE)
-- [textgenrnn](https://github.com/minimaxir/textgenrnn)
-- [gpt-2-simple](https://github.com/minimaxir/gpt-2-simple)
-- [texar](https://github.com/asyml/texar)
-- [GPT2-chitchat](https://github.com/yangjianxin1/GPT2-chitchat)
-- [TextGAN-PyTorch](https://github.com/williamSYSU/TextGAN-PyTorch)
-- [TextBox](https://github.com/RUCAIBox/TextBox)
-- [bert_score](https://github.com/Tiiiger/bert_score)
+- [https://github.com/PaddlePaddle/ERNIE](https://github.com/PaddlePaddle/ERNIE)
+- [https://github.com/minimaxir/textgenrnn](https://github.com/minimaxir/textgenrnn)
+- [https://github.com/minimaxir/gpt-2-simple](https://github.com/minimaxir/gpt-2-simple)
+- [https://github.com/asyml/texar](https://github.com/asyml/texar)
+- [https://github.com/yangjianxin1/GPT2-chitchat](https://github.com/yangjianxin1/GPT2-chitchat)
+- [https://github.com/williamSYSU/TextGAN-PyTorch](https://github.com/williamSYSU/TextGAN-PyTorch)
+- [https://github.com/RUCAIBox/TextBox](https://github.com/RUCAIBox/TextBox)
+- [https://github.com/Tiiiger/bert_score]()
+- [https://github.com/1YCxZ/Fake-review-generation](https://github.com/1YCxZ/Fake-review-generation)
