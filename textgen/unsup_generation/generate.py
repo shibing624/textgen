@@ -81,5 +81,5 @@ if __name__ == '__main__':
                  sample1
                  ]
     m = Generate(docs_text)
-    r = m.generate(sample1[:300])
+    r = m.generate(sample1[:400])
     print(len(r))

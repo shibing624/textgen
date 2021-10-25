@@ -441,7 +441,7 @@ def generate_reviews(aspect_express, num=1000):
         used_aspect = []
         for _ in range(num_aspect):
             a = random.choice(weight_aspect_list)
-            while a in used_aspect:
+            if a in used_aspect and len(all_aspect) > 1:
                 a = random.choice(weight_aspect_list)
             used_aspect.append(a)
             a_s = random.choice(aspect_express[a])
@@ -482,7 +482,8 @@ def fake_review_filter(reviews, opinion_set):
                 print('error:')
                 print(review)
             review = review[:-1] + '。'
-            results.append(review)
-            print('\t' + review)
+            if review not in results:
+                results.append(review)
+                print('\t' + review)
 
     return results
