@@ -30,6 +30,7 @@ sents = [
     "我的心爱之物 我有一只可爱的珍珠鳖，我们有一段特别的感情。 记得它是几个月前，叔叔从河边给我带来的。这只小鳖是灰黑色的，"
 ]
 
+
 # 文本摘要任务
 for text in sents:
     ids = tokenizer.encode(text, return_tensors='pt')

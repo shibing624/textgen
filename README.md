@@ -51,6 +51,14 @@ textgen, Text Generation models. 文本生成，包括：UDA，Seq2Seq，ERNIE-G
 
 基于Transformer的decode结果的自回归生成模型。
 
+
+### TGLS
+无监督文本生成模型：本文提出TGLS——一种基于“先搜索后学习”的无监督文本生成方法，模型反复迭代，最终能生成较高质量的文本。
+
+
+https://www.jiqizhixin.com/articles/2020-08-11-5
+
+
 # Install
 ```
 pip3 install textgen
