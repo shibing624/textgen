@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 @author:XuMing(xuming624@qq.com)
-@description: refer https://github.com/renmada/t5-pegasus-pytorch
+@description: 中文句子续写
+refer https://github.com/renmada/t5-pegasus-pytorch
+原文:蓝蓝的天上有一朵白白的云
+bert4keras预测	《蓝蓝的天上有一朵白白的云》是蓝蓝的天上有一朵白白的云创作的网络小说，发表于
+torch预测     	《蓝蓝的天上有一朵白白的云》是蓝蓝的天上有一朵白白的云创作的网络小说，发表于
 """
 
 import sys
@@ -10,11 +14,6 @@ from transformers.models.mt5 import MT5ForConditionalGeneration
 
 sys.path.append('../..')
 from textgen.t5.t5_utils import ZHTokenizer
-
-# config_path = 'D:\\BaiduNetdiskDownload\\chinese_t5_pegasus_base\\chinese_t5_pegasus_base\\config.json'
-# checkpoint_path = 'D:\\BaiduNetdiskDownload\\chinese_t5_pegasus_base\\chinese_t5_pegasus_base\\model.ckpt'
-# dict_path = 'D:\\BaiduNetdiskDownload\\chinese_t5_pegasus_base\\chinese_t5_pegasus_base\\vocab.txt'
-# torch_model = './'
 
 # 模型名	MODEL_NAME
 # t5-pegasus-base	imxly/t5-pegasus
