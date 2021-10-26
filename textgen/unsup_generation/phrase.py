@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 @author:XuMing(xuming624@qq.com)
-@description: 
+@description: jieba分词的效果还不足以支持电商评论，例如"痘痘肌"、"炒鸡棒"、"t字区"等词是jieba无法处理的。
+使用了(PMI+左右熵)的方法来找出新词，参考：https://www.matrix67.com/blog/archives/5044
 """
 import os
 import jieba

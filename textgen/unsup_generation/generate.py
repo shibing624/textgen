@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 @author:XuMing(xuming624@qq.com)
-@description: 
+@description: 生成仿真评论
 """
 import os
 from textgen.unsup_generation.phrase import load_list, caculate_word_idf, text2review, find_word_phrase, get_seg_pos
-from textgen.unsup_generation.util import text2seg_pos, get_aspect_express, get_candidate_aspect, NSDict, PairPattSort, \
-    merge_aspect_express, fake_review_filter, generate_reviews
+from textgen.unsup_generation.util import text2seg_pos, get_aspect_express, get_candidate_aspect, \
+    merge_aspect_express, fake_review_filter, generate_reviews, NSDict, PairPattSort
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
 default_stopwords_path = os.path.join(pwd_path, '../data/stopwords.txt')
@@ -28,7 +28,7 @@ class Generate:
         # 加载正向情感词典
         self.pos_adj_word = load_list(default_pos_adj_word_path)
 
-    def generate(self, doc):
+    def generate(self, doc, num=1000, is_uniq=True):
         seg_pos_text = [get_seg_pos(l) for l in doc]
         seg_list, pos_list, seg_review_list = text2seg_pos(seg_pos_text, pattern='[。！？，～]')
         raw_aspect_list = get_candidate_aspect(seg_list, pos_list, self.pos_adj_word, self.stopwords, self.word_idf)
@@ -58,9 +58,9 @@ class Generate:
         merged_aspect_express, opinion_set = merge_aspect_express(aspect_express, pair_useful)
 
         # 生成假评论
-        generated_raw_reviews = generate_reviews(merged_aspect_express)
+        generated_raw_reviews = generate_reviews(merged_aspect_express, num=num)
 
-        results = fake_review_filter(generated_raw_reviews, opinion_set)
+        results = fake_review_filter(generated_raw_reviews, opinion_set, is_uniq=is_uniq)
         return results
 
 
@@ -81,5 +81,7 @@ if __name__ == '__main__':
                  sample1
                  ]
     m = Generate(docs_text)
-    r = m.generate(sample1[:400])
-    print(len(r))
+    r = m.generate(sample1[:500])
+    print('size:', len(r))
+    for review in r:
+        print('\t' + review)

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 @author:XuMing(xuming624@qq.com)
-@description: 
+@description: 用于无监督抽取用户观点表达的函数。
+参考: https://github.com/rainarch/SentiBridge
 """
 import random
-
 
 WINDOW_SIZE = 5
 PUNCTUATION_MARK = ['x']  # 标点
@@ -15,16 +15,15 @@ ADJECTIVE_MARK = ['a', 'ad', 'an', 'ag']  # 形容词
 ADVERB_MARK = ['d', 'df', 'dg']  # 副词
 ENG_MARK = ['eng']
 
-EMOJI = ['😀', '😁', '😂', '😃', '😄', '😆','😉', '😊',
+EMOJI = ['😀', '😁', '😂', '😃', '😄', '😆', '😉', '😊',
          '😋', '😎', '😍', '😘', '😗', '😙', '😚', '😇',
          '😏', '😝']
 
 YANWENZI = ['ヽ(✿ﾟ▽ﾟ)ノ', 'φ(≧ω≦*)♪', '╰(*°▽°*)╯', 'o(￣▽￣)ｄ', 'o( =•ω•= )m']
 
-ILLEGAL_WORD = ['考拉', '网易']  # '不过', '因为', '而且', '但是', '但', '所以', '因此', '如果',
+ILLEGAL_WORD = ['考拉', '网易', '淘宝', '京东', '拼多多', '不过', '因为', '而且', '但是', '但', '所以', '因此', '如果']  # 过滤词
 
-
-RESERVED_MARK = NOUN_MARK + VERB_MARK + ADJECTIVE_MARK + ADVERB_MARK + ENG_MARK # 用于发现新词
+RESERVED_MARK = NOUN_MARK + VERB_MARK + ADJECTIVE_MARK + ADVERB_MARK + ENG_MARK  # 用于发现新词
 ASPECT_MARK = NOUN_MARK + VERB_MARK
 
 
@@ -89,6 +88,7 @@ class NSDict:
     """
     用来构建候选集（aspect，opinion，pattern）
     """
+
     def __init__(self, seg_list, pos_list, raw_aspect_list):
         self.seg_list = seg_list
         self.pos_list = pos_list
@@ -135,7 +135,7 @@ class NSDict:
                 self._noise(opinion, self.ns_dict[n])
             for s in self.ns_dict[n]:
                 for pattern in self.pattern_do_not_use:
-                    self._noise(pattern,self.ns_dict[n][s])
+                    self._noise(pattern, self.ns_dict[n][s])
 
     def _noise(self, str, dict):
         if str in dict:
@@ -153,6 +153,7 @@ class PairPattSort:
     """
     Pair-Patt-Count structure
     """
+
     def __init__(self, ns_dict):
         self._get_map(ns_dict)
 
@@ -173,7 +174,7 @@ class PairPattSort:
 
         for n in aspects:
             for s in ns_dict[n]:
-                n_s = "{}\t{}".format(n, s)   #这里存的pair是字符串，中间用\t隔开
+                n_s = "{}\t{}".format(n, s)  # 这里存的pair是字符串，中间用\t隔开
                 pair_list.append(n_s)
                 pair_patt_map[n_s] = {}
                 for patt in ns_dict[n][s]:
@@ -216,6 +217,7 @@ class PairPattSort:
             for pair in self.patt_pair_map[patt]:  # <- 每个被pattern修饰的pair出现的个数 * 这个pair的score，然后求和得到这个pattern1的
                 value += self.patt_pair_map[patt][pair] * self.pair_score[pair]
             self.patt_score[patt] = value
+
     def _patt_correct(self):
         self.patt_score['的-'] = 0.0
 
@@ -259,11 +261,8 @@ def get_aspect_express(seg_review_list, pair_useful):
     raw_aspect_express = {k: [] for k in pair_useful}  # 用户关于某个观点的一段原始表达
     raw_aspect_express_count = {k: 0 for k in pair_useful}  # 记录某个观点表达出现的次数
     for review in seg_review_list:  # 每个sentence就是一句完整的review
-
-        source = []  # 训练的src
         if review[-1] not in PUNCTUATION:
             review.append('。')
-        target = review  # 训练的tgt
 
         # 对于单个review进行切分
         cur_review = []
@@ -390,6 +389,7 @@ def build_dataset_express(seg_review_list, pair_useful):
         train_data.append((list(source), target))
 
     max_source_length = 0
+
     # 筛选训练数据
     def check_review(item):
         """
@@ -408,7 +408,7 @@ def build_dataset_express(seg_review_list, pair_useful):
             legal = False
         return legal
 
-    legal_train_data= []
+    legal_train_data = []
     for item in train_data:
         if check_review(item):
             max_source_length = max(max_source_length, len(item[0]))
@@ -452,7 +452,7 @@ def generate_reviews(aspect_express, num=1000):
     return res
 
 
-def fake_review_filter(reviews, opinion_set):
+def fake_review_filter(reviews, opinion_set, is_uniq=True):
     """
     筛去评论中不像人写的句子：如果同一个形容词重复出现两次就判定为假评论，同时筛去长度超过60的评论
     """
@@ -482,8 +482,9 @@ def fake_review_filter(reviews, opinion_set):
                 print('error:')
                 print(review)
             review = review[:-1] + '。'
-            if review not in results:
+            if is_uniq:
+                if review not in results:
+                    results.append(review)
+            else:
                 results.append(review)
-                print('\t' + review)
-
     return results

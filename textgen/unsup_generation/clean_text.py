@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 @author:XuMing(xuming624@qq.com)
-@description: 
+@description: 清洗无意义字符
 """
 import re
 
 FH_PUNCTUATION = [
-    (u"。", u"."), (u"，", u","), (u"！", u"!"), (u"？", u"?"), (u"～", u"~"),
+    ("。", "."), ("，", ","), ("！", "!"), ("？", "?"), ("～", "~"),
 ]
 
 keep_p = ['，', '。', '！', '？', '～', '、']
