@@ -3,8 +3,8 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-from text2vec import Vector
-from text2vec.utils.logger import set_log_level
+from text2vec import Word2Vec
+from text2vec.utils.log import set_log_level
 
 from textgen.augment.sentence_level_augment import back_translation
 from textgen.augment.word_level_augment import (get_data_idf, RandomReplace, DeleteReplace, InsertReplace,
@@ -13,7 +13,7 @@ from textgen.augment.word_vocab import build_vocab
 from textgen.utils.log import logger
 from textgen.utils.tokenizer import Tokenizer
 
-set_log_level('ERROR')
+# set_log_level('ERROR')
 
 
 class TextAugment(object):
@@ -27,9 +27,8 @@ class TextAugment(object):
         :param sentence_list: list, docs
         """
         self.tokenizer = tokenizer if tokenizer else Tokenizer()
-        vec = Vector()
-        vec.load_model()
-        self.w2v = vec.model.w2v
+        vec = Word2Vec()
+        self.w2v = vec.w2v
         tokenized_sentence_list = [self.tokenizer.tokenize(i) for i in sentence_list]
         self.data_idf = get_data_idf(tokenized_sentence_list)
         word_list = []
