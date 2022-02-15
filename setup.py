@@ -2,8 +2,7 @@
 
 from setuptools import setup, find_packages
 
-from textgen import __version__
-
+__version__ = '0.0.4'
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
 
@@ -24,11 +23,9 @@ setup(
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
         "License :: OSI Approved :: Apache Software License",
-        'Natural Language :: Chinese (Simplified)',
-        'Natural Language :: Chinese (Traditional)',
         'Programming Language :: Python :: 3',
         'Topic :: Text Processing :: Linguistic',
-        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
     python_requires=">=3.6",
     keywords='textgen,text-generation,Text Generation Tool,ernie-gen,chinese text generation',
