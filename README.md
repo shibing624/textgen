@@ -179,21 +179,7 @@ output:
 <img src="docs/wechat.jpeg" width="200" />
 
 
-# Cite
-
-如果你在研究中使用了textgen，请按如下格式引用：
-
-```latex
-@software{textgen,
-  author = {Xu Ming},
-  title = {textgen: A Tool for Text generation},
-  year = {2021},
-  url = {https://github.com/shibing624/textgen},
-}
-```
-
 # License
-
 
 授权协议为 [The Apache License 2.0](/LICENSE)，可免费用做商业用途。请在产品说明中附加textgen的链接和授权协议。
 

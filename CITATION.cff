@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Xu"
+  given-names: "Ming"
+title: "Textgen: Text generation toolkit"
+url: "https://github.com/shibing624/textgen"
+data-released: 2022-02-22
+version: 0.0.4
