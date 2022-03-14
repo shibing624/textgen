@@ -6,9 +6,6 @@ __version__ = '0.0.4'
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
 
-with open('requirements.txt', 'r', encoding='utf-8') as f:
-    reqs = f.read()
-
 setup(
     name='textgen',
     version=__version__,
@@ -29,7 +26,17 @@ setup(
     ],
     python_requires=">=3.6",
     keywords='textgen,text-generation,Text Generation Tool,ernie-gen,chinese text generation',
-    install_requires=reqs.strip().split('\n'),
+    install_requires=[
+        'colorlog',
+        'jieba>=0.39',
+        'transformers',
+        'datasets',
+        'gensim>=4.0.0',
+        'text2vec',
+        'tensorboardX',
+        'tqdm',
+        'pandas',
+    ],
     packages=find_packages(exclude=['tests']),
     package_dir={'textgen': 'textgen'},
     package_data={

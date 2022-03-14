@@ -1,8 +1,11 @@
 colorlog
 jieba>=0.39
+transformers
+datasets
 gensim>=4.0.0
-numpy>=1.17.4
-torch
 text2vec
+tensorboardX
+tqdm
+pandas
 wandb
 faiss

@@ -4,9 +4,6 @@ transformers
 datasets
 gensim>=4.0.0
 text2vec
-torch
 tensorboardX
-tqdm>=4.47.0
+tqdm
 pandas
-tokenizers
-numpy>=1.17.4

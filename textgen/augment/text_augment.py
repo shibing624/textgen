@@ -4,7 +4,6 @@
 @description: 
 """
 from text2vec import Word2Vec
-from text2vec.utils.log import set_log_level
 
 from textgen.augment.sentence_level_augment import back_translation
 from textgen.augment.word_level_augment import (get_data_idf, RandomReplace, DeleteReplace, InsertReplace,
@@ -12,8 +11,6 @@ from textgen.augment.word_level_augment import (get_data_idf, RandomReplace, Del
 from textgen.augment.word_vocab import build_vocab
 from textgen.utils.log import logger
 from textgen.utils.tokenizer import Tokenizer
-
-# set_log_level('ERROR')
 
 
 class TextAugment(object):
@@ -49,7 +46,7 @@ class TextAugment(object):
         # Sentence augmentation
         if aug_ops.startswith("bt"):
             new_query = back_translation(query, from_lang='zh', use_min_length=10,
-                                   use_max_length_diff_ratio=0.5)
+                                         use_max_length_diff_ratio=0.5)
             return new_query, details
         # Word augmentation
         tokens = self.tokenizer.tokenize(query)
