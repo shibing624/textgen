@@ -40,6 +40,6 @@ setup(
     packages=find_packages(exclude=['tests']),
     package_dir={'textgen': 'textgen'},
     package_data={
-        'textgen': ['*.*', '../LICENSE', '../README.*', '../*.txt', '../examples/*', ],
+        'textgen': ['*.*', ],
     }
 )

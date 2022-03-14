@@ -26,18 +26,6 @@ class BaseTestCase(unittest.TestCase):
             print(r)
             res.append(r)
 
-        def _assert_line(linenum, p, b, t, s, sy):
-            assert res[linenum]['place'] == p
-            assert res[linenum]['brand'] == b
-            assert res[linenum]['trade'] == t
-            assert res[linenum]['suffix'] == s
-            assert res[linenum]['symbol'] == sy
-
-        _assert_line(0, '武汉', '海明智业', '电子商务', '有限公司', '')
-        _assert_line(1, '泉州', '益念', '食品', '有限公司', '')
-        _assert_line(2, '常州,合肥', '途畅', '互联网科技', '有限公司,分公司', '')
-        _assert_line(3, '昆明', '享亚', '教育信息咨询', '有限公司', '')
-
     def test_parse_enable_word_segment(self):
         """测试带分词的parse结果"""
         company_strs = [
