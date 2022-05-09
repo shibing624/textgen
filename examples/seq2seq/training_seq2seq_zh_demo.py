@@ -6,6 +6,7 @@
 import argparse
 import pandas as pd
 from loguru import logger
+import os
 import sys
 
 sys.path.append('../..')
@@ -30,8 +31,8 @@ def main():
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/zh/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
-    parser.add_argument('--num_epochs', default=20, type=int, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
+    parser.add_argument('--num_epochs', default=10, type=int, help='Number of training epochs')
+    parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
 
@@ -74,6 +75,7 @@ def main():
             "use_multiprocessing": False,
             "save_best_model": True,
             "output_dir": args.output_dir,
+            "use_early_stopping": True,
         }
 
         # encoder_type=None, encoder_name=None, decoder_name=None, encoder_decoder_type=None, encoder_decoder_name=None,
@@ -89,7 +91,9 @@ def main():
 
     if args.do_predict:
         # model = Seq2SeqModel("bert", "outputs/encoder", "outputs/decoder", use_cuda=use_cuda)
-        model = Seq2SeqModel(args.model_type, args.output_dir, args.output_dir)
+        model = Seq2SeqModel(args.model_type,
+                             os.path.join(args.output_dir, "encoder"),
+                             os.path.join(args.output_dir, "decoder"))
 
         print(model.predict(["one", "four", "five"]))
         print(model.predict(["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]))
