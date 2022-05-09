@@ -5,14 +5,11 @@
 """
 import json
 import os
-
-import torch
 import sys
 
 sys.path.append('../..')
 from textgen.question_answering import QuestionAnsweringModel
 
-use_cuda = torch.cuda.is_available()
 # Create dummy data to use for training.
 train_data = [
     {
@@ -75,9 +72,7 @@ train_args = {
 }
 
 # Create the QuestionAnsweringModel
-model = QuestionAnsweringModel("bert", "bert-base-cased", args=train_args,
-                               use_cuda=use_cuda
-                               )
+model = QuestionAnsweringModel("bert", "bert-base-cased", args=train_args)
 
 # Train the model with JSON file
 model.train_model("data/train.json")

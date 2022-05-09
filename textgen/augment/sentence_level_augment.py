@@ -7,7 +7,7 @@
 import math
 
 from textgen.augment import translate_api
-from textgen.utils.log import logger
+from loguru import logger
 
 
 def replace_with_length_check(

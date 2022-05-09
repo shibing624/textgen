@@ -4,14 +4,8 @@
 @description: 
 """
 
-import unittest
 
-
-class MyTestCase(unittest.TestCase):
-    def test_something(self):
-        print("hi")
-        self.assertEqual(True, True)
-
-
-if __name__ == '__main__':
-    unittest.main()
+def test_something():
+    a = "hi"
+    print("hi")
+    assert a == "hi"

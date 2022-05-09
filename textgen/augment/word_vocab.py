@@ -5,9 +5,8 @@
 """
 
 import collections
-from codecs import open
 
-from textgen.utils.log import logger
+from loguru import logger
 
 
 def convert_tokens_to_ids(vocab, tokens):

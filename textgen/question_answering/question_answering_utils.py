@@ -24,8 +24,7 @@ from transformers.data.processors.squad import (
     squad_convert_example_to_features_init,
 )
 from transformers.models.bert.tokenization_bert import BasicTokenizer
-
-from textgen.utils.log import logger
+from loguru import logger
 
 
 class InputExample(object):

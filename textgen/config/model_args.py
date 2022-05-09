@@ -135,62 +135,6 @@ class ModelArgs:
 
 
 @dataclass
-class ClassificationArgs(ModelArgs):
-    """
-    Model args for a ClassificationModel
-    """
-
-    model_class: str = "ClassificationModel"
-    labels_list: list = field(default_factory=list)
-    labels_map: dict = field(default_factory=dict)
-    lazy_delimiter: str = "\t"
-    lazy_labels_column: int = 1
-    lazy_loading: bool = False
-    lazy_loading_start_line: int = 1
-    lazy_text_a_column: bool = None
-    lazy_text_b_column: bool = None
-    lazy_text_column: int = 0
-    onnx: bool = False
-    regression: bool = False
-    sliding_window: bool = False
-    special_tokens_list: list = field(default_factory=list)
-    stride: float = 0.8
-    tie_value: int = 1
-
-
-@dataclass
-class MultiLabelClassificationArgs(ModelArgs):
-    """
-    Model args for a MultiLabelClassificationModel
-    """
-
-    model_class: str = "MultiLabelClassificationModel"
-    sliding_window: bool = False
-    stride: float = 0.8
-    threshold: float = 0.5
-    tie_value: int = 1
-    labels_list: list = field(default_factory=list)
-    labels_map: dict = field(default_factory=dict)
-    lazy_loading: bool = False
-    special_tokens_list: list = field(default_factory=list)
-
-
-@dataclass
-class NERArgs(ModelArgs):
-    """
-    Model args for a NERModel
-    """
-
-    model_class: str = "NERModel"
-    classification_report: bool = False
-    labels_list: list = field(default_factory=list)
-    lazy_loading: bool = False
-    lazy_loading_start_line: int = 0
-    onnx: bool = False
-    special_tokens_list: list = field(default_factory=list)
-
-
-@dataclass
 class QuestionAnsweringArgs(ModelArgs):
     """
     Model args for a QuestionAnsweringModel
@@ -370,41 +314,4 @@ class LanguageGenerationArgs(ModelArgs):
     xlm_language: str = ""
     config_name: str = None
     tokenizer_name: str = None
-    special_tokens_list: list = field(default_factory=list)
-
-
-@dataclass
-class ConvAIArgs(ModelArgs):
-    """
-    Model args for a ConvAIModel
-    """
-
-    model_class: str = "ConvAIModel"
-    do_sample: bool = True
-    lm_coef: float = 2.0
-    max_history: int = 2
-    max_length: int = 20
-    mc_coef: float = 1.0
-    min_length: int = 1
-    num_candidates: int = 2
-    personality_permutations: int = 1
-    temperature: float = 0.7
-    top_k: float = 0
-    top_p: float = 0.9
-
-
-@dataclass
-class MultiModalClassificationArgs(ModelArgs):
-    """
-    Model args for a MultiModalClassificationModel
-    """
-
-    model_class: str = "MultiModalClassificationModel"
-    regression: bool = False
-    num_image_embeds: int = 1
-    text_label: str = "text"
-    labels_label: str = "labels"
-    images_label: str = "images"
-    image_type_extension: str = ""
-    data_type_extension: str = ""
     special_tokens_list: list = field(default_factory=list)

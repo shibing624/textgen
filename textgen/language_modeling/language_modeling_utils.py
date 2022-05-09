@@ -15,7 +15,7 @@ from torch.utils.data import Dataset
 from tqdm.auto import tqdm
 from transformers import PreTrainedTokenizer
 
-from textgen.utils.log import logger
+from loguru import logger
 
 
 def encode(data):

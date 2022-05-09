@@ -67,27 +67,14 @@ pip3 install textgen
 or
 
 ```
-git clone https://github.com/shibing624/textgeneration.git
-cd textgeneration
+git clone https://github.com/shibing624/textgen.git
+cd textgen
 python3 setup.py install
 ```
 
 # Usage
 
-1. download pretrained vector file
-
-
-以下词向量，任选一个下载：
-
-- 轻量版腾讯词向量 [百度云盘-密码:tawe](https://pan.baidu.com/s/1La4U4XNFe8s5BJqxPQpeiQ) 或 [谷歌云盘](https://drive.google.com/u/0/uc?id=1iQo9tBb2NgFOBxx0fA16AZpSgc-bG_Rp&export=download)，二进制，111MB放到 `~/.text2vec/datasets/light_Tencent_AILab_ChineseEmbedding.bin`
-- [腾讯词向量-官方全量](https://ai.tencent.com/ailab/nlp/zh/download.html), 6.78G放到： `~/.text2vec/datasets/Tencent_AILab_ChineseEmbedding.txt`
-
-
-2. download pretrained language model file
-
-bert模型
-
-3. EDA文本数据增强
+1. EDA文本数据增强
 
 ```python
 import sys
@@ -133,7 +120,7 @@ mix-0.1: ('主要受限于机器学习、深度学习、计算机视觉、智能
 bt: ('主要研究机器学习、深度学习、计算机视觉和智能对话系统', [])
 ```
 
-4. text generation base seq2seq
+2. text generation base seq2seq
 
 ```python
 import textgen
@@ -146,6 +133,21 @@ print(b)
 output:
 ```bash
 你这么早就睡呀，我还没写完作业呢，你陪我看看这个题怎么写吧。
+```
+
+4. text generation base ernie-gen
+
+```python
+import textgen
+
+a = '你这么早就睡呀，'
+b = textgen.erniegen(a)
+print(b)
+```
+
+output:
+```bash
+你这么早就睡呀，我还没写完作业呢，你陪我看看这个题怎么写吧。求求你了！
 ```
 
 5. text generation base ernie-gen
@@ -166,6 +168,7 @@ output:
 # TODO
 
 * bert
+* gpt2
 * ernie-gen
 * xlnet
 
@@ -174,7 +177,7 @@ output:
 - Issue(建议)：[![GitHub issues](https://img.shields.io/github/issues/shibing624/textgen.svg)](https://github.com/shibing624/textgen/issues)
 - 邮件我：xuming: xuming624@qq.com
 - 微信我：
-加我*微信号：xuming624, 备注：个人名称-NLP* 进NLP交流群。
+加我*微信号：xuming624, 备注：姓名-公司名-NLP* 进NLP交流群。
 
 <img src="docs/wechat.jpeg" width="200" />
 
@@ -188,7 +191,7 @@ output:
 项目代码还很粗糙，如果大家对代码有所改进，欢迎提交回本项目，在提交之前，注意以下两点：
 
  - 在`tests`添加相应的单元测试
- - 使用`python setup.py test`来运行所有单元测试，确保所有单测都是通过的
+ - 使用`python -m pytest`来运行所有单元测试，确保所有单测都是通过的
 
 之后即可提交PR。
 

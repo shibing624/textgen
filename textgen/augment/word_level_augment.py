@@ -11,7 +11,7 @@ import math
 
 import numpy as np
 
-from textgen.utils.log import logger
+from loguru import logger
 
 min_token_num = 3
 

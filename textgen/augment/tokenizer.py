@@ -34,7 +34,7 @@ class Tokenizer(object):
 
         if self.lower:
             text = text.lower()
-        # for the multilingual and Chinese
+        # for the multilingual (include: Chinese and English)
         res = tokenize_words(text)
         return res
 

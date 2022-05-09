@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
 
@@ -27,15 +27,16 @@ setup(
     python_requires=">=3.6",
     keywords='textgen,text-generation,Text Generation Tool,ernie-gen,chinese text generation',
     install_requires=[
-        'colorlog',
+        'loguru',
         'jieba>=0.39',
-        'transformers',
+        'transformers>=4.6.0',
         'datasets',
         'gensim>=4.0.0',
         'text2vec',
-        'tensorboardX',
-        'tqdm',
+        'tensorboard',
+        'tqdm>=4.47.0',
         'pandas',
+        'wandb>=0.10.32',
     ],
     packages=find_packages(exclude=['tests']),
     package_dir={'textgen': 'textgen'},

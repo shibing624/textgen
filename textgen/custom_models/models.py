@@ -59,7 +59,7 @@ class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
         self.init_weights()
 
     def forward(
-        self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None, labels=None,
+            self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None, labels=None,
     ):
         outputs = self.bert(
             input_ids,
@@ -103,14 +103,14 @@ class RobertaForMultiLabelSequenceClassification(BertPreTrainedModel):
         self.classifier = RobertaClassificationHead(config)
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
     ):
         outputs = self.roberta(
             input_ids,
@@ -173,17 +173,17 @@ class XLNetForMultiLabelSequenceClassification(XLNetPreTrainedModel):
         self.init_weights()
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        mems=None,
-        perm_mask=None,
-        target_mapping=None,
-        token_type_ids=None,
-        input_mask=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            mems=None,
+            perm_mask=None,
+            target_mapping=None,
+            token_type_ids=None,
+            input_mask=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
     ):
         transformer_outputs = self.transformer(
             input_ids,
@@ -227,17 +227,17 @@ class XLMForMultiLabelSequenceClassification(XLMPreTrainedModel):
         self.init_weights()
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        langs=None,
-        token_type_ids=None,
-        position_ids=None,
-        lengths=None,
-        cache=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            langs=None,
+            token_type_ids=None,
+            position_ids=None,
+            lengths=None,
+            cache=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
     ):
         transformer_outputs = self.transformer(
             input_ids,
@@ -307,7 +307,7 @@ class DistilBertForMultiLabelSequenceClassification(DistilBertPreTrainedModel):
         self.init_weights()
 
     def forward(
-        self, input_ids=None, attention_mask=None, head_mask=None, inputs_embeds=None, labels=None,
+            self, input_ids=None, attention_mask=None, head_mask=None, inputs_embeds=None, labels=None,
     ):
         distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask, head_mask=head_mask)
         hidden_state = distilbert_output[0]  # (bs, seq_len, dim)
@@ -345,16 +345,15 @@ class AlbertForMultiLabelSequenceClassification(AlbertPreTrainedModel):
         self.init_weights()
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
     ):
-
         outputs = self.albert(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -396,17 +395,17 @@ class FlaubertForMultiLabelSequenceClassification(FlaubertModel):
         self.init_weights()
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        langs=None,
-        token_type_ids=None,
-        position_ids=None,
-        lengths=None,
-        cache=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            langs=None,
+            token_type_ids=None,
+            position_ids=None,
+            lengths=None,
+            cache=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
     ):
         transformer_outputs = self.transformer(
             input_ids,
@@ -449,14 +448,14 @@ class LongformerForMultiLabelSequenceClassification(LongformerPreTrainedModel):
         self.init_weights()
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        global_attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        inputs_embeds=None,
-        labels=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            global_attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            inputs_embeds=None,
+            labels=None,
     ):
         if global_attention_mask is None:
             global_attention_mask = torch.zeros_like(input_ids)
@@ -600,14 +599,14 @@ class ElectraForSequenceClassification(ElectraPreTrainedModel):
         self.weight = weight
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
     ):
 
         outputs = self.electra(input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds)
@@ -650,16 +649,15 @@ class ElectraForMultiLabelSequenceClassification(ElectraPreTrainedModel):
         self.classifier = nn.Linear(config.hidden_size, self.config.num_labels)
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
     ):
-
         outputs = self.electra(input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds)
         sequence_output = outputs[0]
         pooled_output = self.pooler(sequence_output)
@@ -695,15 +693,15 @@ class ElectraForQuestionAnswering(ElectraPreTrainedModel):
         self.init_weights()
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        start_positions=None,
-        end_positions=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            start_positions=None,
+            end_positions=None,
     ):
 
         outputs = self.electra(input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds)

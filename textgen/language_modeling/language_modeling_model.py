@@ -14,7 +14,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 import torch
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
@@ -26,9 +26,6 @@ from transformers import (
     BertConfig,
     BertForMaskedLM,
     BertTokenizer,
-    CamembertConfig,
-    CamembertForMaskedLM,
-    CamembertTokenizer,
     DistilBertConfig,
     DistilBertForMaskedLM,
     DistilBertTokenizer,
@@ -61,10 +58,9 @@ from transformers.optimization import (
 )
 
 from textgen.config.model_args import LanguageModelingArgs
-from textgen.config.utils import sweep_config_to_sweep_values
 from textgen.custom_models.models import ElectraForLanguageModelingModel
 from textgen.language_modeling.language_modeling_utils import SimpleDataset, load_hf_dataset, mask_tokens
-from textgen.utils.log import logger
+from loguru import logger
 
 try:
     import wandb
@@ -76,7 +72,6 @@ except ImportError:
 MODEL_CLASSES = {
     "auto": (AutoConfig, AutoModelWithLMHead, AutoTokenizer),
     "bert": (BertConfig, BertForMaskedLM, BertTokenizer),
-    "camembert": (CamembertConfig, CamembertForMaskedLM, CamembertTokenizer),
     "distilbert": (DistilBertConfig, DistilBertForMaskedLM, DistilBertTokenizer),
     "electra": (ElectraConfig, ElectraForLanguageModelingModel, ElectraTokenizer),
     "gpt2": (GPT2Config, GPT2LMHeadModel, GPT2Tokenizer),
@@ -84,6 +79,9 @@ MODEL_CLASSES = {
     "openai-gpt": (OpenAIGPTConfig, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer),
     "roberta": (RobertaConfig, RobertaForMaskedLM, RobertaTokenizer),
 }
+use_cuda = torch.cuda.is_available()
+os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 class LanguageModelingModel:
@@ -95,7 +93,7 @@ class LanguageModelingModel:
             discriminator_name=None,
             train_files=None,
             args=None,
-            use_cuda=True,
+            use_cuda=use_cuda,
             cuda_device=-1,
             **kwargs,
     ):
@@ -122,13 +120,7 @@ class LanguageModelingModel:
         elif isinstance(args, LanguageModelingArgs):
             self.args = args
 
-        if "sweep_config" in kwargs:
-            self.is_sweeping = True
-            sweep_config = kwargs.pop("sweep_config")
-            sweep_values = sweep_config_to_sweep_values(sweep_config)
-            self.args.update_from_dict(sweep_values)
-        else:
-            self.is_sweeping = False
+        self.is_sweeping = False
 
         if self.args.manual_seed:
             random.seed(self.args.manual_seed)
@@ -155,7 +147,7 @@ class LanguageModelingModel:
                 )
         else:
             self.device = "cpu"
-
+        logger.debug(f"Device: {self.device}")
         self.results = {}
 
         if not use_cuda:

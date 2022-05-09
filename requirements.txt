@@ -1,9 +1,10 @@
-colorlog
+loguru
 jieba>=0.39
-transformers
+transformers>=4.6.0
 datasets
 gensim>=4.0.0
 text2vec
-tensorboardX
-tqdm
+tensorboard
+tqdm>=4.47.0
 pandas
+wandb>=0.10.32

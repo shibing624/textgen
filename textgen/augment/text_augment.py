@@ -3,17 +3,23 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
+from loguru import logger
 from text2vec import Word2Vec
 
 from textgen.augment.sentence_level_augment import back_translation
-from textgen.augment.word_level_augment import (get_data_idf, RandomReplace, DeleteReplace, InsertReplace,
-                                                TfIdfWordReplace, MixWordReplace)
+from textgen.augment.word_level_augment import (
+    get_data_idf,
+    RandomReplace,
+    DeleteReplace,
+    InsertReplace,
+    TfIdfWordReplace,
+    MixWordReplace
+)
 from textgen.augment.word_vocab import build_vocab
-from textgen.utils.log import logger
-from textgen.utils.tokenizer import Tokenizer
+from textgen.augment.tokenizer import Tokenizer
 
 
-class TextAugment(object):
+class TextAugment:
     """
     Text Data Augmentation
     """

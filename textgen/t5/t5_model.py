@@ -3,22 +3,21 @@
 @author:XuMing(xuming624@qq.com)
 @description: refer https://github.com/ThilinaRajapakse/simpletransformers
 """
+
 import math
 import os
 import random
 import warnings
 from dataclasses import asdict
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 import numpy as np
 import pandas as pd
 import torch
-from tensorboardX import SummaryWriter
-from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
 from tqdm.auto import tqdm, trange
-from transformers.models.mt5 import MT5Config, MT5ForConditionalGeneration
 from transformers.models.t5 import T5Config, T5ForConditionalGeneration, T5Tokenizer
-from transformers.optimization import AdamW, Adafactor
 from transformers.optimization import (
     get_constant_schedule,
     get_constant_schedule_with_warmup,
@@ -27,9 +26,12 @@ from transformers.optimization import (
     get_cosine_with_hard_restarts_schedule_with_warmup,
     get_polynomial_decay_schedule_with_warmup,
 )
+from transformers.optimization import AdamW, Adafactor
+from transformers.models.mt5 import MT5Config, MT5ForConditionalGeneration
+from transformers.models.byt5 import ByT5Tokenizer
 
+from loguru import logger
 from textgen.config.model_args import T5Args
-from textgen.config.utils import sweep_config_to_sweep_values
 from textgen.t5.t5_utils import T5Dataset, load_hf_dataset
 
 try:
@@ -39,7 +41,9 @@ try:
 except ImportError:
     wandb_available = False
 
-from textgen.utils.log import logger
+use_cuda = torch.cuda.is_available()
+os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 def chunks(lst, n):
@@ -51,19 +55,27 @@ def chunks(lst, n):
 MODEL_CLASSES = {
     "t5": (T5Config, T5ForConditionalGeneration),
     "mt5": (MT5Config, MT5ForConditionalGeneration),
+    "byt5": (T5Config, T5ForConditionalGeneration),
 }
 
 
 class T5Model:
     def __init__(
-            self, model_type, model_name, args=None, tokenizer=None, use_cuda=True, cuda_device=-1, **kwargs,
+            self,
+            model_type,
+            model_name,
+            args=None,
+            tokenizer=None,
+            use_cuda=use_cuda,
+            cuda_device=-1,
+            **kwargs,
     ):
 
         """
         Initializes a T5Model model.
 
         Args:
-            model_type: The type of model (t5, mt5)
+            model_type: The type of model (t5, mt5, byt5)
             model_name: The exact architecture and trained weights to use. This may be a Hugging Face Transformers compatible pre-trained model, a community model, or the path to a directory containing model files.
             args (optional): Default args will be used if this parameter is not provided. If provided, it should be a dict containing the args that should be changed in the default args.
             use_cuda (optional): Use GPU if available. Setting to False will force model to use CPU only.
@@ -78,13 +90,7 @@ class T5Model:
         elif isinstance(args, T5Args):
             self.args = args
 
-        if "sweep_config" in kwargs:
-            self.is_sweeping = True
-            sweep_config = kwargs.pop("sweep_config")
-            sweep_values = sweep_config_to_sweep_values(sweep_config)
-            self.args.update_from_dict(sweep_values)
-        else:
-            self.is_sweeping = False
+        self.is_sweeping = False
 
         if self.args.manual_seed:
             random.seed(self.args.manual_seed)
@@ -121,17 +127,23 @@ class T5Model:
         if isinstance(tokenizer, T5Tokenizer):
             self.tokenizer = tokenizer
             self.model.resize_token_embeddings(len(self.tokenizer))
+        elif model_type == "byt5":
+            self.tokenizer = ByT5Tokenizer.from_pretrained(model_name, truncate=True)
         else:
             self.tokenizer = T5Tokenizer.from_pretrained(model_name, truncate=True)
 
         if self.args.dynamic_quantize:
-            self.model = torch.quantization.quantize_dynamic(self.model, {torch.nn.Linear}, dtype=torch.qint8)
+            self.model = torch.quantization.quantize_dynamic(
+                self.model, {torch.nn.Linear}, dtype=torch.qint8
+            )
 
         if not use_cuda:
             self.args.fp16 = False
 
         if self.args.special_tokens_list:
-            self.tokenizer.add_tokens(self.args.special_tokens_list, special_tokens=True)
+            self.tokenizer.add_tokens(
+                self.args.special_tokens_list, special_tokens=True
+            )
             self.model.resize_token_embeddings(len(self.tokenizer))
 
         self.args.model_type = model_type
@@ -141,11 +153,19 @@ class T5Model:
             self.args.model_name = model_name
 
         if self.args.wandb_project and not wandb_available:
-            warnings.warn("wandb_project specified but wandb is not available. Wandb disabled.")
+            warnings.warn(
+                "wandb_project specified but wandb is not available. Wandb disabled."
+            )
             self.args.wandb_project = None
 
     def train_model(
-            self, train_data, output_dir=None, show_running_loss=True, args=None, eval_data=None, verbose=True,
+            self,
+            train_data,
+            output_dir=None,
+            show_running_loss=True,
+            args=None,
+            eval_data=None,
+            verbose=True,
             **kwargs,
     ):
         """
@@ -184,7 +204,11 @@ class T5Model:
         if not output_dir:
             output_dir = self.args.output_dir
 
-        if os.path.exists(output_dir) and os.listdir(output_dir) and not self.args.overwrite_output_dir:
+        if (
+                os.path.exists(output_dir)
+                and os.listdir(output_dir)
+                and not self.args.overwrite_output_dir
+        ):
             raise ValueError(
                 "Output directory ({}) already exists and is not empty."
                 " Set args.overwrite_output_dir = True to overcome.".format(output_dir)
@@ -208,11 +232,22 @@ class T5Model:
         self.save_model(model=self.model)
 
         if verbose:
-            logger.info(" Training of {} model complete. Saved to {}.".format(self.args.model_name, output_dir))
+            logger.info(
+                " Training of {} model complete. Saved to {}.".format(
+                    self.args.model_name, output_dir
+                )
+            )
 
         return global_step, training_details
 
-    def train(self, train_dataset, output_dir, show_running_loss=True, eval_data=None, verbose=True, **kwargs,
+    def train(
+            self,
+            train_dataset,
+            output_dir,
+            show_running_loss=True,
+            eval_data=None,
+            verbose=True,
+            **kwargs,
     ):
         """
         Trains the model on train_dataset.
@@ -224,7 +259,7 @@ class T5Model:
         args = self.args
         device = self.device
 
-        tb_writer = SummaryWriter(logdir=args.tensorboard_dir)
+        tb_writer = SummaryWriter(log_dir=args.tensorboard_dir)
         train_sampler = RandomSampler(train_dataset)
         train_dataloader = DataLoader(
             train_dataset,
@@ -235,9 +270,17 @@ class T5Model:
 
         if args.max_steps > 0:
             t_total = args.max_steps
-            args.num_train_epochs = args.max_steps // (len(train_dataloader) // args.gradient_accumulation_steps) + 1
+            args.num_train_epochs = (
+                    args.max_steps
+                    // (len(train_dataloader) // args.gradient_accumulation_steps)
+                    + 1
+            )
         else:
-            t_total = len(train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
+            t_total = (
+                    len(train_dataloader)
+                    // args.gradient_accumulation_steps
+                    * args.num_train_epochs
+            )
 
         no_decay = ["bias", "LayerNorm.weight"]
 
@@ -247,7 +290,9 @@ class T5Model:
             params = group.pop("params")
             custom_parameter_names.update(params)
             param_group = {**group}
-            param_group["params"] = [p for n, p in model.named_parameters() if n in params]
+            param_group["params"] = [
+                p for n, p in model.named_parameters() if n in params
+            ]
             optimizer_grouped_parameters.append(param_group)
 
         for group in self.args.custom_layer_parameters:
@@ -278,7 +323,8 @@ class T5Model:
                         "params": [
                             p
                             for n, p in model.named_parameters()
-                            if n not in custom_parameter_names and not any(nd in n for nd in no_decay)
+                            if n not in custom_parameter_names
+                               and not any(nd in n for nd in no_decay)
                         ],
                         "weight_decay": args.weight_decay,
                     },
@@ -286,7 +332,8 @@ class T5Model:
                         "params": [
                             p
                             for n, p in model.named_parameters()
-                            if n not in custom_parameter_names and any(nd in n for nd in no_decay)
+                            if n not in custom_parameter_names
+                               and any(nd in n for nd in no_decay)
                         ],
                         "weight_decay": 0.0,
                     },
@@ -294,10 +341,16 @@ class T5Model:
             )
 
         warmup_steps = math.ceil(t_total * args.warmup_ratio)
-        args.warmup_steps = warmup_steps if args.warmup_steps == 0 else args.warmup_steps
+        args.warmup_steps = (
+            warmup_steps if args.warmup_steps == 0 else args.warmup_steps
+        )
 
         if args.optimizer == "AdamW":
-            optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
+            optimizer = AdamW(
+                optimizer_grouped_parameters,
+                lr=args.learning_rate,
+                eps=args.adam_epsilon,
+            )
         elif args.optimizer == "Adafactor":
             optimizer = Adafactor(
                 optimizer_grouped_parameters,
@@ -311,7 +364,7 @@ class T5Model:
                 relative_step=args.adafactor_relative_step,
                 warmup_init=args.adafactor_warmup_init,
             )
-            print("Using Adafactor for T5")
+
         else:
             raise ValueError(
                 "{} is not a valid optimizer class. Please use one of ('AdamW', 'Adafactor') instead.".format(
@@ -323,11 +376,15 @@ class T5Model:
             scheduler = get_constant_schedule(optimizer)
 
         elif args.scheduler == "constant_schedule_with_warmup":
-            scheduler = get_constant_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps)
+            scheduler = get_constant_schedule_with_warmup(
+                optimizer, num_warmup_steps=args.warmup_steps
+            )
 
         elif args.scheduler == "linear_schedule_with_warmup":
             scheduler = get_linear_schedule_with_warmup(
-                optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=t_total
+                optimizer,
+                num_warmup_steps=args.warmup_steps,
+                num_training_steps=t_total,
             )
 
         elif args.scheduler == "cosine_schedule_with_warmup":
@@ -364,8 +421,12 @@ class T5Model:
                 and os.path.isfile(os.path.join(args.model_name, "scheduler.pt"))
         ):
             # Load in optimizer and scheduler states
-            optimizer.load_state_dict(torch.load(os.path.join(args.model_name, "optimizer.pt")))
-            scheduler.load_state_dict(torch.load(os.path.join(args.model_name, "scheduler.pt")))
+            optimizer.load_state_dict(
+                torch.load(os.path.join(args.model_name, "optimizer.pt"))
+            )
+            scheduler.load_state_dict(
+                torch.load(os.path.join(args.model_name, "scheduler.pt"))
+            )
 
         if args.n_gpu > 1:
             model = torch.nn.DataParallel(model)
@@ -376,7 +437,9 @@ class T5Model:
         training_progress_scores = None
         tr_loss, logging_loss = 0.0, 0.0
         model.zero_grad()
-        train_iterator = trange(int(args.num_train_epochs), desc="Epoch", disable=args.silent, mininterval=0)
+        train_iterator = trange(
+            int(args.num_train_epochs), desc="Epoch", disable=args.silent, mininterval=0
+        )
         epoch_number = 0
         best_eval_metric = None
         early_stopping_counter = 0
@@ -392,15 +455,22 @@ class T5Model:
                 else:
                     checkpoint_suffix = checkpoint_suffix[-1]
                 global_step = int(checkpoint_suffix)
-                epochs_trained = global_step // (len(train_dataloader) // args.gradient_accumulation_steps)
+                epochs_trained = global_step // (
+                        len(train_dataloader) // args.gradient_accumulation_steps
+                )
                 steps_trained_in_current_epoch = global_step % (
                         len(train_dataloader) // args.gradient_accumulation_steps
                 )
 
-                logger.info("   Continuing training from checkpoint, will skip to saved global_step")
+                logger.info(
+                    "   Continuing training from checkpoint, will skip to saved global_step"
+                )
                 logger.info("   Continuing training from epoch %d", epochs_trained)
                 logger.info("   Continuing training from global step %d", global_step)
-                logger.info("   Will skip the first %d steps in the current epoch", steps_trained_in_current_epoch)
+                logger.info(
+                    "   Will skip the first %d steps in the current epoch",
+                    steps_trained_in_current_epoch,
+                )
             except ValueError:
                 logger.info("   Starting fine-tuning.")
 
@@ -408,8 +478,14 @@ class T5Model:
             training_progress_scores = self._create_training_progress_scores(**kwargs)
 
         if args.wandb_project:
-            wandb.init(project=args.wandb_project, config={**asdict(args)}, **args.wandb_kwargs)
+            wandb.init(
+                project=args.wandb_project,
+                config={**asdict(args)},
+                **args.wandb_kwargs,
+            )
+            wandb.run._label(repo="simpletransformers")
             wandb.watch(self.model)
+            self.wandb_run_id = wandb.run.id
 
         if args.fp16:
             from torch.cuda import amp
@@ -421,7 +497,9 @@ class T5Model:
             if epochs_trained > 0:
                 epochs_trained -= 1
                 continue
-            train_iterator.set_description(f"Epoch {epoch_number + 1} of {args.num_train_epochs}")
+            train_iterator.set_description(
+                f"Epoch {epoch_number + 1} of {args.num_train_epochs}"
+            )
             batch_iterator = tqdm(
                 train_dataloader,
                 desc=f"Running Epoch {epoch_number} of {args.num_train_epochs}",
@@ -445,7 +523,9 @@ class T5Model:
                     loss = outputs[0]
 
                 if args.n_gpu > 1:
-                    loss = loss.mean()  # mean() to average on multi-gpu parallel training
+                    loss = (
+                        loss.mean()
+                    )  # mean() to average on multi-gpu parallel training
 
                 current_loss = loss.item()
 
@@ -467,7 +547,9 @@ class T5Model:
                     if args.fp16:
                         scaler.unscale_(optimizer)
                     if args.optimizer == "AdamW":
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                        torch.nn.utils.clip_grad_norm_(
+                            model.parameters(), args.max_grad_norm
+                        )
 
                     if args.fp16:
                         scaler.step(optimizer)
@@ -480,8 +562,14 @@ class T5Model:
 
                     if args.logging_steps > 0 and global_step % args.logging_steps == 0:
                         # Log metrics
-                        tb_writer.add_scalar("lr", scheduler.get_last_lr()[0], global_step)
-                        tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
+                        tb_writer.add_scalar(
+                            "lr", scheduler.get_last_lr()[0], global_step
+                        )
+                        tb_writer.add_scalar(
+                            "loss",
+                            (tr_loss - logging_loss) / args.logging_steps,
+                            global_step,
+                        )
                         logging_loss = tr_loss
                         if args.wandb_project or self.is_sweeping:
                             wandb.log(
@@ -494,9 +582,13 @@ class T5Model:
 
                     if args.save_steps > 0 and global_step % args.save_steps == 0:
                         # Save model checkpoint
-                        output_dir_current = os.path.join(output_dir, "checkpoint-{}".format(global_step))
+                        output_dir_current = os.path.join(
+                            output_dir, "checkpoint-{}".format(global_step)
+                        )
 
-                        self.save_model(output_dir_current, optimizer, scheduler, model=model)
+                        self.save_model(
+                            output_dir_current, optimizer, scheduler, model=model
+                        )
 
                     if args.evaluate_during_training and (
                             args.evaluate_during_training_steps > 0
@@ -510,12 +602,25 @@ class T5Model:
                             **kwargs,
                         )
                         for key, value in results.items():
-                            tb_writer.add_scalar("eval_{}".format(key), value, global_step)
+                            try:
+                                tb_writer.add_scalar(
+                                    "eval_{}".format(key), value, global_step
+                                )
+                            except (NotImplementedError, AssertionError):
+                                pass
 
-                        output_dir_current = os.path.join(output_dir, "checkpoint-{}".format(global_step))
+                        output_dir_current = os.path.join(
+                            output_dir, "checkpoint-{}".format(global_step)
+                        )
 
                         if args.save_eval_checkpoints:
-                            self.save_model(output_dir_current, optimizer, scheduler, model=model, results=results)
+                            self.save_model(
+                                output_dir_current,
+                                optimizer,
+                                scheduler,
+                                model=model,
+                                results=results,
+                            )
 
                         training_progress_scores["global_step"].append(global_step)
                         training_progress_scores["train_loss"].append(current_loss)
@@ -523,7 +628,10 @@ class T5Model:
                             training_progress_scores[key].append(results[key])
                         report = pd.DataFrame(training_progress_scores)
                         report.to_csv(
-                            os.path.join(args.output_dir, "training_progress_scores.csv"), index=False,
+                            os.path.join(
+                                args.output_dir, "training_progress_scores.csv"
+                            ),
+                            index=False,
                         )
 
                         if args.wandb_project or self.is_sweeping:
@@ -531,25 +639,49 @@ class T5Model:
 
                         if not best_eval_metric:
                             best_eval_metric = results[args.early_stopping_metric]
-                            self.save_model(args.best_model_dir, optimizer, scheduler, model=model, results=results)
+                            self.save_model(
+                                args.best_model_dir,
+                                optimizer,
+                                scheduler,
+                                model=model,
+                                results=results,
+                            )
                         if best_eval_metric and args.early_stopping_metric_minimize:
-                            if results[args.early_stopping_metric] - best_eval_metric < args.early_stopping_delta:
+                            if (
+                                    results[args.early_stopping_metric] - best_eval_metric
+                                    < args.early_stopping_delta
+                            ):
                                 best_eval_metric = results[args.early_stopping_metric]
                                 self.save_model(
-                                    args.best_model_dir, optimizer, scheduler, model=model, results=results
+                                    args.best_model_dir,
+                                    optimizer,
+                                    scheduler,
+                                    model=model,
+                                    results=results,
                                 )
                                 early_stopping_counter = 0
                             else:
                                 if args.use_early_stopping:
-                                    if early_stopping_counter < args.early_stopping_patience:
+                                    if (
+                                            early_stopping_counter
+                                            < args.early_stopping_patience
+                                    ):
                                         early_stopping_counter += 1
                                         if verbose:
-                                            logger.info(f" No improvement in {args.early_stopping_metric}")
-                                            logger.info(f" Current step: {early_stopping_counter}")
-                                            logger.info(f" Early stopping patience: {args.early_stopping_patience}")
+                                            logger.info(
+                                                f" No improvement in {args.early_stopping_metric}"
+                                            )
+                                            logger.info(
+                                                f" Current step: {early_stopping_counter}"
+                                            )
+                                            logger.info(
+                                                f" Early stopping patience: {args.early_stopping_patience}"
+                                            )
                                     else:
                                         if verbose:
-                                            logger.info(f" Patience of {args.early_stopping_patience} steps reached")
+                                            logger.info(
+                                                f" Patience of {args.early_stopping_patience} steps reached"
+                                            )
                                             logger.info(" Training terminated.")
                                             train_iterator.close()
                                         return (
@@ -559,23 +691,41 @@ class T5Model:
                                             else training_progress_scores,
                                         )
                         else:
-                            if results[args.early_stopping_metric] - best_eval_metric > args.early_stopping_delta:
+                            if (
+                                    results[args.early_stopping_metric] - best_eval_metric
+                                    > args.early_stopping_delta
+                            ):
                                 best_eval_metric = results[args.early_stopping_metric]
                                 self.save_model(
-                                    args.best_model_dir, optimizer, scheduler, model=model, results=results
+                                    args.best_model_dir,
+                                    optimizer,
+                                    scheduler,
+                                    model=model,
+                                    results=results,
                                 )
                                 early_stopping_counter = 0
                             else:
                                 if args.use_early_stopping:
-                                    if early_stopping_counter < args.early_stopping_patience:
+                                    if (
+                                            early_stopping_counter
+                                            < args.early_stopping_patience
+                                    ):
                                         early_stopping_counter += 1
                                         if verbose:
-                                            logger.info(f" No improvement in {args.early_stopping_metric}")
-                                            logger.info(f" Current step: {early_stopping_counter}")
-                                            logger.info(f" Early stopping patience: {args.early_stopping_patience}")
+                                            logger.info(
+                                                f" No improvement in {args.early_stopping_metric}"
+                                            )
+                                            logger.info(
+                                                f" Current step: {early_stopping_counter}"
+                                            )
+                                            logger.info(
+                                                f" Early stopping patience: {args.early_stopping_patience}"
+                                            )
                                     else:
                                         if verbose:
-                                            logger.info(f" Patience of {args.early_stopping_patience} steps reached")
+                                            logger.info(
+                                                f" Patience of {args.early_stopping_patience} steps reached"
+                                            )
                                             logger.info(" Training terminated.")
                                             train_iterator.close()
                                         return (
@@ -587,7 +737,9 @@ class T5Model:
                         model.train()
 
             epoch_number += 1
-            output_dir_current = os.path.join(output_dir, "checkpoint-{}-epoch-{}".format(global_step, epoch_number))
+            output_dir_current = os.path.join(
+                output_dir, "checkpoint-{}-epoch-{}".format(global_step, epoch_number)
+            )
 
             if args.save_model_every_epoch or args.evaluate_during_training:
                 os.makedirs(output_dir_current, exist_ok=True)
@@ -604,37 +756,68 @@ class T5Model:
                 )
 
                 if args.save_eval_checkpoints:
-                    self.save_model(output_dir_current, optimizer, scheduler, results=results)
+                    self.save_model(
+                        output_dir_current, optimizer, scheduler, results=results
+                    )
 
                 training_progress_scores["global_step"].append(global_step)
                 training_progress_scores["train_loss"].append(current_loss)
                 for key in results:
                     training_progress_scores[key].append(results[key])
                 report = pd.DataFrame(training_progress_scores)
-                report.to_csv(os.path.join(args.output_dir, "training_progress_scores.csv"), index=False)
+                report.to_csv(
+                    os.path.join(args.output_dir, "training_progress_scores.csv"),
+                    index=False,
+                )
 
                 if args.wandb_project or self.is_sweeping:
                     wandb.log(self._get_last_metrics(training_progress_scores))
 
                 if not best_eval_metric:
                     best_eval_metric = results[args.early_stopping_metric]
-                    self.save_model(args.best_model_dir, optimizer, scheduler, model=model, results=results)
+                    self.save_model(
+                        args.best_model_dir,
+                        optimizer,
+                        scheduler,
+                        model=model,
+                        results=results,
+                    )
                 if best_eval_metric and args.early_stopping_metric_minimize:
-                    if results[args.early_stopping_metric] - best_eval_metric < args.early_stopping_delta:
+                    if (
+                            results[args.early_stopping_metric] - best_eval_metric
+                            < args.early_stopping_delta
+                    ):
                         best_eval_metric = results[args.early_stopping_metric]
-                        self.save_model(args.best_model_dir, optimizer, scheduler, model=model, results=results)
+                        self.save_model(
+                            args.best_model_dir,
+                            optimizer,
+                            scheduler,
+                            model=model,
+                            results=results,
+                        )
                         early_stopping_counter = 0
                     else:
-                        if args.use_early_stopping and args.early_stopping_consider_epochs:
+                        if (
+                                args.use_early_stopping
+                                and args.early_stopping_consider_epochs
+                        ):
                             if early_stopping_counter < args.early_stopping_patience:
                                 early_stopping_counter += 1
                                 if verbose:
-                                    logger.info(f" No improvement in {args.early_stopping_metric}")
-                                    logger.info(f" Current step: {early_stopping_counter}")
-                                    logger.info(f" Early stopping patience: {args.early_stopping_patience}")
+                                    logger.info(
+                                        f" No improvement in {args.early_stopping_metric}"
+                                    )
+                                    logger.info(
+                                        f" Current step: {early_stopping_counter}"
+                                    )
+                                    logger.info(
+                                        f" Early stopping patience: {args.early_stopping_patience}"
+                                    )
                             else:
                                 if verbose:
-                                    logger.info(f" Patience of {args.early_stopping_patience} steps reached")
+                                    logger.info(
+                                        f" Patience of {args.early_stopping_patience} steps reached"
+                                    )
                                     logger.info(" Training terminated.")
                                     train_iterator.close()
                                 return (
@@ -644,21 +827,41 @@ class T5Model:
                                     else training_progress_scores,
                                 )
                 else:
-                    if results[args.early_stopping_metric] - best_eval_metric > args.early_stopping_delta:
+                    if (
+                            results[args.early_stopping_metric] - best_eval_metric
+                            > args.early_stopping_delta
+                    ):
                         best_eval_metric = results[args.early_stopping_metric]
-                        self.save_model(args.best_model_dir, optimizer, scheduler, model=model, results=results)
+                        self.save_model(
+                            args.best_model_dir,
+                            optimizer,
+                            scheduler,
+                            model=model,
+                            results=results,
+                        )
                         early_stopping_counter = 0
                     else:
-                        if args.use_early_stopping and args.early_stopping_consider_epochs:
+                        if (
+                                args.use_early_stopping
+                                and args.early_stopping_consider_epochs
+                        ):
                             if early_stopping_counter < args.early_stopping_patience:
                                 early_stopping_counter += 1
                                 if verbose:
-                                    logger.info(f" No improvement in {args.early_stopping_metric}")
-                                    logger.info(f" Current step: {early_stopping_counter}")
-                                    logger.info(f" Early stopping patience: {args.early_stopping_patience}")
+                                    logger.info(
+                                        f" No improvement in {args.early_stopping_metric}"
+                                    )
+                                    logger.info(
+                                        f" Current step: {early_stopping_counter}"
+                                    )
+                                    logger.info(
+                                        f" Early stopping patience: {args.early_stopping_patience}"
+                                    )
                             else:
                                 if verbose:
-                                    logger.info(f" Patience of {args.early_stopping_patience} steps reached")
+                                    logger.info(
+                                        f" Patience of {args.early_stopping_patience} steps reached"
+                                    )
                                     logger.info(" Training terminated.")
                                     train_iterator.close()
                                 return (
@@ -670,10 +873,14 @@ class T5Model:
 
         return (
             global_step,
-            tr_loss / global_step if not self.args.evaluate_during_training else training_progress_scores,
+            tr_loss / global_step
+            if not self.args.evaluate_during_training
+            else training_progress_scores,
         )
 
-    def eval_model(self, eval_data, output_dir=None, verbose=True, silent=False, **kwargs):
+    def eval_model(
+            self, eval_data, output_dir=None, verbose=True, silent=False, **kwargs
+    ):
         """
         Evaluates the model on eval_data. Saves results to output_dir.
 
@@ -697,25 +904,36 @@ class T5Model:
 
         self._move_model_to_device()
 
-        eval_dataset = self.load_and_cache_examples(eval_data, evaluate=True, verbose=verbose, silent=silent)
+        eval_dataset = self.load_and_cache_examples(
+            eval_data, evaluate=True, verbose=verbose, silent=silent
+        )
         os.makedirs(output_dir, exist_ok=True)
 
-        result = self.evaluate(eval_dataset, output_dir, verbose=verbose, silent=silent, **kwargs)
+        result = self.evaluate(
+            eval_dataset, output_dir, verbose=verbose, silent=silent, **kwargs
+        )
         self.results.update(result)
 
         if self.args.evaluate_generated_text:
             if self.args.preprocess_inputs:
                 to_predict = [
                     prefix + ": " + input_text
-                    for prefix, input_text in zip(eval_data["prefix"], eval_data["input_text"])
+                    for prefix, input_text in zip(
+                        eval_data["prefix"], eval_data["input_text"]
+                    )
                 ]
             else:
                 to_predict = [
-                    prefix + input_text for prefix, input_text in zip(eval_data["prefix"], eval_data["input_text"])
+                    prefix + input_text
+                    for prefix, input_text in zip(
+                        eval_data["prefix"], eval_data["input_text"]
+                    )
                 ]
             preds = self.predict(to_predict)
 
-            result = self.compute_metrics(eval_data["target_text"].tolist(), preds, **kwargs)
+            result = self.compute_metrics(
+                eval_data["target_text"].tolist(), preds, **kwargs
+            )
             self.results.update(result)
 
         if verbose:
@@ -738,7 +956,9 @@ class T5Model:
         results = {}
 
         eval_sampler = SequentialSampler(eval_dataset)
-        eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size)
+        eval_dataloader = DataLoader(
+            eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size
+        )
 
         if args.n_gpu > 1:
             model = torch.nn.DataParallel(model)
@@ -753,7 +973,9 @@ class T5Model:
         if self.args.fp16:
             from torch.cuda import amp
 
-        for batch in tqdm(eval_dataloader, disable=args.silent or silent, desc="Running Evaluation"):
+        for batch in tqdm(
+                eval_dataloader, disable=args.silent or silent, desc="Running Evaluation"
+        ):
             inputs = self._get_inputs_dict(batch)
             with torch.no_grad():
                 if self.args.fp16:
@@ -834,7 +1056,9 @@ class T5Model:
             self.model.to("cpu")
             with Pool(self.args.process_count) as p:
                 if self.args.multiprocessing_chunksize == -1:
-                    chunksize = max(len(all_outputs) // (self.args.process_count * 2), 500)
+                    chunksize = max(
+                        len(all_outputs) // (self.args.process_count * 2), 500
+                    )
                 else:
                     chunksize = self.args.multiprocessing_chunksize
                 outputs = list(
@@ -849,7 +1073,9 @@ class T5Model:
         else:
             outputs = [
                 self.tokenizer.decode(
-                    output_id, skip_special_tokens=self.args.skip_special_tokens, clean_up_tokenization_spaces=True
+                    output_id,
+                    skip_special_tokens=self.args.skip_special_tokens,
+                    clean_up_tokenization_spaces=True,
                 )
                 for output_id in all_outputs
             ]
@@ -864,7 +1090,9 @@ class T5Model:
 
     def _decode(self, output_id):
         return self.tokenizer.decode(
-            output_id, skip_special_tokens=self.args.skip_special_tokens, clean_up_tokenization_spaces=True
+            output_id,
+            skip_special_tokens=self.args.skip_special_tokens,
+            clean_up_tokenization_spaces=True,
         )
 
     def compute_metrics(self, labels, preds, **kwargs):
@@ -905,11 +1133,17 @@ class T5Model:
             labels = batch[2]
             labels[labels == self.tokenizer.pad_token_id] = -100
 
-            inputs = {"input_ids": input_ids, "attention_mask": attention_mask, "labels": labels}
+            inputs = {
+                "input_ids": input_ids,
+                "attention_mask": attention_mask,
+                "labels": labels,
+            }
 
             return inputs
 
-    def load_and_cache_examples(self, data, evaluate=False, no_cache=False, verbose=True, silent=False):
+    def load_and_cache_examples(
+            self, data, evaluate=False, no_cache=False, verbose=True, silent=False
+    ):
         """
         Creates a T5Dataset from data.
 
@@ -934,7 +1168,12 @@ class T5Model:
             CustomDataset = args.dataset_class
             return CustomDataset(tokenizer, args, data, mode)
         else:
-            return T5Dataset(tokenizer, self.args, data, mode, )
+            return T5Dataset(
+                tokenizer,
+                self.args,
+                data,
+                mode,
+            )
 
     def _create_training_progress_scores(self, **kwargs):
         extra_metrics = {key: [] for key in kwargs}
@@ -950,7 +1189,9 @@ class T5Model:
     def _get_last_metrics(self, metric_values):
         return {metric: values[-1] for metric, values in metric_values.items()}
 
-    def save_model(self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None):
+    def save_model(
+            self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
+    ):
         if not output_dir:
             output_dir = self.args.output_dir
         os.makedirs(output_dir, exist_ok=True)
@@ -962,8 +1203,12 @@ class T5Model:
             self.tokenizer.save_pretrained(output_dir)
             torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
             if optimizer and scheduler and self.args.save_optimizer_and_scheduler:
-                torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
-                torch.save(scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+                torch.save(
+                    optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt")
+                )
+                torch.save(
+                    scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt")
+                )
             self.save_model_args(output_dir)
 
         if results:

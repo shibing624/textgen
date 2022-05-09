@@ -31,16 +31,23 @@ from transformers import (
 )
 
 from textgen.config.model_args import LanguageGenerationArgs
-from textgen.config.utils import sweep_config_to_sweep_values
 from textgen.language_generation.language_generation_utils import PREPROCESSING_FUNCTIONS
-from textgen.utils.log import logger
-
+from loguru import logger
+use_cuda = torch.cuda.is_available()
+os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 MAX_LENGTH = int(10000)  # Hardcoded max length to avoid infinite loop
 
 
 class LanguageGenerationModel:
     def __init__(
-            self, model_type, model_name, args=None, use_cuda=True, cuda_device=-1, **kwargs,
+        self,
+        model_type,
+        model_name,
+        args=None,
+        use_cuda=use_cuda,
+        cuda_device=-1,
+        **kwargs,
     ):
 
         """
@@ -53,7 +60,7 @@ class LanguageGenerationModel:
             use_cuda (optional): Use GPU if available. Setting to False will force model to use CPU only.
             cuda_device (optional): Specific GPU that should be used. Will use the first available GPU by default.
             **kwargs (optional): For providing proxies, force_download, resume_download, cache_dir and other options specific to the 'from_pretrained' implementation where this will be supplied.
-        """  # noqa: ignore flake8
+        """  # noqa: ignore flake8"
 
         MODEL_CLASSES = {
             "gpt2": (GPT2Config, GPT2LMHeadModel, GPT2Tokenizer),
@@ -71,13 +78,7 @@ class LanguageGenerationModel:
         elif isinstance(args, LanguageGenerationArgs):
             self.args = args
 
-        if "sweep_config" in kwargs:
-            self.is_sweeping = True
-            sweep_config = kwargs.pop("sweep_config")
-            sweep_values = sweep_config_to_sweep_values(sweep_config)
-            self.args.update_from_dict(sweep_values)
-        else:
-            self.is_sweeping = False
+        self.is_sweeping = False
 
         if self.args.manual_seed:
             random.seed(self.args.manual_seed)
@@ -99,9 +100,12 @@ class LanguageGenerationModel:
                 )
         else:
             self.device = "cpu"
+        logger.debug(f"Device: {self.device}")
 
         if self.args.special_tokens_list:
-            self.tokenizer.add_tokens(self.args.special_tokens_list, special_tokens=True)
+            self.tokenizer.add_tokens(
+                self.args.special_tokens_list, special_tokens=True
+            )
             self.model.resize_token_embeddings(len(self.tokenizer))
 
         self.args.model_name = model_name
@@ -110,18 +114,29 @@ class LanguageGenerationModel:
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
 
         if self.args.tokenizer_name:
-            self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name, cache_dir=self.args.cache_dir)
+            self.tokenizer = tokenizer_class.from_pretrained(
+                self.args.tokenizer_name, cache_dir=self.args.cache_dir
+            )
         else:
-            self.tokenizer = tokenizer_class.from_pretrained(model_name, cache_dir=self.args.cache_dir, **kwargs)
+            self.tokenizer = tokenizer_class.from_pretrained(
+                model_name, cache_dir=self.args.cache_dir, **kwargs
+            )
             self.args.tokenizer_name = model_name
 
         if self.args.config_name:
-            self.config = config_class.from_pretrained(self.args.config_name, cache_dir=self.args.cache_dir)
+            self.config = config_class.from_pretrained(
+                self.args.config_name, cache_dir=self.args.cache_dir
+            )
         else:
-            self.config = config_class.from_pretrained(model_name, cache_dir=self.args.cache_dir, **kwargs)
+            self.config = config_class.from_pretrained(
+                model_name, cache_dir=self.args.cache_dir, **kwargs
+            )
 
         self.model = model_class.from_pretrained(
-            model_name, config=self.config, cache_dir=self.args.cache_dir, **kwargs,
+            model_name,
+            config=self.config,
+            cache_dir=self.args.cache_dir,
+            **kwargs,
         )
 
         self.model.to(self.device)
@@ -158,14 +173,19 @@ class LanguageGenerationModel:
         requires_preprocessing = args.model_type in PREPROCESSING_FUNCTIONS.keys()
         if requires_preprocessing:
             prepare_input = PREPROCESSING_FUNCTIONS.get(args.model_type)
-            preprocessed_prompt_text = prepare_input(args, model, tokenizer, prompt_text)
+            preprocessed_prompt_text = prepare_input(
+                args, model, tokenizer, prompt_text
+            )
             encoded_prompt = tokenizer.encode(
                 preprocessed_prompt_text,
                 add_special_tokens=False,
                 return_tensors="pt",
+                add_space_before_punct_symbol=True,
             )
         else:
-            encoded_prompt = tokenizer.encode(prompt_text, add_special_tokens=False, return_tensors="pt")
+            encoded_prompt = tokenizer.encode(
+                prompt_text, add_special_tokens=False, return_tensors="pt"
+            )
         encoded_prompt = encoded_prompt.to(device)
 
         output_sequences = model.generate(
@@ -187,18 +207,29 @@ class LanguageGenerationModel:
 
         for generated_sequence_idx, generated_sequence in enumerate(output_sequences):
             if verbose:
-                logger.info("=== GENERATED SEQUENCE {} ===".format(generated_sequence_idx + 1))
+                logger.info(
+                    "=== GENERATED SEQUENCE {} ===".format(generated_sequence_idx + 1)
+                )
             generated_sequence = generated_sequence.tolist()
 
             # Decode text
-            text = tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
+            text = tokenizer.decode(
+                generated_sequence, clean_up_tokenization_spaces=True
+            )
 
             # Remove all text after the stop token
             text = text[: text.find(args.stop_token) if args.stop_token else None]
 
             # Add the prompt at the beginning of the sequence. Remove the excess text that was used for pre-processing
             total_sequence = (
-                    prompt_text + text[len(tokenizer.decode(encoded_prompt[0], clean_up_tokenization_spaces=True)):]
+                prompt_text
+                + text[
+                    len(
+                        tokenizer.decode(
+                            encoded_prompt[0], clean_up_tokenization_spaces=True
+                        )
+                    ) :
+                ]
             )
 
             generated_sequences.append(total_sequence)

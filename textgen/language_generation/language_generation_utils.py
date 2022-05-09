@@ -4,7 +4,7 @@
 @description: refer https://github.com/ThilinaRajapakse/simpletransformers
 """
 
-from textgen.utils.log import logger
+from loguru import logger
 
 # Padding text to help Transformer-XL and XLNet with short prompts as proposed by Aman Rusia
 # in https://github.com/rusiaaman/XLNet-gen#methodology

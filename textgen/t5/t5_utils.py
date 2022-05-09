@@ -14,7 +14,7 @@ from torch.utils.data import Dataset
 from tqdm.auto import tqdm
 from transformers import BertTokenizer
 
-from textgen.utils.log import logger
+from loguru import logger
 
 jieba.setLogLevel('ERROR')
 
@@ -35,11 +35,13 @@ class ZHTokenizer(BertTokenizer):
         return split_tokens
 
 
+
 def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):
     if args.preprocess_inputs:
         return tokenizer.prepare_seq2seq_batch(
             src_texts=[
-                prefix + ": " + input_text for prefix, input_text in zip(dataset["prefix"], dataset["input_text"])
+                prefix + ": " + input_text
+                for prefix, input_text in zip(dataset["prefix"], dataset["input_text"])
             ],
             tgt_texts=dataset["target_text"],
             max_length=args.max_seq_length,
@@ -49,7 +51,10 @@ def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):
         )
     else:
         return tokenizer.prepare_seq2seq_batch(
-            src_texts=[prefix + input_text for prefix, input_text in zip(dataset["prefix"], dataset["input_text"])],
+            src_texts=[
+                prefix + input_text
+                for prefix, input_text in zip(dataset["prefix"], dataset["input_text"])
+            ],
             tgt_texts=dataset["target_text"],
             max_length=args.max_seq_length,
             padding="max_length",
@@ -60,11 +65,21 @@ def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):
 
 def load_hf_dataset(data, tokenizer, args):
     if isinstance(data, str):
-        dataset = load_dataset("csv", data_files=data, delimiter="\t")
+        dataset = load_dataset(
+            "csv",
+            data_files=data,
+            delimiter="\t",
+            download_mode="force_redownload"
+            if args.reprocess_input_data
+            else "reuse_dataset_if_exists",
+        )
     else:
         dataset = HFDataset.from_pandas(data)
 
-    dataset = dataset.map(lambda x: preprocess_batch_for_hf_dataset(x, tokenizer=tokenizer, args=args), batched=True, )
+    dataset = dataset.map(
+        lambda x: preprocess_batch_for_hf_dataset(x, tokenizer=tokenizer, args=args),
+        batched=True,
+    )
 
     dataset.set_format(type="pt", columns=["input_ids", "attention_mask"])
 
@@ -132,12 +147,16 @@ def preprocess_data(data):
 class T5Dataset(Dataset):
     def __init__(self, tokenizer, args, data, mode):
         cached_features_file = os.path.join(
-            args.cache_dir, args.model_name.replace("/", "_") + "_cached_" + str(args.max_seq_length) + str(len(data)),
+            args.cache_dir,
+            args.model_name.replace("/", "_")
+            + "_cached_"
+            + str(args.max_seq_length)
+            + str(len(data)),
         )
 
         if os.path.exists(cached_features_file) and (
-                (not args.reprocess_input_data and not args.no_cache)
-                or (mode == "dev" and args.use_cached_eval_features and not args.no_cache)
+            (not args.reprocess_input_data and not args.no_cache)
+            or (mode == "dev" and args.use_cached_eval_features and not args.no_cache)
         ):
             logger.info(" Loading features from cached file %s", cached_features_file)
             with open(cached_features_file, "rb") as handle:
@@ -147,11 +166,13 @@ class T5Dataset(Dataset):
 
             data = [
                 (prefix, input_text, target_text, tokenizer, args)
-                for prefix, input_text, target_text in zip(data["prefix"], data["input_text"], data["target_text"])
+                for prefix, input_text, target_text in zip(
+                    data["prefix"], data["input_text"], data["target_text"]
+                )
             ]
 
             if (mode == "train" and args.use_multiprocessing) or (
-                    mode == "dev" and args.use_multiprocessing_for_evaluation
+                mode == "dev" and args.use_multiprocessing_for_evaluation
             ):
                 if args.multiprocessing_chunksize == -1:
                     chunksize = max(len(data) // (args.process_count * 2), 500)
@@ -160,13 +181,21 @@ class T5Dataset(Dataset):
 
                 with Pool(args.process_count) as p:
                     self.examples = list(
-                        tqdm(p.imap(preprocess_data, data, chunksize=chunksize), total=len(data), disable=args.silent, )
+                        tqdm(
+                            p.imap(preprocess_data, data, chunksize=chunksize),
+                            total=len(data),
+                            disable=args.silent,
+                        )
                     )
             else:
-                self.examples = [preprocess_data(d) for d in tqdm(data, disable=args.silent)]
+                self.examples = [
+                    preprocess_data(d) for d in tqdm(data, disable=args.silent)
+                ]
 
             if not args.no_cache:
-                logger.info(" Saving features into cached file %s", cached_features_file)
+                logger.info(
+                    " Saving features into cached file %s", cached_features_file
+                )
                 with open(cached_features_file, "wb") as handle:
                     pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
