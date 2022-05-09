@@ -17,15 +17,19 @@ def load_qa_data(file_path):
     data = []
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
-            q = ''
             line = line.strip()
             if line.startswith('='):
+                q = ''
+                a = ''
                 continue
             if line.startswith('Q: '):
                 q = line[3:]
             if line.startswith('A: '):
                 a = line[3:]
-                data.append([q, a])
+                if q and a:
+                    data.append((q, a))
+                    q = ''
+                    a = ''
     return data
 
 
@@ -38,7 +42,7 @@ def main():
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/en/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
-    parser.add_argument('--num_epochs', default=10, type=int, help='Number of training epochs')
+    parser.add_argument('--num_epochs', default=3, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
@@ -56,6 +60,7 @@ def main():
             ["eight", "8"],
         ]
         sub_train_data = load_qa_data(args.train_file)
+        logger.debug('train_data: {}'.format(sub_train_data[:20]))
         train_data += sub_train_data
         train_df = pd.DataFrame(train_data, columns=["input_text", "target_text"])
 
@@ -107,6 +112,7 @@ def main():
              "Not the hacking and gagging and spitting part .",
              ]
         ))
+        print('input: one', ' output:', model.predict(["one"]))
 
 
 if __name__ == '__main__':

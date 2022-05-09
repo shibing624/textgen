@@ -17,8 +17,12 @@ def load_data(file_path):
     data = []
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
-            terms = line.strip().split()
-            data.append([terms[0], terms[1]])
+            line = line.strip()
+            terms = line.split()
+            if len(terms) == 2:
+                data.append([terms[0], terms[1]])
+            else:
+                logger.warning(f'line error: {line}')
     return data
 
 
@@ -31,7 +35,7 @@ def main():
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/zh/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
-    parser.add_argument('--num_epochs', default=10, type=int, help='Number of training epochs')
+    parser.add_argument('--num_epochs', default=3, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
@@ -50,6 +54,7 @@ def main():
         ]
         sub_train_data = load_data(args.train_file)
         train_data += sub_train_data
+        logger.debug('train_data: {}'.format(sub_train_data[:20]))
         train_df = pd.DataFrame(train_data, columns=["input_text", "target_text"])
 
         eval_data = [
@@ -94,7 +99,7 @@ def main():
         model = Seq2SeqModel(args.model_type,
                              os.path.join(args.output_dir, "encoder"),
                              os.path.join(args.output_dir, "decoder"))
-
+        print('input: one', ' output:', model.predict(["one"]))
         print(model.predict(["one", "four", "five"]))
         print(model.predict(["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]))
 
