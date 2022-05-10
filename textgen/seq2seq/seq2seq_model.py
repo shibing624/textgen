@@ -240,7 +240,7 @@ class Seq2SeqModel:
             self.trg_2_ids = None
             self.id_2_trgs = None
 
-    def train_model(self,train_data):
+    def train_model(self,train_data,eval_data=None):
         """
         Trains the model using 'train_data'
 
@@ -325,6 +325,9 @@ class Seq2SeqModel:
                 if is_best:
                     self.save_model()
                     logger.info('Epoch:{}, save new bert model:{}'.format(epoch, self.model_path))
+                if eval_data:
+                    self.eval_model(eval_data)
+
 
         return train_losses
 
@@ -348,19 +351,20 @@ class Seq2SeqModel:
         if self.src_2_ids is None:
             self.src_2_ids = load_word_dict(self.src_vocab_path)
             self.trg_2_ids = load_word_dict(self.trg_vocab_path)
-        if self.model is None and os.path.exists(self.model_path):
-            self.model = Seq2Seq(
-                encoder_vocab_size=len(self.src_2_ids),
-                decoder_vocab_size=len(self.trg_2_ids),
-                embed_size=self.embed_size,
-                enc_hidden_size=self.hidden_size,
-                dec_hidden_size=self.hidden_size,
-                dropout=self.dropout
-            )
-            self.load_model()
-            self.model.to(device)
-        else:
-            raise ValueError("Model not found at {}".format(self.model_path))
+        if self.model is None:
+            if os.path.exists(self.model_path):
+                self.model = Seq2Seq(
+                    encoder_vocab_size=len(self.src_2_ids),
+                    decoder_vocab_size=len(self.trg_2_ids),
+                    embed_size=self.embed_size,
+                    enc_hidden_size=self.hidden_size,
+                    dec_hidden_size=self.hidden_size,
+                    dropout=self.dropout
+                )
+                self.load_model()
+                self.model.to(device)
+            else:
+                raise ValueError("Model not found at {}".format(self.model_path))
         self.model.eval()
 
         train_src, train_trg = one_hot(source_texts, target_texts, self.src_2_ids, self.trg_2_ids, sort_by_len=True)
@@ -410,19 +414,20 @@ class Seq2SeqModel:
         if self.src_2_ids is None:
             self.src_2_ids = load_word_dict(self.src_vocab_path)
             self.trg_2_ids = load_word_dict(self.trg_vocab_path)
-        if self.model is None and os.path.exists(self.model_path):
-            self.model = Seq2Seq(
-                encoder_vocab_size=len(self.src_2_ids),
-                decoder_vocab_size=len(self.trg_2_ids),
-                embed_size=self.embed_size,
-                enc_hidden_size=self.hidden_size,
-                dec_hidden_size=self.hidden_size,
-                dropout=self.dropout
-            )
-            self.load_model()
-            self.model.to(device)
-        else:
-            raise ValueError("Model not found. Please train the model first.")
+        if self.model is None:
+            if os.path.exists(self.model_path):
+                self.model = Seq2Seq(
+                    encoder_vocab_size=len(self.src_2_ids),
+                    decoder_vocab_size=len(self.trg_2_ids),
+                    embed_size=self.embed_size,
+                    enc_hidden_size=self.hidden_size,
+                    dec_hidden_size=self.hidden_size,
+                    dropout=self.dropout
+                )
+                self.load_model()
+                self.model.to(device)
+            else:
+                raise ValueError("Model not found. Please train the model first.")
         self.model.eval()
         result = []
         for query in sentence_list:
