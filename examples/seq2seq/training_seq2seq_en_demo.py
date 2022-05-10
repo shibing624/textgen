@@ -49,27 +49,11 @@ def main():
 
     if args.do_train:
         logger.info('Loading data...')
-        train_data = [
-            ["one", "1"],
-            ["two", "2"],
-            ["three", "3"],
-            ["four", "4"],
-            ["five", "5"],
-            ["six", "6"],
-            ["seven", "7"],
-            ["eight", "8"],
-        ]
-        sub_train_data = load_qa_data(args.train_file)
-        logger.debug('train_data: {}'.format(sub_train_data[:20]))
-        train_data += sub_train_data
+        train_data = load_qa_data(args.train_file)
+        logger.debug('train_data: {}'.format(train_data[:20]))
         train_df = pd.DataFrame(train_data, columns=["input_text", "target_text"])
 
-        eval_data = [
-            ["nine", "9"],
-            ["zero", "0"],
-        ]
-        sub_eval_data = load_qa_data(args.train_file)[:10]
-        eval_data += sub_eval_data
+        eval_data = load_qa_data(args.train_file)[:10]
         eval_df = pd.DataFrame(eval_data, columns=["input_text", "target_text"])
 
         model_args = {
@@ -82,9 +66,9 @@ def main():
             "save_model_every_epoch": False,
             "silent": False,
             "evaluate_generated_text": True,
-            "evaluate_during_training": False,
-            "evaluate_during_training_verbose": False,
-            "use_multiprocessing": False,
+            "evaluate_during_training": True,
+            "evaluate_during_training_verbose": True,
+            "use_multiprocessing": True,
             "save_best_model": True,
             "output_dir": args.output_dir,
             "use_early_stopping": True,
@@ -94,8 +78,8 @@ def main():
         model = Seq2SeqModel(args.model_type, args.model_name, args.model_name, args=model_args)
 
         def count_matches(labels, preds):
-            print(labels)
-            print(preds)
+            logger.debug(f"labels: {labels[:10]}")
+            logger.debug(f"preds: {labels[:10]}")
             return sum([1 if label == pred else 0 for label, pred in zip(labels, preds)])
 
         model.train_model(train_df, eval_data=eval_df, matches=count_matches)
@@ -105,14 +89,11 @@ def main():
         model = Seq2SeqModel(args.model_type,
                              os.path.join(args.output_dir, "encoder"),
                              os.path.join(args.output_dir, "decoder"))
-
-        print(model.predict(["one", "four", "five"]))
         print(model.predict(
             ["that 's the kind of guy she likes ? Pretty ones ?",
              "Not the hacking and gagging and spitting part .",
              ]
         ))
-        print('input: one', ' output:', model.predict(["one"]))
 
 
 if __name__ == '__main__':

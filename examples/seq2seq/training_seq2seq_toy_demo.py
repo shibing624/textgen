@@ -28,25 +28,36 @@ def load_data(file_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', default='zh_dialog.tsv', type=str, help='Training data file')
     parser.add_argument('--model_type', default='bert', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='bert-base-chinese', type=str, help='Transformers model or path')
+    parser.add_argument('--model_name', default='bert-base-cased', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--output_dir', default='./outputs/zh/', type=str, help='Model output directory')
-    parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
+    parser.add_argument('--output_dir', default='./outputs/toy/', type=str, help='Model output directory')
+    parser.add_argument('--max_seq_length', default=10, type=int, help='Max sequence length')
     parser.add_argument('--num_epochs', default=3, type=int, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
 
     if args.do_train:
         logger.info('Loading data...')
-        train_data = load_data(args.train_file)
+        train_data = [
+            ["one", "1"],
+            ["two", "2"],
+            ["three", "3"],
+            ["four", "4"],
+            ["five", "5"],
+            ["six", "6"],
+            ["seven", "7"],
+            ["eight", "8"],
+        ]
         logger.debug('train_data: {}'.format(train_data[:20]))
         train_df = pd.DataFrame(train_data, columns=["input_text", "target_text"])
 
-        eval_data = load_data(args.train_file)[:10]
+        eval_data = [
+            ["nine", "9"],
+            ["zero", "0"],
+        ]
         eval_df = pd.DataFrame(eval_data, columns=["input_text", "target_text"])
 
         model_args = {
@@ -82,7 +93,8 @@ def main():
         model = Seq2SeqModel(args.model_type,
                              os.path.join(args.output_dir, "encoder"),
                              os.path.join(args.output_dir, "decoder"))
-        print(model.predict(["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]))
+        print('input: one', ' output:', model.predict(["one"]))
+        print(model.predict(["four", "five"]))
 
 
 if __name__ == '__main__':
