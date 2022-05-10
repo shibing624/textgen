@@ -85,7 +85,7 @@ python3 setup.py install
 
 # Usage
 
-1. 文本数据增强
+### 1. 文本数据增强
 
 
 example: [examples/text_augmentation_demo.py](examples/text_augmentation_demo.py)
@@ -135,7 +135,7 @@ mix-0.1: ('主要受限于机器学习、深度学习、计算机视觉、智能
 bt: ('主要研究机器学习、深度学习、计算机视觉和智能对话系统', [])
 ```
 
-2. Seq2Seq 模型
+### 2. Seq2Seq 模型
 
 训练并预测ConvSeq2Seq模型：
 
@@ -186,7 +186,8 @@ output:
 ['人工智能是工程和科学的分支,致力于构建思维的机器。', '我的程序运行在python,所以我在任何运脑上工作！', '我不能错热是一个疯狂的人工智能"200年。']
 ```
 
-3. GPT2 模型
+### 3. GPT2 模型
+
 example: [examples/language_generation/gpt2_demo.py](examples/language_generation/gpt2_demo.py)
 
 
