@@ -222,12 +222,12 @@ example: [examples/language_generation/gpt2_demo.py](examples/language_generatio
 
 ## Reference
 
-- [https://github.com/PaddlePaddle/ERNIE](https://github.com/PaddlePaddle/ERNIE)
-- [https://github.com/minimaxir/textgenrnn](https://github.com/minimaxir/textgenrnn)
-- [https://github.com/minimaxir/gpt-2-simple](https://github.com/minimaxir/gpt-2-simple)
-- [https://github.com/asyml/texar](https://github.com/asyml/texar)
-- [https://github.com/yangjianxin1/GPT2-chitchat](https://github.com/yangjianxin1/GPT2-chitchat)
-- [https://github.com/williamSYSU/TextGAN-PyTorch](https://github.com/williamSYSU/TextGAN-PyTorch)
-- [https://github.com/RUCAIBox/TextBox](https://github.com/RUCAIBox/TextBox)
-- [https://github.com/Tiiiger/bert_score]()
-- [https://github.com/1YCxZ/Fake-review-generation](https://github.com/1YCxZ/Fake-review-generation)
+- [PaddlePaddle/ERNIE](https://github.com/PaddlePaddle/ERNIE)
+- [minimaxir/textgenrnn](https://github.com/minimaxir/textgenrnn)
+- [minimaxir/gpt-2-simple](https://github.com/minimaxir/gpt-2-simple)
+- [asyml/texar](https://github.com/asyml/texar)
+- [yangjianxin1/GPT2-chitchat](https://github.com/yangjianxin1/GPT2-chitchat)
+- [williamSYSU/TextGAN-PyTorch](https://github.com/williamSYSU/TextGAN-PyTorch)
+- [RUCAIBox/TextBox](https://github.com/RUCAIBox/TextBox)
+- [Tiiiger/bert_score]()
+- [1YCxZ/Fake-review-generation](https://github.com/1YCxZ/Fake-review-generation)
