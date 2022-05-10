@@ -71,8 +71,10 @@ def main():
 
         def count_matches(labels, preds):
             logger.debug(f"labels: {labels[:10]}")
-            logger.debug(f"preds: {labels[:10]}")
-            return sum([1 if label == pred else 0 for label, pred in zip(labels, preds)])
+            logger.debug(f"preds: {preds[:10]}")
+            match = sum([1 if label == pred else 0 for label, pred in zip(labels, preds)])
+            logger.debug(f"match: {match}")
+            return match
 
         model.train_model(train_df, eval_data=eval_df, matches=count_matches)
         print(model.eval_model(eval_df, matches=count_matches))

@@ -13,19 +13,6 @@ sys.path.append('../..')
 from textgen.seq2seq import Seq2SeqModel
 
 
-def load_data(file_path):
-    data = []
-    with open(file_path, 'r', encoding='utf-8') as f:
-        for line in f:
-            line = line.strip()
-            terms = line.split()
-            if len(terms) == 2:
-                data.append([terms[0], terms[1]])
-            else:
-                logger.warning(f'line error: {line}')
-    return data
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_type', default='bert', type=str, help='Transformers model type')
@@ -33,8 +20,8 @@ def main():
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/toy/', type=str, help='Model output directory')
-    parser.add_argument('--max_seq_length', default=10, type=int, help='Max sequence length')
-    parser.add_argument('--num_epochs', default=3, type=int, help='Number of training epochs')
+    parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
+    parser.add_argument('--num_epochs', default=30, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
@@ -82,8 +69,10 @@ def main():
 
         def count_matches(labels, preds):
             logger.debug(f"labels: {labels[:10]}")
-            logger.debug(f"preds: {labels[:10]}")
-            return sum([1 if label == pred else 0 for label, pred in zip(labels, preds)])
+            logger.debug(f"preds: {preds[:10]}")
+            match = sum([1 if label == pred else 0 for label, pred in zip(labels, preds)])
+            logger.debug(f"match: {match}")
+            return match
 
         model.train_model(train_df, eval_data=eval_df, matches=count_matches)
         print(model.eval_model(eval_df, matches=count_matches))
