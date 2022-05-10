@@ -1,25 +1,25 @@
-# textgen
-
 [![PyPI version](https://badge.fury.io/py/textgen.svg)](https://badge.fury.io/py/textgen)
+[![Downloads](https://pepy.tech/badge/textgen)](https://pepy.tech/project/textgen)
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![GitHub contributors](https://img.shields.io/github/contributors/shibing624/textgen.svg)](https://github.com/shibing624/textgen/graphs/contributors)
 [![License Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![python_vesion](https://img.shields.io/badge/Python-3.5%2B-green.svg)](requirements.txt)
+[![python_version](https://img.shields.io/badge/Python-3.5%2B-green.svg)](requirements.txt)
 [![GitHub issues](https://img.shields.io/github/issues/shibing624/textgen.svg)](https://github.com/shibing624/textgen/issues)
 [![Wechat Group](http://vlog.sfyc.ltd/wechat_everyday/wxgroup_logo.png?imageView2/0/w/60/h/20)](#Contact)
 
-textgen, Text Generation models. 文本生成，包括：UDA，Seq2Seq，ERNIE-GEN，BERT，XLNet，GPT-2等模型实现，开箱即用。
+# TextGen
+🌈 Implementation of Text Generation models. 
+
+**textgen**实现了多种文本生成模型，包括：UDA、Seq2Seq、BERT、XLNet、GPT2、ERNIE-GEN等模型，开箱即用。
 
 
 **Guide**
-
 - [Question](#Question)
 - [Solution](#Solution)
 - [Feature](#Feature)
 - [Install](#install)
 - [Usage](#usage)
 - [Contact](#Contact)
-- [Cite](#Cite)
 - [Reference](#reference)
 
 # Question
@@ -29,9 +29,9 @@ textgen, Text Generation models. 文本生成，包括：UDA，Seq2Seq，ERNIE-G
 # Solution
 
 1. UDA，非核心词替换
-2. EDA，简单数据增广技术：相似词、同义词替换，随机词插入、删除、替换
-3. 回译（bt, back translate），中文-英文-中文
-4. 生成模型，seq2seq，gpt
+2. EDA，简单数据增强技术：相似词、同义词替换，随机词插入、删除、替换
+3. 回译（BT, Back Translate），中文-英文-中文
+4. 生成模型，Seq2Seq，GPT2等
 
 
 # Feature
@@ -50,7 +50,6 @@ textgen, Text Generation models. 文本生成，包括：UDA，Seq2Seq，ERNIE-G
 ### GPT2
 
 基于Transformer的decode结果的自回归生成模型。
-
 
 ### TGLS
 无监督文本生成模型：本文提出[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)——一种基于“先搜索后学习”的无监督文本生成方法，
