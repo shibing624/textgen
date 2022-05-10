@@ -34,7 +34,9 @@ def main():
 
     if args.do_predict:
         model = Seq2SeqModel(model_dir=args.output_dir)
-        print(model.predict(["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]))
+        sentences = ["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
+        print("inputs:", sentences)
+        print(model.predict(sentences))
 
 
 if __name__ == '__main__':

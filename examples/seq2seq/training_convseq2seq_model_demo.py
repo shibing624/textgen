@@ -33,7 +33,9 @@ def main():
     if args.do_predict:
         model = ConvSeq2SeqModel(epochs=args.num_epochs, batch_size=args.batch_size,
                                  model_dir=args.output_dir, max_length=args.max_seq_length)
-        print(model.predict(["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]))
+        sentences = ["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
+        print("inputs:", sentences)
+        print(model.predict(sentences))
 
 
 if __name__ == '__main__':
