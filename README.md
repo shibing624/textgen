@@ -53,15 +53,26 @@ textgen, Text Generation models. 文本生成，包括：UDA，Seq2Seq，ERNIE-G
 
 
 ### TGLS
-无监督文本生成模型：本文提出TGLS——一种基于“先搜索后学习”的无监督文本生成方法，模型反复迭代，最终能生成较高质量的文本。
+无监督文本生成模型：本文提出[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)——一种基于“先搜索后学习”的无监督文本生成方法，
+模型反复迭代，最终能生成较高质量的文本。
 
 
-https://www.jiqizhixin.com/articles/2020-08-11-5
+# Demo
 
+Demo: https://huggingface.co/spaces/shibing624/textgen
 
+![](docs/hf.png)
+
+run example: [examples/gradio_demo.py](examples/gradio_demo.py) to see the demo:
+```shell
+python examples/gradio_demo.py
+```
+
+ 
 # Install
 ```
-pip3 install textgen
+pip3 install torch # conda install pytorch
+pip3 install -U textgen
 ```
 
 or
@@ -72,41 +83,46 @@ cd textgen
 python3 setup.py install
 ```
 
+
 # Usage
 
-1. EDA文本数据增强
+1. 文本数据增强
 
+
+example: [examples/text_augmentation_demo.py](examples/text_augmentation_demo.py)
 ```python
 import sys
 
 sys.path.append('..')
 from textgen.augment import TextAugment
 
-docs = ['主要研究机器学习、深度学习、计算机视觉、智能对话系统相关内容',
-        '晚上肚子好难受',
-        '你会武功吗，我不会',
-        '组装标题质量受限于广告主自提物料的片段质量，且表达丰富度有限',
-        '晚上一个人好孤单，想:找附近的人陪陪我.',
-        ]
-m = TextAugment(sentence_list=docs)
-a = docs[0]
-print(a)
+if __name__ == '__main__':
+    docs = ['主要研究机器学习、深度学习、计算机视觉、智能对话系统相关内容',
+            '晚上肚子好难受',
+            '你会武功吗，我不会',
+            '组装标题质量受限于广告主自提物料的片段质量，且表达丰富度有限',
+            '晚上一个人好孤单，想:找附近的人陪陪我.',
+            ]
+    m = TextAugment(sentence_list=docs)
+    a = docs[0]
+    print(a)
 
-b = m.augment(a, aug_ops='random-0.1')
-print('random-0.1:', b)
+    b = m.augment(a, aug_ops='random-0.1')
+    print('random-0.1:', b)
 
-b = m.augment(a, aug_ops='insert-0.1')
-print('insert-0.1:', b)
+    b = m.augment(a, aug_ops='insert-0.1')
+    print('insert-0.1:', b)
 
-b = m.augment(a, aug_ops='tfidf-0.2')
-print('tfidf-0.2:', b)
+    # tfidf
+    b = m.augment(a, aug_ops='tfidf-0.2')
+    print('tfidf-0.2:', b)
 
-b = m.augment(a, aug_ops='mix-0.1', similar_prob=0.1,
-              random_prob=0.4, delete_prob=0.3, insert_prob=0.2)
-print('mix-0.1:', b)
+    b = m.augment(a, aug_ops='mix-0.1', similar_prob=0.1,
+                  random_prob=0.4, delete_prob=0.3, insert_prob=0.2)
+    print('mix-0.1:', b)
 
-b = m.augment(a, aug_ops='bt')
-print('bt:', b)
+    b = m.augment(a, aug_ops='bt')
+    print('bt:', b)
 ```
 
 output:
@@ -120,55 +136,63 @@ mix-0.1: ('主要受限于机器学习、深度学习、计算机视觉、智能
 bt: ('主要研究机器学习、深度学习、计算机视觉和智能对话系统', [])
 ```
 
-2. text generation base seq2seq
+2. Seq2Seq 模型
 
+训练并预测ConvSeq2Seq模型：
+
+example: [examples/seq2sesq/training_convseq2seq_model_demo.py](examples/seq2seq/training_convseq2seq_model_demo.py)
 ```python
-import textgen
+import argparse
+from loguru import logger
+import sys
 
-a = '你这么早就睡呀，'
-b = textgen.seq2seq(a)
-print(b)
+sys.path.append('../..')
+from textgen.seq2seq.conv_seq2seq_model import ConvSeq2SeqModel
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--train_file', default='zh_dialog.tsv', type=str, help='Training data file')
+    parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
+    parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
+    parser.add_argument('--output_dir', default='./outputs/convseq2seq_zh/', type=str, help='Model output directory')
+    parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
+    parser.add_argument('--num_epochs', default=200, type=int, help='Number of training epochs')
+    parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
+    args = parser.parse_args()
+    logger.info(args)
+
+    if args.do_train:
+        logger.info('Loading data...')
+        model = ConvSeq2SeqModel(epochs=args.num_epochs, batch_size=args.batch_size,
+                                 model_dir=args.output_dir, max_length=args.max_seq_length)
+        model.train_model(args.train_file)
+        print(model.eval_model(args.train_file))
+
+    if args.do_predict:
+        model = ConvSeq2SeqModel(epochs=args.num_epochs, batch_size=args.batch_size,
+                                 model_dir=args.output_dir, max_length=args.max_seq_length)
+        sentences = ["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
+        print("inputs:", sentences)
+        print(model.predict(sentences))
+
+
+if __name__ == '__main__':
+    main()
 ```
 
 output:
 ```bash
-你这么早就睡呀，我还没写完作业呢，你陪我看看这个题怎么写吧。
+["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
+['人工智能是工程和科学的分支,致力于构建思维的机器。', '我的程序运行在python,所以我在任何运脑上工作！', '我不能错热是一个疯狂的人工智能"200年。']
 ```
 
-4. text generation base ernie-gen
+3. GPT2 模型
+example: [examples/language_generation/gpt2_demo.py](examples/language_generation/gpt2_demo.py)
 
-```python
-import textgen
-
-a = '你这么早就睡呀，'
-b = textgen.erniegen(a)
-print(b)
-```
-
-output:
-```bash
-你这么早就睡呀，我还没写完作业呢，你陪我看看这个题怎么写吧。求求你了！
-```
-
-5. text generation base ernie-gen
-
-```python
-import textgen
-
-a = '你这么早就睡呀，'
-b = textgen.erniegen(a)
-print(b)
-```
-
-output:
-```bash
-你这么早就睡呀，我还没写完作业呢，你陪我看看这个题怎么写吧。求求你了！
-```
 
 # TODO
 
-* bert
-* gpt2
 * ernie-gen
 * xlnet
 
