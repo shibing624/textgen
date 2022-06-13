@@ -188,7 +188,8 @@ output:
 
 ### 3. GPT2 模型
 
-example: [examples/language_generation/gpt2_demo.py](examples/language_generation/gpt2_demo.py)
+example: [examples/language_generation/gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/gpt2_demo.py)
+
 
 
 # TODO
