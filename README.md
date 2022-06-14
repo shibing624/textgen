@@ -188,7 +188,7 @@ output:
 
 ### 3. GPT2 模型
 
-example: [examples/language_generation/gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/gpt2_demo.py)
+example: [examples/language_generation/gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_gpt2_demo.py)
 
 ### 4. ByT5 模型
 
