@@ -56,6 +56,7 @@ from transformers.optimization import (
     get_cosine_with_hard_restarts_schedule_with_warmup,
     get_polynomial_decay_schedule_with_warmup,
 )
+from transformers import BertTokenizerFast
 
 from textgen.config.model_args import LanguageModelingArgs
 from textgen.custom_models.models import ElectraForLanguageModelingModel
@@ -157,6 +158,11 @@ class LanguageModelingModel:
         self.args.model_type = model_type
 
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
+
+        # Special tokenizer for chinese gpt2 model
+        if self.args.model_name in ['ckiplab/gpt2-base-chinese']:
+            tokenizer_class = BertTokenizerFast
+
         self.tokenizer_class = tokenizer_class
         new_tokenizer = False
 
@@ -394,7 +400,7 @@ class LanguageModelingModel:
             return pad_sequence(examples, batch_first=True, padding_value=tokenizer.pad_token_id)
 
         if self.is_world_master():
-            tb_writer = SummaryWriter(logdir=args.tensorboard_dir)
+            tb_writer = SummaryWriter(log_dir=args.tensorboard_dir)
         train_sampler = RandomSampler(train_dataset) if args.local_rank == -1 else DistributedSampler(train_dataset)
         if self.args.use_hf_datasets:
             # Inputs are already padded so default collation is fine

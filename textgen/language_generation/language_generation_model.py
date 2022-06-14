@@ -29,6 +29,7 @@ from transformers import (
     XLNetLMHeadModel,
     XLNetTokenizer,
 )
+from transformers import BertTokenizerFast
 
 from textgen.config.model_args import LanguageGenerationArgs
 from textgen.language_generation.language_generation_utils import PREPROCESSING_FUNCTIONS
@@ -112,6 +113,10 @@ class LanguageGenerationModel:
         self.args.model_type = model_type
 
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
+
+        # Special tokenizer for chinese gpt2 model
+        if self.args.model_name in ['ckiplab/gpt2-base-chinese']:
+            tokenizer_class = BertTokenizerFast
 
         if self.args.tokenizer_name:
             self.tokenizer = tokenizer_class.from_pretrained(

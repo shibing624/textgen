@@ -37,6 +37,7 @@ setup(
         'tqdm>=4.47.0',
         'pandas',
         'wandb>=0.10.32',
+        'sacremoses',
     ],
     packages=find_packages(exclude=['tests']),
     package_dir={'textgen': 'textgen'},
