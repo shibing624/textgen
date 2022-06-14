@@ -12,7 +12,7 @@ from textgen.language_modeling import LanguageModelingModel
 
 
 def raw(prompts):
-    model = LanguageGenerationModel("gpt2", "ckiplab/gpt2-base-chinese", args={"max_length": 200})
+    model = LanguageGenerationModel("gpt2", "ckiplab/gpt2-base-chinese", args={"max_length": 64})
     for prompt in prompts:
         # Generate text using the model. Verbose set to False to prevent logging generated sequences.
         generated = model.generate(prompt, verbose=False)
@@ -32,7 +32,7 @@ def finetune(prompts, train_path, test_path):
         "learning_rate": 5e-6,
         "train_batch_size": 8,
         "gradient_accumulation_steps": 8,
-        "num_train_epochs": 1,
+        "num_train_epochs": 3,
         "mlm": False,
         "output_dir": f"outputs/zh-fine-tuned/",
     }
@@ -43,7 +43,7 @@ def finetune(prompts, train_path, test_path):
 
     # Use fine-tuned model
     tokenizer = BertTokenizerFast.from_pretrained("outputs/zh-fine-tuned")
-    model = LanguageGenerationModel("gpt2", "outputs/zh-fine-tuned", args={"max_length": 200}, tokenizer=tokenizer)
+    model = LanguageGenerationModel("gpt2", "outputs/zh-fine-tuned", args={"max_length": 64}, tokenizer=tokenizer)
     for prompt in prompts:
         # Generate text using the model. Verbose set to False to prevent logging generated sequences.
         generated = model.generate(prompt, verbose=False)

@@ -96,6 +96,8 @@ class LanguageModelingModel:
             args=None,
             use_cuda=has_cuda,
             cuda_device=-1,
+            model=None,
+            tokenizer=None,
             **kwargs,
     ):
 
@@ -159,34 +161,6 @@ class LanguageModelingModel:
 
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
 
-        # Special tokenizer for chinese gpt2 model
-        if self.args.model_name in ['ckiplab/gpt2-base-chinese']:
-            tokenizer_class = BertTokenizerFast
-
-        self.tokenizer_class = tokenizer_class
-        new_tokenizer = False
-
-        if self.args.tokenizer_name:
-            self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name, cache_dir=self.args.cache_dir)
-        elif self.args.model_name:
-            if self.args.model_name == "electra":
-                self.tokenizer = tokenizer_class.from_pretrained(
-                    generator_name, cache_dir=self.args.cache_dir, **kwargs
-                )
-                self.args.tokenizer_name = self.args.model_name
-            else:
-                self.tokenizer = tokenizer_class.from_pretrained(model_name, cache_dir=self.args.cache_dir, **kwargs)
-                self.args.tokenizer_name = self.args.model_name
-        else:
-            if not train_files:
-                raise ValueError(
-                    "model_name and tokenizer_name are not specified."
-                    "You must specify train_files to train a Tokenizer."
-                )
-            else:
-                self.train_tokenizer(train_files)
-                new_tokenizer = True
-
         if self.args.config_name:
             self.config = config_class.from_pretrained(self.args.config_name, cache_dir=self.args.cache_dir)
         elif self.args.model_name and self.args.model_name != "electra":
@@ -195,8 +169,39 @@ class LanguageModelingModel:
             self.config = config_class(**self.args.config, **kwargs)
         if self.args.vocab_size:
             self.config.vocab_size = self.args.vocab_size
-        if new_tokenizer:
-            self.config.vocab_size = len(self.tokenizer)
+
+        new_tokenizer = False
+        if tokenizer is None:
+            # Special tokenizer for chinese gpt2 model
+            if self.args.model_name in ['ckiplab/gpt2-base-chinese']:
+                tokenizer_class = BertTokenizerFast
+
+            self.tokenizer_class = tokenizer_class
+            if self.args.tokenizer_name:
+                self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name, cache_dir=self.args.cache_dir)
+            elif self.args.model_name:
+                if self.args.model_name == "electra":
+                    self.tokenizer = tokenizer_class.from_pretrained(
+                        generator_name, cache_dir=self.args.cache_dir, **kwargs
+                    )
+                    self.args.tokenizer_name = self.args.model_name
+                else:
+                    self.tokenizer = tokenizer_class.from_pretrained(model_name, cache_dir=self.args.cache_dir, **kwargs)
+                    self.args.tokenizer_name = self.args.model_name
+            else:
+                if not train_files:
+                    raise ValueError(
+                        "model_name and tokenizer_name are not specified."
+                        "You must specify train_files to train a Tokenizer."
+                    )
+                else:
+                    self.train_tokenizer(train_files)
+                    new_tokenizer = True
+            if new_tokenizer:
+                self.config.vocab_size = len(self.tokenizer)
+        else:
+            self.tokenizer = tokenizer
+
 
         if self.args.model_type == "electra":
             if generator_name:
@@ -226,11 +231,56 @@ class LanguageModelingModel:
         else:
             self.args.block_size = min(self.args.block_size, self.tokenizer.model_max_length, self.args.max_seq_length)
 
-        if self.args.model_name:
-            if self.args.model_type == "electra":
-                if self.args.model_name == "electra":
-                    generator_model = ElectraForMaskedLM.from_pretrained(generator_name)
-                    discriminator_model = ElectraForPreTraining.from_pretrained(discriminator_name)
+        if model is None:
+            if self.args.model_name:
+                if self.args.model_type == "electra":
+                    if self.args.model_name == "electra":
+                        generator_model = ElectraForMaskedLM.from_pretrained(generator_name)
+                        discriminator_model = ElectraForPreTraining.from_pretrained(discriminator_name)
+                        self.model = ElectraForLanguageModelingModel(
+                            config=self.config,
+                            generator_model=generator_model,
+                            discriminator_model=discriminator_model,
+                            generator_config=self.generator_config,
+                            discriminator_config=self.discriminator_config,
+                            tie_generator_and_discriminator_embeddings=self.args.tie_generator_and_discriminator_embeddings,
+                        )
+                        model_to_resize = (
+                            self.model.generator_model.module
+                            if hasattr(self.model.generator_model, "module")
+                            else self.model.generator_model
+                        )
+                        model_to_resize.resize_token_embeddings(len(self.tokenizer))
+
+                        model_to_resize = (
+                            self.model.discriminator_model.module
+                            if hasattr(self.model.discriminator_model, "module")
+                            else self.model.discriminator_model
+                        )
+                        model_to_resize.resize_token_embeddings(len(self.tokenizer))
+                        self.model.generator_model = generator_model
+                        self.model.discriminator_model = discriminator_model
+                    else:
+                        self.model = model_class.from_pretrained(
+                            model_name,
+                            config=self.config,
+                            cache_dir=self.args.cache_dir,
+                            generator_config=self.generator_config,
+                            discriminator_config=self.discriminator_config,
+                            **kwargs,
+                        )
+                        self.model.load_state_dict(
+                            torch.load(os.path.join(self.args.model_name, "pytorch_model.bin"), map_location=self.device)
+                        )
+                else:
+                    self.model = model_class.from_pretrained(
+                        model_name, config=self.config, cache_dir=self.args.cache_dir, **kwargs,
+                    )
+            else:
+                logger.info(" Training language model from scratch")
+                if self.args.model_type == "electra":
+                    generator_model = ElectraForMaskedLM(config=self.generator_config)
+                    discriminator_model = ElectraForPreTraining(config=self.discriminator_config)
                     self.model = ElectraForLanguageModelingModel(
                         config=self.config,
                         generator_model=generator_model,
@@ -252,55 +302,12 @@ class LanguageModelingModel:
                         else self.model.discriminator_model
                     )
                     model_to_resize.resize_token_embeddings(len(self.tokenizer))
-                    self.model.generator_model = generator_model
-                    self.model.discriminator_model = discriminator_model
                 else:
-                    self.model = model_class.from_pretrained(
-                        model_name,
-                        config=self.config,
-                        cache_dir=self.args.cache_dir,
-                        generator_config=self.generator_config,
-                        discriminator_config=self.discriminator_config,
-                        **kwargs,
-                    )
-                    self.model.load_state_dict(
-                        torch.load(os.path.join(self.args.model_name, "pytorch_model.bin"), map_location=self.device)
-                    )
-            else:
-                self.model = model_class.from_pretrained(
-                    model_name, config=self.config, cache_dir=self.args.cache_dir, **kwargs,
-                )
+                    self.model = model_class(config=self.config)
+                    model_to_resize = self.model.module if hasattr(self.model, "module") else self.model
+                    model_to_resize.resize_token_embeddings(len(self.tokenizer))
         else:
-            logger.info(" Training language model from scratch")
-            if self.args.model_type == "electra":
-                generator_model = ElectraForMaskedLM(config=self.generator_config)
-                discriminator_model = ElectraForPreTraining(config=self.discriminator_config)
-                self.model = ElectraForLanguageModelingModel(
-                    config=self.config,
-                    generator_model=generator_model,
-                    discriminator_model=discriminator_model,
-                    generator_config=self.generator_config,
-                    discriminator_config=self.discriminator_config,
-                    tie_generator_and_discriminator_embeddings=self.args.tie_generator_and_discriminator_embeddings,
-                )
-                model_to_resize = (
-                    self.model.generator_model.module
-                    if hasattr(self.model.generator_model, "module")
-                    else self.model.generator_model
-                )
-                model_to_resize.resize_token_embeddings(len(self.tokenizer))
-
-                model_to_resize = (
-                    self.model.discriminator_model.module
-                    if hasattr(self.model.discriminator_model, "module")
-                    else self.model.discriminator_model
-                )
-                model_to_resize.resize_token_embeddings(len(self.tokenizer))
-            else:
-                self.model = model_class(config=self.config)
-                model_to_resize = self.model.module if hasattr(self.model, "module") else self.model
-                model_to_resize.resize_token_embeddings(len(self.tokenizer))
-
+            self.model = model
         if model_type in ["camembert", "xlmroberta"]:
             warnings.warn(
                 f"use_multiprocessing automatically disabled as {model_type}"

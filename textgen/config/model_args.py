@@ -68,7 +68,7 @@ class ModelArgs:
     model_type: str = None
     multiprocessing_chunksize: int = -1
     n_gpu: int = 1
-    no_cache: bool = True
+    no_cache: bool = False
     no_save: bool = False
     not_saved_args: list = field(default_factory=list)
     num_train_epochs: int = 1
