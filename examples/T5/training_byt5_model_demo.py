@@ -17,8 +17,8 @@ def load_data(file_path):
     data = []
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
-            line = line.strip()
-            terms = line.split()
+            line = line.strip('\n')
+            terms = line.split('\t')
             if len(terms) == 2:
                 data.append(['dialog', terms[0], terms[1]])
             else:
