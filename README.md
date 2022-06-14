@@ -151,7 +151,7 @@ from textgen.seq2seq.conv_seq2seq_model import ConvSeq2SeqModel
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', default='zh_dialog.tsv', type=str, help='Training data file')
+    parser.add_argument('--train_file', default='../data/zh_dialog.tsv', type=str, help='Training data file')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/convseq2seq_zh/', type=str, help='Model output directory')
@@ -190,12 +190,45 @@ output:
 
 example: [examples/language_generation/gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/gpt2_demo.py)
 
+### 4. ByT5 模型
+
+example: [examples/t5/training_byt5_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/t5/training_byt5_model_demo.py)
 
 
-# TODO
+### 5. 无监督生成模型
 
-* ernie-gen
-* xlnet
+无监督的中文电商评论生成：从**电商评论**中提取用户表达观点的短句并进行组合来生成仿真评论。
+
+
+example: [examples/unsup_generation_demo.py](examples/unsup_generation_demo.py)
+
+## 效果
+[美迪惠尔 N.M.F针剂水库保湿面膜](https://goods.kaola.com/product/2227311.html)有如下的20句评论，其中有10句是真实用户评论，10句是生成的评论，能看出来么?😂
+```
+还不错还不错还不错还不错。
+东西到了，不知道好不好用。试用过后再来评价。到时看网评都还可以。
+哺乳期唯一使用的护肤品，每天都是素颜，脸面全靠面膜吊着😄补水💦不粘腻一如既往的支持，喜欢💕
+搞活动时买的面膜，不知道这个面膜是真是假敷在脸上面膜纸都有小水泡鼓起来。
+很不错，非常补水，用过的都知道，性价比之王，好用又不贵，正品，用着放心，物流也很快。
+面膜非常好用哦。面膜薄薄的。好像是蚕丝面膜啊。精华很多呢。敷在脸上很舒服。感觉挺保湿的，味道也挺好闻的。就是里面只有单纯的面膜直接敷脸上有点不好弄，哈哈哈
+还可以保湿效果不错水润润的每天贴一片脸也不干了用完了在买点，不错还会继续回购的。
+快递很快，东西很赞！想要得点考拉豆不容易，还要三十个字。时间宝贵，废话不说！用过了就知道了
+挺好用的，朋友推荐来的
+挺好用的，淡淡的，虽然不是很浓精华的感觉，但是效果也蛮好的。划算
+不得不说美迪惠尔的面膜是我用过的最好的面膜之一😎补水效果非常好，没想到这么便宜的价格竟真的能买到真品。
+保湿效果挺好的，面膜很好用。
+期待好的产品。
+一打开包装里面的精华刚刚好，用了补水补水效果不错，物流非常快。
+皮肤很光滑😇比上去速度快三天就到了。
+前两天皮肤干燥连续敷了两个晚上感觉还不错😂补水效果明显！可想而知精华液又多充足😍敷上以后凉凉的很舒服。
+补水效果一般吧～但是我用的韩国背回来的面膜纸不算薄，希望好用会回购的，敷上脸感觉比较清爽～价格还不便宜。
+希望好用，面膜用过了很好用，皮肤水嫩光滑白皙，补水不错，价格也合适。
+就是精华液太少了，保湿效果不错。
+面膜的补水效果非常好，保湿效果确实很赞，这个面膜相对于胶原蛋白和美白的那两款的面膜纸要厚一些，看着价格合适。
+```
+（前10句是真实用户评论，后10句是生成的😆
+
+
 
 # Contact
 

@@ -41,7 +41,7 @@ try:
 except ImportError:
     wandb_available = False
 
-use_cuda = torch.cuda.is_available()
+has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -66,7 +66,7 @@ class T5Model:
             model_name,
             args=None,
             tokenizer=None,
-            use_cuda=use_cuda,
+            use_cuda=has_cuda,
             cuda_device=-1,
             **kwargs,
     ):

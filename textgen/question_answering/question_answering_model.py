@@ -108,14 +108,14 @@ try:
 except ImportError:
     wandb_available = False
 
-use_cuda = torch.cuda.is_available()
+has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 class QuestionAnsweringModel:
     def __init__(
-            self, model_type, model_name, args=None, use_cuda=use_cuda, cuda_device=-1, **kwargs
+            self, model_type, model_name, args=None, use_cuda=has_cuda, cuda_device=-1, **kwargs
     ):
         """
         Initializes a QuestionAnsweringModel model.

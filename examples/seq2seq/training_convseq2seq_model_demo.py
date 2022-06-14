@@ -8,12 +8,12 @@ from loguru import logger
 import sys
 
 sys.path.append('../..')
-from textgen.seq2seq.conv_seq2seq_model import ConvSeq2SeqModel
+from textgen.seq2seq import ConvSeq2SeqModel
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', default='zh_dialog.tsv', type=str, help='Training data file')
+    parser.add_argument('--train_file', default='../data/zh_dialog.tsv', type=str, help='Training data file')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/convseq2seq_zh/', type=str, help='Model output directory')

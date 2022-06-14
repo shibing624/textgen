@@ -21,6 +21,7 @@ ENG_MARK = ['eng']
 
 RESERVED_MARK = NOUN_MARK + VERB_MARK + ADJECTIVE_MARK + ADVERB_MARK + ENG_MARK  # 用于发现新词
 
+jieba.setLogLevel(log_level="ERROR")
 jieba.load_userdict(os.path.join(pwd_path, '../data/user_dict.txt'))
 
 

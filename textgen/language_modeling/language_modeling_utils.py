@@ -92,11 +92,11 @@ class SimpleDataset(Dataset):
                 (not args.reprocess_input_data and not args.no_cache)
                 or (mode == "dev" and args.use_cached_eval_features and not args.no_cache)
         ):
-            logger.info(" Loading features from cached file %s", cached_features_file)
+            logger.info(f" Loading features from cached file {cached_features_file}")
             with open(cached_features_file, "rb") as handle:
                 self.examples = pickle.load(handle)
         else:
-            logger.info(" Creating features from dataset file at %s", args.cache_dir)
+            logger.info(f" Creating features from dataset file at {args.cache_dir}")
 
             if sliding_window:
                 no_padding = True if args.model_type in ["gpt2", "openai-gpt"] else False
@@ -159,7 +159,7 @@ class SimpleDataset(Dataset):
                 else:
                     self.examples = [tokenizer.build_inputs_with_special_tokens(self.examples)]
 
-            logger.info(" Saving features into cached file %s", cached_features_file)
+            logger.info(f" Saving features into cached file {cached_features_file}")
             with open(cached_features_file, "wb") as handle:
                 pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
 

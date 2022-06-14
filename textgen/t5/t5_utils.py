@@ -35,7 +35,6 @@ class ZHTokenizer(BertTokenizer):
         return split_tokens
 
 
-
 def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):
     if args.preprocess_inputs:
         return tokenizer.prepare_seq2seq_batch(
@@ -155,14 +154,14 @@ class T5Dataset(Dataset):
         )
 
         if os.path.exists(cached_features_file) and (
-            (not args.reprocess_input_data and not args.no_cache)
-            or (mode == "dev" and args.use_cached_eval_features and not args.no_cache)
+                (not args.reprocess_input_data and not args.no_cache)
+                or (mode == "dev" and args.use_cached_eval_features and not args.no_cache)
         ):
-            logger.info(" Loading features from cached file %s", cached_features_file)
+            logger.info(" Loading features from cached file %s" % cached_features_file)
             with open(cached_features_file, "rb") as handle:
                 self.examples = pickle.load(handle)
         else:
-            logger.info(" Creating features from dataset file at %s", args.cache_dir)
+            logger.info(" Creating features from dataset file at %s" % args.cache_dir)
 
             data = [
                 (prefix, input_text, target_text, tokenizer, args)
@@ -172,7 +171,7 @@ class T5Dataset(Dataset):
             ]
 
             if (mode == "train" and args.use_multiprocessing) or (
-                mode == "dev" and args.use_multiprocessing_for_evaluation
+                    mode == "dev" and args.use_multiprocessing_for_evaluation
             ):
                 if args.multiprocessing_chunksize == -1:
                     chunksize = max(len(data) // (args.process_count * 2), 500)
@@ -194,7 +193,7 @@ class T5Dataset(Dataset):
 
             if not args.no_cache:
                 logger.info(
-                    " Saving features into cached file %s", cached_features_file
+                    " Saving features into cached file %s" % cached_features_file
                 )
                 with open(cached_features_file, "wb") as handle:
                     pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)

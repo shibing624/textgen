@@ -35,7 +35,7 @@ def load_qa_data(file_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', default='en_dialog.txt', type=str, help='Training data file')
+    parser.add_argument('--train_file', default='../data/en_dialog.txt', type=str, help='Training data file')
     parser.add_argument('--model_type', default='bert', type=str, help='Transformers model type')
     parser.add_argument('--model_name', default='bert-base-cased', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')

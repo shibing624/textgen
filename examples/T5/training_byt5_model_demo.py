@@ -4,13 +4,13 @@
 @description:
 """
 import argparse
-import pandas as pd
 from loguru import logger
+import pandas as pd
 import os
 import sys
 
 sys.path.append('../..')
-from textgen.seq2seq import BertSeq2SeqModel
+from textgen.t5 import T5Model
 
 
 def load_data(file_path):
@@ -20,7 +20,7 @@ def load_data(file_path):
             line = line.strip()
             terms = line.split()
             if len(terms) == 2:
-                data.append([terms[0], terms[1]])
+                data.append(['dialog', terms[0], terms[1]])
             else:
                 logger.warning(f'line error: {line}')
     return data
@@ -29,11 +29,11 @@ def load_data(file_path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', default='../data/zh_dialog.tsv', type=str, help='Training data file')
-    parser.add_argument('--model_type', default='bert', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='bert-base-chinese', type=str, help='Transformers model or path')
+    parser.add_argument('--model_type', default='byt5', type=str, help='Transformers model type')
+    parser.add_argument('--model_name', default='google/byt5-small', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--output_dir', default='./outputs/bertseq2seq_zh/', type=str, help='Model output directory')
+    parser.add_argument('--output_dir', default='./outputs/byt5_zh/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
     parser.add_argument('--num_epochs', default=3, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
@@ -42,12 +42,16 @@ def main():
 
     if args.do_train:
         logger.info('Loading data...')
+        # train_data: Pandas DataFrame containing the 3 columns - `prefix`, `input_text`, `target_text`.
+        #   - `prefix`: A string indicating the task to perform. (E.g. `"question"`, `"stsb"`)
+        #   - `input_text`: The input text. `prefix` is prepended to form the full input. (<prefix>: <input_text>)
+        #   - `target_text`: The target sequence
         train_data = load_data(args.train_file)
-        logger.debug('train_data: {}'.format(train_data[:20]))
-        train_df = pd.DataFrame(train_data, columns=["input_text", "target_text"])
+        logger.debug('train_data: {}'.format(train_data[:100]))
+        train_df = pd.DataFrame(train_data, columns=["prefix", "input_text", "target_text"])
 
         eval_data = load_data(args.train_file)[:10]
-        eval_df = pd.DataFrame(eval_data, columns=["input_text", "target_text"])
+        eval_df = pd.DataFrame(eval_data, columns=["prefix", "input_text", "target_text"])
 
         model_args = {
             "reprocess_input_data": True,
@@ -65,9 +69,7 @@ def main():
             "output_dir": args.output_dir,
             "use_early_stopping": True,
         }
-
-        # encoder_type=None, encoder_name=None, decoder_name=None, encoder_decoder_type=None, encoder_decoder_name=None,
-        model = BertSeq2SeqModel(args.model_type, args.model_name, args.model_name, args=model_args)
+        model = T5Model(args.model_type, args.model_name, args=model_args)
 
         def count_matches(labels, preds):
             logger.debug(f"labels: {labels[:10]}")
@@ -80,10 +82,7 @@ def main():
         print(model.eval_model(eval_df, matches=count_matches))
 
     if args.do_predict:
-        # model = Seq2SeqModel("bert", "outputs/encoder", "outputs/decoder", use_cuda=use_cuda)
-        model = BertSeq2SeqModel(args.model_type,
-                                 os.path.join(args.output_dir, "encoder"),
-                                 os.path.join(args.output_dir, "decoder"))
+        model = T5Model(args.model_type, args.output_dir)
         print(model.predict(["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]))
 
 

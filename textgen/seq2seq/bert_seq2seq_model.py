@@ -103,7 +103,7 @@ MODEL_CLASSES = {
     "rag-sequence": (RagConfig, RagSequenceForGeneration, RagTokenizer, RagRetriever),
     "roberta": (RobertaConfig, RobertaModel, RobertaTokenizerFast),
 }
-use_cuda = torch.cuda.is_available()
+has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -125,7 +125,7 @@ class BertSeq2SeqModel:
             rag_question_encoder_model_name=None,
             config=None,
             args=None,
-            use_cuda=use_cuda,
+            use_cuda=has_cuda,
             cuda_device=-1,
             **kwargs,
     ):

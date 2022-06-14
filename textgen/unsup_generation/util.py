@@ -5,6 +5,7 @@
 参考: https://github.com/rainarch/SentiBridge
 """
 import random
+from loguru import logger
 
 WINDOW_SIZE = 5
 PUNCTUATION_MARK = ['x']  # 标点
@@ -61,7 +62,7 @@ def get_candidate_aspect(seg_list, pos_list, adj_word, stop_word, word_idf):
     输入的数据为用逗号隔开的短句，
     利用开窗口的方式，根据情感词典抽名词得到候选的aspect
     """
-    print("利用情感词典抽取候选aspect...")
+    logger.info("Using emotion dictionary to extract aspect candidates...")
     aspect_dict = {}
     for i, sentence in enumerate(seg_list):
         for j, word in enumerate(sentence):
@@ -80,7 +81,7 @@ def get_candidate_aspect(seg_list, pos_list, adj_word, stop_word, word_idf):
     temp = [item[0] for item in temp if item[0] not in stop_word]  # 删去停用词
     temp = [item for item in temp if word_idf[item] != 0]  # 删去IDF值为0的词
     aspect_list = temp
-    print("---aspect抽取完成，共抽取到%s个候选aspect---" % (len(aspect_list)))
+    logger.info(f"Extract aspect candidates done, size: {len(aspect_list)}")
     return aspect_list
 
 
@@ -142,10 +143,10 @@ class NSDict:
             del dict[str]
 
     def build_nsdict(self):
-        print("stage 1：抽取pair和pattern...")
+        logger.info("Stage 1：extract pair and pattern...")
         self._seg2nsd(self.raw_aspect_list)
         self._noise_del()
-        print("\tDone")
+        logger.info("Stage 1: done")
         return self.ns_dict
 
 
@@ -234,12 +235,11 @@ class PairPattSort:
         self.patt_score = self._norm(self.patt_score, self.patt_len)
 
     def sort_pair(self):
-        print("stage 2：组合排序...")
+        logger.info("Stage 2：pair sort...")
         for i in range(100):
             self._iterative()
         pair_score = sorted(self.pair_score.items(), key=lambda d: d[1], reverse=True)
-        print('\tDone')
-        print("---pair抽取完成---")
+        logger.info("Stage 2：done")
         return pair_score
 
 
@@ -414,7 +414,7 @@ def build_dataset_express(seg_review_list, pair_useful):
             max_source_length = max(max_source_length, len(item[0]))
             legal_train_data.append(item)
 
-    print('max source length:%s' % max_source_length)
+    logger.info(f'max source length: {max_source_length}')
     return legal_train_data
 
 
@@ -423,8 +423,7 @@ def generate_reviews(aspect_express, num=1000):
     根据候选集合生成假评论
     """
     all_aspect = list(aspect_express.keys())
-    print('Aspect:{}'.format(all_aspect))
-    print()
+    logger.info(f'Aspect: {all_aspect}')
 
     # 根据不同aspect出现的概率分配不同权重
     aspect_length_dict = {}
@@ -467,7 +466,7 @@ def fake_review_filter(reviews, opinion_set, is_uniq=True):
                 opinion_used[word] += 1
                 if opinion_used[word] >= 2:
                     flag = False
-                    # print('Fake:{}'.format(''.join(review)))
+                    # logger.info('Fake:{}'.format(''.join(review)))
                     break
         if flag:
             _s = ''.join(review)
@@ -479,8 +478,8 @@ def fake_review_filter(reviews, opinion_set, is_uniq=True):
                 if a_s:
                     review += a_s + random.choice(pu)
             if not review:
-                print('error:')
-                print(review)
+                logger.info('error:')
+                logger.info(review)
             review = review[:-1] + '。'
             if is_uniq:
                 if review not in results:
