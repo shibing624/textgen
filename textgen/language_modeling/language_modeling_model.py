@@ -80,7 +80,7 @@ MODEL_CLASSES = {
     "openai-gpt": (OpenAIGPTConfig, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer),
     "roberta": (RobertaConfig, RobertaForMaskedLM, RobertaTokenizer),
 }
-use_cuda = torch.cuda.is_available()
+has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -94,7 +94,7 @@ class LanguageModelingModel:
             discriminator_name=None,
             train_files=None,
             args=None,
-            use_cuda=use_cuda,
+            use_cuda=has_cuda,
             cuda_device=-1,
             **kwargs,
     ):

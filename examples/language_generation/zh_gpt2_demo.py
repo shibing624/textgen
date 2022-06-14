@@ -3,7 +3,7 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-
+from transformers import BertTokenizerFast
 import sys
 
 sys.path.append('../..')
@@ -34,15 +34,16 @@ def finetune(prompts, train_path, test_path):
         "gradient_accumulation_steps": 8,
         "num_train_epochs": 1,
         "mlm": False,
-        "output_dir": f"outputs/fine-tuned/",
+        "output_dir": f"outputs/zh-fine-tuned/",
     }
 
     model = LanguageModelingModel("gpt2", "ckiplab/gpt2-base-chinese", args=train_args)
     model.train_model(train_path, eval_file=test_path)
     print(model.eval_model(test_path))
 
-    # Use finetuned model
-    model = LanguageGenerationModel("gpt2", "outputs/zh-fine-tuned", args={"max_length": 200})
+    # Use fine-tuned model
+    tokenizer = BertTokenizerFast.from_pretrained("outputs/zh-fine-tuned")
+    model = LanguageGenerationModel("gpt2", "outputs/zh-fine-tuned", args={"max_length": 200}, tokenizer=tokenizer)
     for prompt in prompts:
         # Generate text using the model. Verbose set to False to prevent logging generated sequences.
         generated = model.generate(prompt, verbose=False)
