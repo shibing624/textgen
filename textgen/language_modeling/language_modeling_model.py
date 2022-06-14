@@ -162,9 +162,9 @@ class LanguageModelingModel:
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
 
         if self.args.config_name:
-            self.config = config_class.from_pretrained(self.args.config_name, cache_dir=self.args.cache_dir)
+            self.config = config_class.from_pretrained(self.args.config_name)
         elif self.args.model_name and self.args.model_name != "electra":
-            self.config = config_class.from_pretrained(model_name, cache_dir=self.args.cache_dir, **kwargs)
+            self.config = config_class.from_pretrained(model_name, **kwargs)
         else:
             self.config = config_class(**self.args.config, **kwargs)
         if self.args.vocab_size:
@@ -178,15 +178,15 @@ class LanguageModelingModel:
 
             self.tokenizer_class = tokenizer_class
             if self.args.tokenizer_name:
-                self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name, cache_dir=self.args.cache_dir)
+                self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name)
             elif self.args.model_name:
                 if self.args.model_name == "electra":
                     self.tokenizer = tokenizer_class.from_pretrained(
-                        generator_name, cache_dir=self.args.cache_dir, **kwargs
+                        generator_name, **kwargs
                     )
                     self.args.tokenizer_name = self.args.model_name
                 else:
-                    self.tokenizer = tokenizer_class.from_pretrained(model_name, cache_dir=self.args.cache_dir, **kwargs)
+                    self.tokenizer = tokenizer_class.from_pretrained(model_name, **kwargs)
                     self.args.tokenizer_name = self.args.model_name
             else:
                 if not train_files:
@@ -201,7 +201,6 @@ class LanguageModelingModel:
                 self.config.vocab_size = len(self.tokenizer)
         else:
             self.tokenizer = tokenizer
-
 
         if self.args.model_type == "electra":
             if generator_name:
@@ -264,17 +263,17 @@ class LanguageModelingModel:
                         self.model = model_class.from_pretrained(
                             model_name,
                             config=self.config,
-                            cache_dir=self.args.cache_dir,
                             generator_config=self.generator_config,
                             discriminator_config=self.discriminator_config,
                             **kwargs,
                         )
                         self.model.load_state_dict(
-                            torch.load(os.path.join(self.args.model_name, "pytorch_model.bin"), map_location=self.device)
+                            torch.load(os.path.join(self.args.model_name, "pytorch_model.bin"),
+                                       map_location=self.device)
                         )
                 else:
                     self.model = model_class.from_pretrained(
-                        model_name, config=self.config, cache_dir=self.args.cache_dir, **kwargs,
+                        model_name, config=self.config, **kwargs,
                     )
             else:
                 logger.info(" Training language model from scratch")

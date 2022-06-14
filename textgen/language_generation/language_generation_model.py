@@ -118,11 +118,11 @@ class LanguageGenerationModel:
 
             if self.args.tokenizer_name:
                 self.tokenizer = tokenizer_class.from_pretrained(
-                    self.args.tokenizer_name, cache_dir=self.args.cache_dir
+                    self.args.tokenizer_name
                 )
             else:
                 self.tokenizer = tokenizer_class.from_pretrained(
-                    model_name, cache_dir=self.args.cache_dir, **kwargs
+                    model_name, **kwargs
                 )
                 self.args.tokenizer_name = model_name
         else:
@@ -130,17 +130,16 @@ class LanguageGenerationModel:
 
         if self.args.config_name:
             self.config = config_class.from_pretrained(
-                self.args.config_name, cache_dir=self.args.cache_dir
+                self.args.config_name
             )
         else:
             self.config = config_class.from_pretrained(
-                model_name, cache_dir=self.args.cache_dir, **kwargs
+                model_name, **kwargs
             )
         if model is None:
             self.model = model_class.from_pretrained(
                 model_name,
                 config=self.config,
-                cache_dir=self.args.cache_dir,
                 **kwargs,
             )
         else:
