@@ -44,6 +44,7 @@ def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):
             ],
             tgt_texts=dataset["target_text"],
             max_length=args.max_seq_length,
+            max_target_length=args.max_length,
             padding="max_length",
             return_tensors="np",
             truncation=True,
@@ -56,6 +57,7 @@ def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):
             ],
             tgt_texts=dataset["target_text"],
             max_length=args.max_seq_length,
+            max_target_length=args.max_length,
             padding="max_length",
             return_tensors="np",
             truncation=True,
@@ -102,41 +104,15 @@ def preprocess_data(data):
             return_tensors="pt",
             truncation=True,
         )
-        # input_text = tokenizer.encode(
-        #     prefix + ": " + input_text,
-        #     max_length=args.max_seq_length,
-        #     padding="max_length",
-        #     return_tensors="pt",
-        #     truncation=True,
-        # )
-
-        # target_text = tokenizer.encode(
-        #     target_text,
-        #     max_length=args.max_seq_length,
-        #     padding="max_length",
-        #     return_tensors="pt",
-        #     truncation=True,
-        # )
     else:
         batch = tokenizer.prepare_seq2seq_batch(
-            src_texts=[prefix + input_text],
+            src_texts=[prefix + ": " + input_text],
             tgt_texts=[target_text],
             max_length=args.max_seq_length,
             padding="max_length",
             return_tensors="pt",
             truncation=True,
         )
-        # input_text = tokenizer.encode(
-        #     prefix + input_text,
-        #     max_length=args.max_seq_length,
-        #     padding="max_length",
-        #     return_tensors="pt",
-        #     truncation=True,
-        # )
-
-        # target_text = tokenizer.encode(
-        #     target_text, max_length=args.max_seq_length, padding="max_length", return_tensors="pt", truncation=True
-        # )
     input_ids = batch["input_ids"][0]
     attention_mask = batch["attention_mask"][0]
     labels = batch["labels"][0]

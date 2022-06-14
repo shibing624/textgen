@@ -43,7 +43,7 @@ def main():
     if args.do_train:
         logger.info('Loading data...')
         train_data = load_data(args.train_file)
-        logger.debug('train_data: {}'.format(train_data[:20]))
+        logger.debug('train_data: {}'.format(train_data[:10]))
         train_df = pd.DataFrame(train_data, columns=["input_text", "target_text"])
 
         eval_data = load_data(args.train_file)[:10]

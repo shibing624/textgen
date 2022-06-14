@@ -20,7 +20,7 @@ def load_data(file_path):
             line = line.strip('\n')
             terms = line.split('\t')
             if len(terms) == 2:
-                data.append(['dialog', terms[0], terms[1]])
+                data.append(['QA', terms[0], terms[1]])
             else:
                 logger.warning(f'line error: {line}')
     return data
@@ -47,7 +47,7 @@ def main():
         #   - `input_text`: The input text. `prefix` is prepended to form the full input. (<prefix>: <input_text>)
         #   - `target_text`: The target sequence
         train_data = load_data(args.train_file)
-        logger.debug('train_data: {}'.format(train_data[:100]))
+        logger.debug('train_data: {}'.format(train_data[:10]))
         train_df = pd.DataFrame(train_data, columns=["prefix", "input_text", "target_text"])
 
         eval_data = load_data(args.train_file)[:10]
