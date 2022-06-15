@@ -11,7 +11,6 @@ import os
 import sys
 import numpy as np
 from loguru import logger
-from tqdm.auto import tqdm, trange
 
 sys.path.append('..')
 from textgen.seq2seq.data_reader import (

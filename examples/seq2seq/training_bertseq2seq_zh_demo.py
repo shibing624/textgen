@@ -22,7 +22,7 @@ def load_data(file_path):
             if len(terms) == 2:
                 data.append([terms[0], terms[1]])
             else:
-                logger.warning(f'line error: {line}')
+                logger.warning(f'line error: {line}, split size: {len(terms)}')
     return data
 
 
