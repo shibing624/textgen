@@ -9,4 +9,5 @@ tqdm>=4.47.0
 pandas
 wandb>=0.10.32
 sacremoses
+sacrebleu
 rouge-score

@@ -32,6 +32,7 @@ from transformers import (
 )
 from transformers.trainer_utils import EvaluationStrategy, is_main_process
 from transformers.training_args import ParallelMode
+sys.path.append('../..')
 from textgen.seq2seq.utils import (
     Seq2SeqDataCollator,
     Seq2SeqDataset,
@@ -45,6 +46,7 @@ from textgen.seq2seq.utils import (
     use_task_specific_params,
     write_txt_file,
 )
+
 from textgen.seq2seq.seq2seq_trainer import Seq2SeqTrainer
 
 logger = logging.getLogger(__name__)

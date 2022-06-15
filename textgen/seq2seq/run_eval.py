@@ -26,25 +26,27 @@ import torch
 from tqdm import tqdm
 
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-from textgen.seq2seq.utils import calculate_bleu, calculate_rouge, chunks, parse_numeric_n_bool_cl_kwargs, use_task_specific_params
+import sys
 
+sys.path.append('../..')
+from textgen.seq2seq.utils import calculate_bleu, calculate_rouge, chunks, parse_numeric_n_bool_cl_kwargs, \
+    use_task_specific_params
 
 logger = getLogger(__name__)
-
 
 DEFAULT_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def generate_translations(
-    examples: List[str],
-    out_file: str,
-    model_name: str,
-    batch_size: int = 8,
-    device: str = DEFAULT_DEVICE,
-    fp16=False,
-    task="translation",
-    prefix=None,
-    **generate_kwargs,
+def generate_sentences(
+        examples: List[str],
+        out_file: str,
+        model_name: str,
+        batch_size: int = 8,
+        device: str = DEFAULT_DEVICE,
+        fp16=False,
+        task="summarization",
+        prefix=None,
+        **generate_kwargs,
 ) -> Dict:
     """Save model.generate results to <out_file>, and return how long it took."""
     fout = Path(out_file).open("w", encoding="utf-8")
@@ -109,7 +111,7 @@ def run_generate(verbose=True):
     parser.add_argument(
         "--prefix", type=str, required=False, default=None, help="will be added to the begininng of src examples"
     )
-    parser.add_argument("--task", type=str, default="translation", help="used for task_specific_params + metrics")
+    parser.add_argument("--task", type=str, default="summarization", help="used for task_specific_params + metrics")
     parser.add_argument("--bs", type=int, default=8, required=False, help="batch size")
     parser.add_argument(
         "--n_obs", type=int, default=-1, required=False, help="How many observations. Defaults to all."
@@ -140,7 +142,7 @@ def run_generate(verbose=True):
         # this mix leads to RuntimeError: "threshold_cpu" not implemented for 'Half'
         raise ValueError("Can't mix --fp16 and --device cpu")
 
-    runtime_metrics = generate_translations(
+    runtime_metrics = generate_sentences(
         examples,
         args.save_path,
         args.model_name,
