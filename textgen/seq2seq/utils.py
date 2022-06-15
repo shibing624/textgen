@@ -19,7 +19,6 @@ import math
 import os
 import pickle
 import socket
-from logging import getLogger
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Tuple, Union
 
@@ -31,6 +30,7 @@ from rouge_score import rouge_scorer, scoring
 from sacrebleu import corpus_bleu
 from torch import nn
 from torch.utils.data import Dataset, Sampler
+from loguru import logger
 
 from transformers import BartTokenizer, EvalPrediction, PreTrainedTokenizer, T5Tokenizer
 from transformers.file_utils import cached_property
@@ -420,9 +420,6 @@ class DistributedSortishSampler(Sampler):
 
     def set_epoch(self, epoch):
         self.epoch = epoch
-
-
-logger = getLogger(__name__)
 
 
 def use_task_specific_params(model, task):

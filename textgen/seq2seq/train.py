@@ -32,6 +32,8 @@ from transformers import (
 )
 from transformers.trainer_utils import EvaluationStrategy, is_main_process
 from transformers.training_args import ParallelMode
+from loguru import logger
+
 sys.path.append('../..')
 from textgen.seq2seq.utils import (
     Seq2SeqDataCollator,
@@ -48,9 +50,6 @@ from textgen.seq2seq.utils import (
 )
 
 from textgen.seq2seq.seq2seq_trainer import Seq2SeqTrainer
-
-logger = logging.getLogger(__name__)
-
 
 
 @dataclass
@@ -128,30 +127,30 @@ class DataTrainingArguments:
         default=1024,
         metadata={
             "help": "The maximum total input sequence length after tokenization. Sequences longer "
-            "than this will be truncated, sequences shorter will be padded."
+                    "than this will be truncated, sequences shorter will be padded."
         },
     )
     max_target_length: Optional[int] = field(
         default=128,
         metadata={
             "help": "The maximum total sequence length for target text after tokenization. Sequences longer "
-            "than this will be truncated, sequences shorter will be padded."
+                    "than this will be truncated, sequences shorter will be padded."
         },
     )
     val_max_target_length: Optional[int] = field(
         default=142,
         metadata={
             "help": "The maximum total sequence length for validation target text after tokenization. Sequences longer "
-            "than this will be truncated, sequences shorter will be padded. "
-            "This argument is also used to override the ``max_length`` param of ``model.generate``, which is used "
-            "during ``evaluate`` and ``predict``."
+                    "than this will be truncated, sequences shorter will be padded. "
+                    "This argument is also used to override the ``max_length`` param of ``model.generate``, which is used "
+                    "during ``evaluate`` and ``predict``."
         },
     )
     test_max_target_length: Optional[int] = field(
         default=142,
         metadata={
             "help": "The maximum total sequence length for test target text after tokenization. Sequences longer "
-            "than this will be truncated, sequences shorter will be padded."
+                    "than this will be truncated, sequences shorter will be padded."
         },
     )
     n_train: Optional[int] = field(default=-1, metadata={"help": "# training examples. -1 means use all."})
@@ -198,26 +197,16 @@ def main():
 
     check_output_dir(training_args)
 
-    # Setup logging
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-        datefmt="%m/%d/%Y %H:%M:%S",
-        level=logging.INFO if training_args.local_rank in [-1, 0] else logging.WARN,
-    )
     logger.warning(
-        "Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s",
-        training_args.local_rank,
-        training_args.device,
-        training_args.n_gpu,
-        bool(training_args.parallel_mode == ParallelMode.DISTRIBUTED),
-        training_args.fp16,
+        "Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s" % (
+            training_args.local_rank,
+            training_args.device,
+            training_args.n_gpu,
+            bool(training_args.parallel_mode == ParallelMode.DISTRIBUTED),
+            training_args.fp16,
+        )
     )
-    transformers.utils.logging.enable_default_handler()
-    transformers.utils.logging.enable_explicit_format()
-    # Set the verbosity to info of the Transformers logger (on main process only):
-    if is_main_process(training_args.local_rank):
-        transformers.utils.logging.set_verbosity_info()
-    logger.info("Training/evaluation parameters %s", training_args)
+    logger.info("Training/evaluation parameters %s" % training_args)
 
     # Set seed
     set_seed(training_args.seed)
@@ -260,7 +249,7 @@ def main():
     # set decoder_start_token_id for MBart
     if model.config.decoder_start_token_id is None and isinstance(tokenizer, (MBartTokenizer, MBartTokenizerFast)):
         assert (
-            data_args.tgt_lang is not None and data_args.src_lang is not None
+                data_args.tgt_lang is not None and data_args.src_lang is not None
         ), "mBart requires --tgt_lang and --src_lang"
         if isinstance(tokenizer, MBartTokenizer):
             model.config.decoder_start_token_id = tokenizer.lang_code_to_id[data_args.tgt_lang]
@@ -366,7 +355,6 @@ def main():
         metrics["val_loss"] = round(metrics["val_loss"], 4)
 
         if trainer.is_world_process_zero():
-
             handle_metrics("val", metrics, training_args.output_dir)
             all_metrics.update(metrics)
 

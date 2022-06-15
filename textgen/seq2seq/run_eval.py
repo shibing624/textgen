@@ -18,7 +18,7 @@ import datetime
 import json
 import time
 import warnings
-from logging import getLogger
+from loguru import logger
 from pathlib import Path
 from typing import Dict, List
 
@@ -31,8 +31,6 @@ import sys
 sys.path.append('../..')
 from textgen.seq2seq.utils import calculate_bleu, calculate_rouge, chunks, parse_numeric_n_bool_cl_kwargs, \
     use_task_specific_params
-
-logger = getLogger(__name__)
 
 DEFAULT_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 

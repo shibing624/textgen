@@ -18,9 +18,8 @@ import torch
 from torch import nn
 from torch.utils.data import DistributedSampler, RandomSampler
 
-from transformers import PreTrainedModel, Trainer, logging
+from transformers import PreTrainedModel, Trainer
 from transformers.file_utils import is_torch_tpu_available
-from transformers.integrations import is_fairscale_available
 from transformers.models.fsmt.configuration_fsmt import FSMTConfig
 from transformers.optimization import (
     Adafactor,
@@ -34,13 +33,7 @@ from transformers.optimization import (
 )
 from transformers.trainer_pt_utils import get_tpu_sampler
 from transformers.training_args import ParallelMode
-
-
-if is_fairscale_available():
-    from fairscale.optim import OSS
-
-
-logger = logging.get_logger(__name__)
+from loguru import logger
 
 arg_to_scheduler = {
     "linear": get_linear_schedule_with_warmup,
