@@ -7,6 +7,7 @@ import argparse
 import pandas as pd
 from loguru import logger
 import os
+from transformers import BertTokenizerFast
 import sys
 
 sys.path.append('../..')
@@ -83,9 +84,13 @@ def main():
         print(model.eval_model(eval_df, matches=count_matches))
 
     if args.do_predict:
-        model = BartSeq2SeqModel(args.model_type,
-                                 os.path.join(args.output_dir, "encoder"),
-                                 os.path.join(args.output_dir, "decoder"))
+        # Use fine-tuned model
+        tokenizer = BertTokenizerFast.from_pretrained(args.output_dir)
+        model = BartSeq2SeqModel(
+            encoder_type=args.model_type,
+            encoder_decoder_type=args.model_type,
+            encoder_decoder_name=args.output_dir,
+            tokenizer=tokenizer)
         print(model.predict(["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]))
 
 

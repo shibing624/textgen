@@ -82,10 +82,10 @@ def main():
         print(model.eval_model(eval_df, matches=count_matches))
 
     if args.do_predict:
-        # model = Seq2SeqModel("bert", "outputs/encoder", "outputs/decoder", use_cuda=use_cuda)
-        model = BartSeq2SeqModel(args.model_type,
-                                 os.path.join(args.output_dir, "encoder"),
-                                 os.path.join(args.output_dir, "decoder"))
+        model = BartSeq2SeqModel(
+            encoder_type=args.model_type,
+            encoder_decoder_type=args.model_type,
+            encoder_decoder_name=args.output_dir)
         print('input: one', ' output:', model.predict(["one"]))
         print(model.predict(["four", "five"]))
 

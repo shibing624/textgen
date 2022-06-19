@@ -123,6 +123,8 @@ class BartSeq2SeqModel:
             args=None,
             use_cuda=has_cuda,
             cuda_device=-1,
+            model=None,
+            tokenizer=None,
             **kwargs,
     ):
 
@@ -290,17 +292,22 @@ class BartSeq2SeqModel:
                 ]
             else:
                 config_class, model_class, tokenizer_class = MODEL_CLASSES[encoder_type]
+            # Special tokenizer for chinese bart model
+            if encoder_decoder_name in ['fnlp/bart-base-chinese']:
+                tokenizer_class = BertTokenizerFast
 
             if encoder_decoder_type in ["bart", "mbart", "marian"]:
-                self.model = model_class.from_pretrained(encoder_decoder_name)
+                if model is None:
+                    self.model = model_class.from_pretrained(encoder_decoder_name)
+                else:
+                    self.model = model
                 if encoder_decoder_type in ["bart", "mbart"]:
-                    # Special tokenizer for chinese bart model
-                    if encoder_decoder_name in ['fnlp/bart-base-chinese']:
-                        tokenizer_class = BertTokenizerFast
-
-                    self.encoder_tokenizer = tokenizer_class.from_pretrained(
-                        encoder_decoder_name
-                    )
+                    if tokenizer is None:
+                        self.encoder_tokenizer = tokenizer_class.from_pretrained(
+                            encoder_decoder_name
+                        )
+                    else:
+                        self.encoder_tokenizer = tokenizer
                 elif encoder_decoder_type == "marian":
                     if self.args.base_marian_model_name:
                         self.encoder_tokenizer = tokenizer_class.from_pretrained(

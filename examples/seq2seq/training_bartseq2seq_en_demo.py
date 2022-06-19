@@ -91,9 +91,10 @@ def main():
         print(model.eval_model(eval_df, matches=count_matches))
 
     if args.do_predict:
-        model = BartSeq2SeqModel(args.model_type,
-                                 os.path.join(args.output_dir, "encoder"),
-                                 os.path.join(args.output_dir, "decoder"))
+        model = BartSeq2SeqModel(
+            encoder_type=args.model_type,
+            encoder_decoder_type=args.model_type,
+            encoder_decoder_name=args.output_dir)
         print(model.predict(
             ["that 's the kind of guy she likes ? Pretty ones ?",
              "Not the hacking and gagging and spitting part .",
