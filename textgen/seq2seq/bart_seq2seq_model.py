@@ -13,7 +13,6 @@ from multiprocessing import Pool, cpu_count
 import numpy as np
 import pandas as pd
 import torch
-import transformers
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
@@ -71,7 +70,7 @@ from transformers import (
 from datasets import load_from_disk
 from loguru import logger
 from textgen.config.model_args import Seq2SeqArgs
-from textgen.seq2seq.bert_seq2seq_utils import (
+from textgen.seq2seq.bart_seq2seq_utils import (
     Seq2SeqDataset,
     SimpleSummarizationDataset,
     add_faiss_index_to_dataset,
@@ -85,9 +84,6 @@ try:
     wandb_available = True
 except ImportError:
     wandb_available = False
-
-if transformers.__version__ < "4.2.0":
-    MBartForConditionalGeneration._keys_to_ignore_on_save = []
 
 MODEL_CLASSES = {
     "auto": (AutoConfig, AutoModel, AutoTokenizer),
@@ -108,7 +104,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
-class BertSeq2SeqModel:
+class BartSeq2SeqModel:
     def __init__(
             self,
             encoder_type=None,
@@ -298,6 +294,10 @@ class BertSeq2SeqModel:
             if encoder_decoder_type in ["bart", "mbart", "marian"]:
                 self.model = model_class.from_pretrained(encoder_decoder_name)
                 if encoder_decoder_type in ["bart", "mbart"]:
+                    # Special tokenizer for chinese bart model
+                    if encoder_decoder_name in ['fnlp/bart-base-chinese']:
+                        tokenizer_class = BertTokenizerFast
+
                     self.encoder_tokenizer = tokenizer_class.from_pretrained(
                         encoder_decoder_name
                     )
@@ -329,10 +329,14 @@ class BertSeq2SeqModel:
                     self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
                         encoder_name, decoder_name, config=config
                     )
-                    self.encoder_tokenizer = tokenizer_class.from_pretrained(
-                        encoder_name
-                    )
-                    self.decoder_tokenizer = AutoTokenizer.from_pretrained(decoder_name)
+                    # Special tokenizer for chinese bart model
+                    if encoder_name in ['fnlp/bart-base-chinese']:
+                        tokenizer_class = BertTokenizerFast
+                        self.encoder_tokenizer = tokenizer_class.from_pretrained(encoder_name)
+                        self.decoder_tokenizer = self.encoder_tokenizer
+                    else:
+                        self.encoder_tokenizer = tokenizer_class.from_pretrained(encoder_name)
+                        self.decoder_tokenizer = AutoTokenizer.from_pretrained(decoder_name)
                 self.encoder_config = self.model.config.encoder
                 self.decoder_config = self.model.config.decoder
 

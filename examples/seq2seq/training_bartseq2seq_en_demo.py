@@ -10,7 +10,7 @@ import os
 import sys
 
 sys.path.append('../..')
-from textgen.seq2seq import BertSeq2SeqModel
+from textgen.seq2seq import BartSeq2SeqModel
 
 
 def load_qa_data(file_path):
@@ -36,11 +36,11 @@ def load_qa_data(file_path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', default='../data/en_dialog.txt', type=str, help='Training data file')
-    parser.add_argument('--model_type', default='bert', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='bert-base-cased', type=str, help='Transformers model or path')
+    parser.add_argument('--model_type', default='mbart', type=str, help='Transformers model type')
+    parser.add_argument('--model_name', default='sshleifer/tiny-mbart', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--output_dir', default='./outputs/bertseq2seq_en/', type=str, help='Model output directory')
+    parser.add_argument('--output_dir', default='./outputs/bartseq2seq_en/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
     parser.add_argument('--num_epochs', default=3, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
@@ -73,9 +73,13 @@ def main():
             "output_dir": args.output_dir,
             "use_early_stopping": True,
         }
-
-        # encoder_type=None, encoder_name=None, decoder_name=None, encoder_decoder_type=None, encoder_decoder_name=None,
-        model = BertSeq2SeqModel(args.model_type, args.model_name, args.model_name, args=model_args)
+        model = BartSeq2SeqModel(
+            encoder_type=args.model_type,
+            encoder_name=args.model_name,
+            decoder_name=args.model_name,
+            encoder_decoder_type=args.model_type,
+            args=model_args
+        )
 
         def count_matches(labels, preds):
             logger.debug(f"labels: {labels[:10]}")
@@ -88,7 +92,7 @@ def main():
         print(model.eval_model(eval_df, matches=count_matches))
 
     if args.do_predict:
-        model = BertSeq2SeqModel(args.model_type,
+        model = BartSeq2SeqModel(args.model_type,
                                  os.path.join(args.output_dir, "encoder"),
                                  os.path.join(args.output_dir, "decoder"))
         print(model.predict(

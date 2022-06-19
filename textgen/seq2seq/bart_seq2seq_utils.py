@@ -9,29 +9,16 @@ from multiprocessing import Pool
 from functools import partial
 import torch
 
-import transformers
 from torch.utils.data import Dataset
 from tqdm.auto import tqdm
-from transformers.models.bart.modeling_bart import (
-    shift_tokens_right as _shift_tokens_right,
-)
+from transformers.models.bart.modeling_bart import shift_tokens_right
 from datasets import Features, Sequence, Value, load_dataset
 from datasets import Dataset as HFDataset
 from transformers import (
     DPRContextEncoder,
     DPRContextEncoderTokenizerFast,
 )
-
 from loguru import logger
-
-if transformers.__version__ < "4.2.0":
-    shift_tokens_right = (
-        lambda input_ids, pad_token_id, decoder_start_token_id: _shift_tokens_right(
-            input_ids, pad_token_id, decoder_start_token_id
-        )
-    )
-else:
-    shift_tokens_right = _shift_tokens_right
 
 
 def preprocess_batch_for_hf_dataset(
@@ -264,11 +251,11 @@ class Seq2SeqDataset(Dataset):
                 (not args.reprocess_input_data and not args.no_cache)
                 or (mode == "dev" and args.use_cached_eval_features and not args.no_cache)
         ):
-            logger.info(" Loading features from cached file %s"% cached_features_file)
+            logger.info(" Loading features from cached file %s" % cached_features_file)
             with open(cached_features_file, "rb") as handle:
                 self.examples = pickle.load(handle)
         else:
-            logger.info(" Creating features from dataset file at %s"% args.cache_dir)
+            logger.info(" Creating features from dataset file at %s" % args.cache_dir)
 
             data = [
                 (input_text, target_text, encoder_tokenizer, decoder_tokenizer, args)
@@ -300,7 +287,7 @@ class Seq2SeqDataset(Dataset):
 
             if not args.no_cache:
                 logger.info(
-                    " Saving features into cached file %s"% cached_features_file
+                    " Saving features into cached file %s" % cached_features_file
                 )
                 with open(cached_features_file, "wb") as handle:
                     pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -383,11 +370,11 @@ class SimpleSummarizationDataset(Dataset):
                 (not args.reprocess_input_data and not args.no_cache)
                 or (mode == "dev" and args.use_cached_eval_features and not args.no_cache)
         ):
-            logger.info(" Loading features from cached file %s"% cached_features_file)
+            logger.info(" Loading features from cached file %s" % cached_features_file)
             with open(cached_features_file, "rb") as handle:
                 self.examples = pickle.load(handle)
         else:
-            logger.info(" Creating features from dataset file at %s"% args.cache_dir)
+            logger.info(" Creating features from dataset file at %s" % args.cache_dir)
 
             data = [
                 (input_text, target_text, tokenizer, args)
