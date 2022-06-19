@@ -102,4 +102,5 @@ if __name__ == '__main__':
     tokenizer = BertTokenizer.from_pretrained("fnlp/bart-base-chinese")
     model = BartForConditionalGeneration.from_pretrained("fnlp/bart-base-chinese")
     text2text_generator = Text2TextGenerationPipeline(model, tokenizer)
-    text2text_generator("北京是[MASK]的首都", max_length=50, do_sample=False)
+    r = text2text_generator("北京是[MASK]的首都", max_length=50, do_sample=False)
+    print(r)
