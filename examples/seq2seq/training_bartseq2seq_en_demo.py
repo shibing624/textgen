@@ -75,9 +75,8 @@ def main():
         }
         model = BartSeq2SeqModel(
             encoder_type=args.model_type,
-            encoder_name=args.model_name,
-            decoder_name=args.model_name,
             encoder_decoder_type=args.model_type,
+            encoder_decoder_name=args.model_name,
             args=model_args
         )
 

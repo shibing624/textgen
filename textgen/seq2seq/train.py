@@ -13,14 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import os
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
 from transformers import TrainingArguments
-import transformers
 from transformers import (
     AutoConfig,
     AutoModelForSeq2SeqLM,
@@ -28,6 +26,7 @@ from transformers import (
     HfArgumentParser,
     MBartTokenizer,
     MBartTokenizerFast,
+    MBart50TokenizerFast,
     set_seed,
 )
 from transformers.trainer_utils import EvaluationStrategy, is_main_process
@@ -247,7 +246,8 @@ def main():
         data_args.eval_beams = model.config.num_beams
 
     # set decoder_start_token_id for MBart
-    if model.config.decoder_start_token_id is None and isinstance(tokenizer, (MBartTokenizer, MBartTokenizerFast)):
+    if model.config.decoder_start_token_id is None and isinstance(tokenizer, (
+            MBartTokenizer, MBartTokenizerFast, MBart50TokenizerFast)):
         assert (
                 data_args.tgt_lang is not None and data_args.src_lang is not None
         ), "mBart requires --tgt_lang and --src_lang"
