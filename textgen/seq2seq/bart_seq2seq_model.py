@@ -389,6 +389,7 @@ class BartSeq2SeqModel:
             args=None,
             eval_data=None,
             verbose=True,
+            split_on_space=False,
             **kwargs,
     ):
         """
@@ -445,6 +446,7 @@ class BartSeq2SeqModel:
             show_running_loss=show_running_loss,
             eval_data=eval_data,
             verbose=verbose,
+            split_on_space=split_on_space,
             **kwargs,
         )
 
@@ -466,6 +468,7 @@ class BartSeq2SeqModel:
             show_running_loss=True,
             eval_data=None,
             verbose=True,
+            split_on_space=False,
             **kwargs,
     ):
         """
@@ -819,6 +822,7 @@ class BartSeq2SeqModel:
                             eval_data,
                             verbose=verbose and args.evaluate_during_training_verbose,
                             silent=args.evaluate_during_training_silent,
+                            split_on_space=split_on_space,
                             **kwargs,
                         )
                         for key, value in results.items():
@@ -975,6 +979,7 @@ class BartSeq2SeqModel:
                     eval_data,
                     verbose=verbose and args.evaluate_during_training_verbose,
                     silent=args.evaluate_during_training_silent,
+                    split_on_space=split_on_space,
                     **kwargs,
                 )
 
@@ -1105,7 +1110,7 @@ class BartSeq2SeqModel:
         )
 
     def eval_model(
-            self, eval_data, output_dir=None, verbose=True, silent=False, **kwargs
+            self, eval_data, output_dir=None, verbose=True, silent=False, split_on_space=False, **kwargs
     ):
         """
         Evaluates the model on eval_data. Saves results to output_dir.
@@ -1145,7 +1150,7 @@ class BartSeq2SeqModel:
             if self.args.model_type in ["rag-token", "rag-sequence"]:
                 preds, _ = self.predict(to_predict)
             else:
-                preds = self.predict(to_predict)
+                preds = self.predict(to_predict, split_on_space=split_on_space)
 
             result = self.compute_metrics(
                 eval_data["target_text"].tolist(), preds, **kwargs
@@ -1215,13 +1220,17 @@ class BartSeq2SeqModel:
 
         return results
 
-    def predict(self, to_predict):
+    def predict(self, to_predict, split_on_space=False):
         """
         Performs predictions on a list of text.
 
         Args:
             to_predict: A python list of text (str) to be sent to the model for prediction. Note that the prefix should be prepended to the text.
-
+            split_on_space: If True, each sequence will be split by spaces for assigning labels.
+                            If False, to_predict must be a a list of lists, with the inner list being a
+                            list of strings consisting of the split sequences. The outer list is the list of sequences 
+                            to predict on.
+                            
         Returns:
             preds: A python list of the generated sequences.
         """  # noqa: ignore flake8"
@@ -1392,6 +1401,7 @@ class BartSeq2SeqModel:
                 for output_id in all_outputs
             ]
 
+        outputs = [sentence if split_on_space else ''.join(sentence.split(' ')) for i, sentence in enumerate(outputs)]
         if self.args.num_return_sequences > 1:
             if self.args.model_type in ["rag-token", "rag-sequence"]:
                 return (

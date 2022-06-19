@@ -98,7 +98,7 @@ def main():
         print(model.predict(
             ["that 's the kind of guy she likes ? Pretty ones ?",
              "Not the hacking and gagging and spitting part .",
-             ]
+             ], split_on_space=True
         ))
 
 
