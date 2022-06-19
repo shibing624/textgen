@@ -40,7 +40,7 @@ def main():
     parser.add_argument('--model_name', default='facebook/bart-base', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--output_dir', default='./outputs/bartseq2seq_en/', type=str, help='Model output directory')
+    parser.add_argument('--output_dir', default='./outputs/bart_en/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
     parser.add_argument('--num_epochs', default=30, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
