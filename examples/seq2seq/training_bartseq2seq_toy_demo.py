@@ -15,8 +15,8 @@ from textgen.seq2seq import BartSeq2SeqModel
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_type', default='mbart', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='sshleifer/tiny-mbart', type=str, help='Transformers model or path')
+    parser.add_argument('--model_type', default='bart', type=str, help='Transformers model type')
+    parser.add_argument('--model_name', default='facebook/bart-base', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/toy/', type=str, help='Model output directory')
