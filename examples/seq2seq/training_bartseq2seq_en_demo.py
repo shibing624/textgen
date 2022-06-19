@@ -42,7 +42,7 @@ def main():
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/bartseq2seq_en/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
-    parser.add_argument('--num_epochs', default=3, type=int, help='Number of training epochs')
+    parser.add_argument('--num_epochs', default=30, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
@@ -87,8 +87,8 @@ def main():
             logger.debug(f"match: {match}")
             return match
 
-        model.train_model(train_df, eval_data=eval_df, matches=count_matches)
-        print(model.eval_model(eval_df, matches=count_matches))
+        model.train_model(train_df, eval_data=eval_df, split_on_space=True, matches=count_matches)
+        print(model.eval_model(eval_df, split_on_space=True, matches=count_matches))
 
     if args.do_predict:
         model = BartSeq2SeqModel(
