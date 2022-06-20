@@ -1,6 +1,6 @@
 loguru
 jieba>=0.39
-transformers>=4.6.0
+transformers
 datasets
 gensim>=4.0.0
 text2vec

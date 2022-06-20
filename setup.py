@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-__version__ = '0.0.6'
+__version__ = '0.1.0'
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
 
@@ -29,7 +29,7 @@ setup(
     install_requires=[
         'loguru',
         'jieba>=0.39',
-        'transformers>=4.6.0',
+        'transformers',
         'datasets',
         'gensim>=4.0.0',
         'text2vec',

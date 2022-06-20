@@ -11,7 +11,7 @@
 
 🌈 Implementation of Text Generation models.
 
-**textgen**实现了多种文本生成模型，包括：UDA、Seq2Seq、Bart、GPT2、T5等模型，开箱即用。
+**textgen**实现了多种文本生成模型，包括：UDA、GPT2、Seq2Seq、BART、T5等模型，开箱即用。
 
 **Guide**
 
@@ -32,16 +32,18 @@
 1. UDA，非核心词替换
 2. EDA，简单数据增强技术：相似词、同义词替换，随机词插入、删除、替换
 3. 回译（BT, Back Translate）：中文-英文-中文
-4. 生成模型：Seq2Seq，GPT2，T5，Bart等
+4. 生成模型：Seq2Seq，GPT2，T5，BART等
 
 # Feature
 
-- UDA(非核心词替换)：基于Google提出的UDA(非核心词替换)算法，将文本中一定比例的不重要词替换为同义词，从而产生新的文本。
-- BT(回译)：基于百度翻译API，把中文句子翻译为英文，再把英文翻译为新的中文。
-- Seq2Seq：基于Encoder-Decoder结构，序列到序列生成新的文本。
-- GPT2：基于Transformer的decode结果的自回归生成模型。
-- TGLS：无监督文本生成模型，提出[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)——一种基于“先搜索后学习”的无监督文本生成方法，
+- UDA(非核心词替换)：基于Google提出的UDA(非核心词替换)算法，将文本中一定比例的不重要词替换为同义词，从而产生新的文本，本项目基于TFIDF实现UDA功能。
+- BT(回译)：本项目基于百度翻译API实现回译，把中文句子翻译为英文，再把英文翻译为新的中文。
+- Seq2Seq：基于Encoder-Decoder结构，序列到序列生成新的文本，本项目实现了PyTorch的ConvSeq2Seq模型和BART模型。
+- T5：
+- GPT2：基于Transformer的decode结果的自回归生成模型，本项目实现了PyTorch的GPT2模型。
+- TGLS：无监督文本生成模型，本项目实现了[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)模型，一种基于“先搜索后学习”的无监督文本生成方法，
   模型反复迭代，最终能生成较高质量的文本。
+
 
 # Demo
 
@@ -65,6 +67,7 @@ pip3 install -U textgen
 or
 
 ```
+pip3 install torch # conda install pytorch
 git clone https://github.com/shibing624/textgen.git
 cd textgen
 python3 setup.py install
@@ -121,8 +124,11 @@ tfidf-0.2: ('主要原因研究机器学习、深度学习、计算机硬件视�
 mix-0.1: ('主要受限于机器学习、深度学习、计算机视觉、智能对话系统相关内容', [('研究', '受限于', 2, 5)])
 bt: ('主要研究机器学习、深度学习、计算机视觉和智能对话系统', [])
 ```
+### 2. GPT2 模型
 
-### 2. Seq2Seq 模型
+example: [examples/language_generation/training_zh_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_gpt2_demo.py)
+
+### 3. Seq2Seq 模型
 
 #### ConvSeq2Seq
 训练并预测ConvSeq2Seq模型：
@@ -182,9 +188,13 @@ outputs: ['人工智能是工程和科学的分支,致力于构建思维的机�
 example: [examples/seq2sesq/training_bartseq2seq_zh_demo.py](examples/seq2seq/training_bartseq2seq_zh_demo.py)
 
 
-### 3. GPT2 模型
+output:
 
-example: [examples/language_generation/training_zh_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_gpt2_demo.py)
+```shell
+inputs: ['什么是ai', '你是什么类型的计算机', '你知道热力学吗']
+outputs: ['人工智能是工程和科学的分支,致力于构', '我的程序运行在python,所以我在任何电脑上', '什么是热力学吗？']
+```
+
 
 ### 4. T5 模型
 
@@ -280,6 +290,12 @@ if __name__ == '__main__':
     main()
 ```
 
+output:
+```shell
+inputs: ['什么是ai', '你是什么类型的计算机', '你知道热力学吗']
+outputs: ['人工智能有两个广义的定义,任何拟人的机械,如在卡雷尔capeks', '我的程序运行在Python,所以我在任何电脑上工作!', '什么是热力学']
+```
+
 
 ### 5. TGLS 模型（无监督生成）
 
@@ -347,7 +363,7 @@ output:
 面膜的补水效果非常好，保湿效果确实很赞，这个面膜相对于胶原蛋白和美白的那两款的面膜纸要厚一些，看着价格合适。
 ```
 
-（前10句是真实用户评论，后10句是生成的😆
+前10句是真实用户评论，后10句是生成的。
 
 # Contact
 
