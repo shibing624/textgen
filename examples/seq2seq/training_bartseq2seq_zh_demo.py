@@ -91,7 +91,9 @@ def main():
             encoder_decoder_type=args.model_type,
             encoder_decoder_name=args.output_dir,
             tokenizer=tokenizer)
-        print(model.predict(["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]))
+        sentences = ["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
+        print("inputs:", sentences)
+        print("outputs:", model.predict(sentences))
 
 
 if __name__ == '__main__':

@@ -6,7 +6,6 @@
 import argparse
 import pandas as pd
 from loguru import logger
-import os
 import sys
 
 sys.path.append('../..')

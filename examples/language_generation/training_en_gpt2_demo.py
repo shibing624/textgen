@@ -18,9 +18,9 @@ def raw(prompts):
         generated = model.generate(prompt, verbose=False)
 
         generated = ".".join(generated[0].split(".")[:-1]) + "."
-        print("=============================================================================")
+        print("=" * 42)
         print(generated)
-        print("=============================================================================")
+        print("=" * 42)
 
 
 def finetune(prompts, train_path, test_path):
@@ -48,9 +48,9 @@ def finetune(prompts, train_path, test_path):
         generated = model.generate(prompt, verbose=False)
 
         generated = ".".join(generated[0].split(".")[:-1]) + "."
-        print("=============================================================================")
+        print("=" * 42)
         print(generated)
-        print("=============================================================================")
+        print("=" * 42)
 
 
 if __name__ == '__main__':

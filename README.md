@@ -8,12 +8,13 @@
 [![Wechat Group](http://vlog.sfyc.ltd/wechat_everyday/wxgroup_logo.png?imageView2/0/w/60/h/20)](#Contact)
 
 # TextGen
-🌈 Implementation of Text Generation models. 
 
-**textgen**实现了多种文本生成模型，包括：UDA、Seq2Seq、BERT、XLNet、GPT2、ERNIE-GEN等模型，开箱即用。
+🌈 Implementation of Text Generation models.
 
+**textgen**实现了多种文本生成模型，包括：UDA、Seq2Seq、Bart、GPT2、T5等模型，开箱即用。
 
 **Guide**
+
 - [Question](#Question)
 - [Solution](#Solution)
 - [Feature](#Feature)
@@ -30,31 +31,17 @@
 
 1. UDA，非核心词替换
 2. EDA，简单数据增强技术：相似词、同义词替换，随机词插入、删除、替换
-3. 回译（BT, Back Translate），中文-英文-中文
-4. 生成模型，Seq2Seq，GPT2等
-
+3. 回译（BT, Back Translate）：中文-英文-中文
+4. 生成模型：Seq2Seq，GPT2，T5，Bart等
 
 # Feature
-### UDA(非核心词替换)
 
-基于Google提出的UDA(非核心词替换)算法，将文本中一定比例的不重要词替换为同义词，从而产生新的文本。
-
-### BT(回译)
-
-基于百度翻译API，把中文句子翻译为英文，再把英文翻译为新的中文。
-
-### Seq2Seq
-
-基于Encoder-Decoder结构，序列到序列生成新的文本。
-
-### GPT2
-
-基于Transformer的decode结果的自回归生成模型。
-
-### TGLS
-无监督文本生成模型：本文提出[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)——一种基于“先搜索后学习”的无监督文本生成方法，
-模型反复迭代，最终能生成较高质量的文本。
-
+- UDA(非核心词替换)：基于Google提出的UDA(非核心词替换)算法，将文本中一定比例的不重要词替换为同义词，从而产生新的文本。
+- BT(回译)：基于百度翻译API，把中文句子翻译为英文，再把英文翻译为新的中文。
+- Seq2Seq：基于Encoder-Decoder结构，序列到序列生成新的文本。
+- GPT2：基于Transformer的decode结果的自回归生成模型。
+- TGLS：无监督文本生成模型，提出[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)——一种基于“先搜索后学习”的无监督文本生成方法，
+  模型反复迭代，最终能生成较高质量的文本。
 
 # Demo
 
@@ -63,12 +50,13 @@ Demo: https://huggingface.co/spaces/shibing624/textgen
 ![](docs/hf.png)
 
 run example: [examples/gradio_demo.py](examples/gradio_demo.py) to see the demo:
+
 ```shell
 python examples/gradio_demo.py
 ```
 
- 
 # Install
+
 ```
 pip3 install torch # conda install pytorch
 pip3 install -U textgen
@@ -82,13 +70,12 @@ cd textgen
 python3 setup.py install
 ```
 
-
 # Usage
 
-### 1. 文本数据增强
-
+### 1. Text Augmentation(EDA、UDA文本数据增强)
 
 example: [examples/text_augmentation_demo.py](examples/text_augmentation_demo.py)
+
 ```python
 import sys
 
@@ -135,11 +122,12 @@ mix-0.1: ('主要受限于机器学习、深度学习、计算机视觉、智能
 bt: ('主要研究机器学习、深度学习、计算机视觉和智能对话系统', [])
 ```
 
-### 2. Seq2Seq 模型
+### 2. ConvSeq2Seq 模型
 
 训练并预测ConvSeq2Seq模型：
 
 example: [examples/seq2sesq/training_convseq2seq_model_demo.py](examples/seq2seq/training_convseq2seq_model_demo.py)
+
 ```python
 import argparse
 from loguru import logger
@@ -173,7 +161,7 @@ def main():
                                  model_dir=args.output_dir, max_length=args.max_seq_length)
         sentences = ["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
         print("inputs:", sentences)
-        print(model.predict(sentences))
+        print('outputs:', model.predict(sentences))
 
 
 if __name__ == '__main__':
@@ -181,29 +169,152 @@ if __name__ == '__main__':
 ```
 
 output:
+
 ```bash
-["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
-['人工智能是工程和科学的分支,致力于构建思维的机器。', '我的程序运行在python,所以我在任何运脑上工作！', '我不能错热是一个疯狂的人工智能"200年。']
+inputs: ["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
+outputs: ['人工智能是工程和科学的分支,致力于构建思维的机器。', '我的程序运行在python,所以我在任何运脑上工作！', '我不能错热是一个疯狂的人工智能"200年。']
 ```
 
 ### 3. GPT2 模型
 
-example: [examples/language_generation/gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_gpt2_demo.py)
+example: [examples/language_generation/training_zh_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_gpt2_demo.py)
 
-### 4. ByT5 模型
+### 4. T5 模型
 
-example: [examples/t5/training_byt5_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/t5/training_byt5_model_demo.py)
+example: [examples/T5/training_zh_t5_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/T5/training_zh_t5_model_demo.py)
+
+```python
+import argparse
+from loguru import logger
+import pandas as pd
+import sys
+
+sys.path.append('../..')
+from textgen.t5 import T5Model
 
 
-### 5. 无监督生成模型
+def load_data(file_path):
+    data = []
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip('\n')
+            terms = line.split('\t')
+            if len(terms) == 2:
+                data.append(['QA', terms[0], terms[1]])
+            else:
+                logger.warning(f'line error: {line}')
+    return data
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--train_file', default='../data/zh_dialog.tsv', type=str, help='Training data file')
+    parser.add_argument('--model_type', default='t5', type=str, help='Transformers model type')
+    parser.add_argument('--model_name', default='Langboat/mengzi-t5-base', type=str, help='Transformers model or path')
+    parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
+    parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
+    parser.add_argument('--output_dir', default='./outputs/mengzi_t5_zh/', type=str, help='Model output directory')
+    parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
+    parser.add_argument('--num_epochs', default=3, type=int, help='Number of training epochs')
+    parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
+    args = parser.parse_args()
+    logger.info(args)
+
+    if args.do_train:
+        logger.info('Loading data...')
+        # train_data: Pandas DataFrame containing the 3 columns - `prefix`, `input_text`, `target_text`.
+        #   - `prefix`: A string indicating the task to perform. (E.g. `"question"`, `"stsb"`)
+        #   - `input_text`: The input text. `prefix` is prepended to form the full input. (<prefix>: <input_text>)
+        #   - `target_text`: The target sequence
+        train_data = load_data(args.train_file)
+        logger.debug('train_data: {}'.format(train_data[:10]))
+        train_df = pd.DataFrame(train_data, columns=["prefix", "input_text", "target_text"])
+
+        eval_data = load_data(args.train_file)[:10]
+        eval_df = pd.DataFrame(eval_data, columns=["prefix", "input_text", "target_text"])
+
+        model_args = {
+            "reprocess_input_data": True,
+            "overwrite_output_dir": True,
+            "max_seq_length": args.max_seq_length,
+            "train_batch_size": args.batch_size,
+            "num_train_epochs": args.num_epochs,
+            "save_eval_checkpoints": False,
+            "save_model_every_epoch": False,
+            "evaluate_generated_text": True,
+            "evaluate_during_training": True,
+            "evaluate_during_training_verbose": True,
+            "use_multiprocessing": True,
+            "save_best_model": True,
+            "output_dir": args.output_dir,
+            "use_early_stopping": True,
+        }
+        # model_type: t5  model_name: Langboat/mengzi-t5-base
+        model = T5Model(args.model_type, args.model_name, args=model_args)
+
+        def count_matches(labels, preds):
+            logger.debug(f"labels: {labels[:10]}")
+            logger.debug(f"preds: {preds[:10]}")
+            match = sum([1 if label == pred else 0 for label, pred in zip(labels, preds)])
+            logger.debug(f"match: {match}")
+            return match
+
+        model.train_model(train_df, eval_data=eval_df, matches=count_matches)
+        print(model.eval_model(eval_df, matches=count_matches))
+
+    if args.do_predict:
+        model = T5Model(args.model_type, args.output_dir)
+        print(model.predict(["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]))
+
+
+if __name__ == '__main__':
+    main()
+```
+
+
+### 5. TGLS 模型（无监督生成）
 
 无监督的中文电商评论生成：从**电商评论**中提取用户表达观点的短句并进行组合来生成仿真评论。
 
-
 example: [examples/unsup_generation_demo.py](examples/unsup_generation_demo.py)
 
-## 效果
+```python
+import os
+import sys
+
+sys.path.append('..')
+from textgen.unsup_generation import Generate
+from textgen.unsup_generation.phrase import load_list
+
+pwd_path = os.path.abspath(os.path.dirname(__file__))
+
+samples = load_list(os.path.join(pwd_path, './data/ecommerce_comments.txt'))
+docs_text = [
+    ["挺好的，速度很快，也很实惠，不知效果如何",
+     "产品没得说，买了以后就降价，心情不美丽。",
+     "刚收到，包装很完整，不错",
+     "发货速度很快，物流也不错，同一时间买的两个东东，一个先到一个还在路上。这个水水很喜欢，不过盖子真的开了。盖不牢了现在。",
+     "包装的很好，是正品",
+     "被种草兰蔻粉水三百元一大瓶囤货，希望是正品好用，收到的时候用保鲜膜包裹得严严实实，只敢买考拉自营的护肤品",
+     ],
+    ['很温和，清洗的也很干净，不油腻，很不错，会考虑回购，第一次考拉买护肤品，满意',
+     '这款卸妆油我会无限回购的。即使我是油痘皮，也不会闷痘，同时在脸部按摩时，还能解决白头的脂肪粒的问题。用清水洗完脸后，非常的清爽。',
+     '自从用了fancl之后就不用其他卸妆了，卸的舒服又干净',
+     '买贵了，大润发才卖79。9。',
+     ],
+    samples
+]
+m = Generate(docs_text)
+r = m.generate(samples[:500])
+print('size:', len(r))
+for review in r:
+    print('\t' + review)
+```
+
+output:
+
 [美迪惠尔 N.M.F针剂水库保湿面膜](https://goods.kaola.com/product/2227311.html)有如下的20句评论，其中有10句是真实用户评论，10句是生成的评论，能看出来么?😂
+
 ```
 还不错还不错还不错还不错。
 东西到了，不知道好不好用。试用过后再来评价。到时看网评都还可以。
@@ -226,33 +337,30 @@ example: [examples/unsup_generation_demo.py](examples/unsup_generation_demo.py)
 就是精华液太少了，保湿效果不错。
 面膜的补水效果非常好，保湿效果确实很赞，这个面膜相对于胶原蛋白和美白的那两款的面膜纸要厚一些，看着价格合适。
 ```
+
 （前10句是真实用户评论，后10句是生成的😆
-
-
 
 # Contact
 
-- Issue(建议)：[![GitHub issues](https://img.shields.io/github/issues/shibing624/textgen.svg)](https://github.com/shibing624/textgen/issues)
+- Issue(建议)
+  ：[![GitHub issues](https://img.shields.io/github/issues/shibing624/textgen.svg)](https://github.com/shibing624/textgen/issues)
 - 邮件我：xuming: xuming624@qq.com
-- 微信我：
-加我*微信号：xuming624, 备注：姓名-公司名-NLP* 进NLP交流群。
+- 微信我： 加我*微信号：xuming624, 备注：姓名-公司名-NLP* 进NLP交流群。
 
 <img src="docs/wechat.jpeg" width="200" />
-
 
 # License
 
 授权协议为 [The Apache License 2.0](/LICENSE)，可免费用做商业用途。请在产品说明中附加textgen的链接和授权协议。
 
-
 # Contribute
+
 项目代码还很粗糙，如果大家对代码有所改进，欢迎提交回本项目，在提交之前，注意以下两点：
 
- - 在`tests`添加相应的单元测试
- - 使用`python -m pytest`来运行所有单元测试，确保所有单测都是通过的
+- 在`tests`添加相应的单元测试
+- 使用`python -m pytest`来运行所有单元测试，确保所有单测都是通过的
 
 之后即可提交PR。
-
 
 ## Reference
 

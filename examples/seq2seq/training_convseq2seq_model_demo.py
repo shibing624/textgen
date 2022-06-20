@@ -35,7 +35,7 @@ def main():
                                  model_dir=args.output_dir, max_length=args.max_seq_length)
         sentences = ["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
         print("inputs:", sentences)
-        print(model.predict(sentences))
+        print("outputs:", model.predict(sentences))
 
 
 if __name__ == '__main__':
