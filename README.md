@@ -122,8 +122,9 @@ mix-0.1: ('主要受限于机器学习、深度学习、计算机视觉、智能
 bt: ('主要研究机器学习、深度学习、计算机视觉和智能对话系统', [])
 ```
 
-### 2. ConvSeq2Seq 模型
+### 2. Seq2Seq 模型
 
+#### ConvSeq2Seq
 训练并预测ConvSeq2Seq模型：
 
 example: [examples/seq2sesq/training_convseq2seq_model_demo.py](examples/seq2seq/training_convseq2seq_model_demo.py)
@@ -175,6 +176,12 @@ inputs: ["什么是ai", "你是什么类型的计算机", "你知道热力学吗
 outputs: ['人工智能是工程和科学的分支,致力于构建思维的机器。', '我的程序运行在python,所以我在任何运脑上工作！', '我不能错热是一个疯狂的人工智能"200年。']
 ```
 
+#### BART
+训练并预测BART模型：
+
+example: [examples/seq2sesq/training_bartseq2seq_zh_demo.py](examples/seq2seq/training_bartseq2seq_zh_demo.py)
+
+
 ### 3. GPT2 模型
 
 example: [examples/language_generation/training_zh_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_gpt2_demo.py)
@@ -215,7 +222,7 @@ def main():
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/mengzi_t5_zh/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
-    parser.add_argument('--num_epochs', default=3, type=int, help='Number of training epochs')
+    parser.add_argument('--num_epochs', default=10, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
@@ -264,7 +271,9 @@ def main():
 
     if args.do_predict:
         model = T5Model(args.model_type, args.output_dir)
-        print(model.predict(["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]))
+        sentences = ["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
+        print("inputs:", sentences)
+        print("outputs:", model.predict(sentences))
 
 
 if __name__ == '__main__':
