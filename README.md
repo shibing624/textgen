@@ -38,9 +38,9 @@
 
 - UDA(非核心词替换)：基于Google提出的UDA(非核心词替换)算法，将文本中一定比例的不重要词替换为同义词，从而产生新的文本，本项目基于TFIDF实现UDA功能。
 - BT(回译)：本项目基于百度翻译API实现回译，把中文句子翻译为英文，再把英文翻译为新的中文。
-- Seq2Seq：基于Encoder-Decoder结构，序列到序列生成新的文本，本项目实现了PyTorch的ConvSeq2Seq模型和BART模型。
-- T5：
 - GPT2：基于Transformer的decode结果的自回归生成模型，本项目实现了PyTorch的GPT2模型。
+- Seq2Seq：基于Encoder-Decoder结构，序列到序列生成新的文本，本项目实现了PyTorch的ConvSeq2Seq模型和BART模型。
+- T5：基于Google提出的T5模型，本项目实现了PyTorch的T5模型，可以用于文本摘要、文本翻译、问题回答等文本生成任务。
 - TGLS：无监督文本生成模型，本项目实现了[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)模型，一种基于“先搜索后学习”的无监督文本生成方法，
   模型反复迭代，最终能生成较高质量的文本。
 
