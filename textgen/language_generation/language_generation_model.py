@@ -211,7 +211,7 @@ class LanguageGenerationModel:
             length_penalty=args.length_penalty,
             early_stopping=args.early_stopping,
             bos_token_id=self.tokenizer.bos_token_id,
-            pad_token_id=self.tokenizer.eos_token_id,  # tokenizer.pad_token_ids is None
+            pad_token_id=self.tokenizer.pad_token_id,
             eos_token_id=self.tokenizer.eos_token_id,
         )
 
@@ -226,13 +226,12 @@ class LanguageGenerationModel:
                 logger.info("=== GENERATED SEQUENCE {} ===".format(generated_sequence_idx + 1))
             generated_sequence = generated_sequence.tolist()
             # Decode text
-            text = tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
+            text = tokenizer.decode(generated_sequence, skip_special_tokens=True)
             # Remove all text after the stop token
             text = text[: text.find(args.stop_token) if args.stop_token else None]
 
             # Add the prompt at the beginning of the sequence. Remove the excess text that was used for pre-processing
-            total_sequence = (prompt_text + text[len(tokenizer.decode(encoded_prompt[0],
-                                                                      clean_up_tokenization_spaces=True)):])
+            total_sequence = (prompt_text + text[len(tokenizer.decode(encoded_prompt[0], skip_special_tokens=True)):])
 
             generated_sequences.append(total_sequence)
             if verbose:
