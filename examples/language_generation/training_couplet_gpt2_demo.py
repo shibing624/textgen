@@ -60,6 +60,6 @@ if __name__ == '__main__':
     ]
     raw(prompts)
 
-    train_path = "../data/couplet/test.tsv"
-    test_path = "../data/couplet/test.tsv"
+    train_path = "../data/couplet/train.txt"
+    test_path = "../data/couplet/test.txt"
     finetune(prompts, train_path, test_path)
