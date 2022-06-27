@@ -35,7 +35,7 @@ def finetune(prompts, train_path, test_path):
         "num_train_epochs": 3,
         "mlm": False,
         "output_dir": f"outputs/couplet-fine-tuned/",
-        "dataset_type": "line_by_line",
+        # "dataset_type": "line_by_line",
     }
 
     model = LanguageModelingModel("gpt2", "ckiplab/gpt2-base-chinese", args=train_args)
