@@ -31,10 +31,9 @@ def finetune(prompts, train_path, test_path):
         "learning_rate": 5e-6,
         "train_batch_size": 8,
         "gradient_accumulation_steps": 8,
-        "num_train_epochs": 3,
+        "num_train_epochs": 10,
         "mlm": False,
         "output_dir": f"outputs/couplet-fine-tuned/",
-        # "dataset_type": "text",
     }
 
     model = LanguageModelingModel("gpt2", "ckiplab/gpt2-base-chinese", args=train_args)
@@ -61,6 +60,6 @@ if __name__ == '__main__':
     ]
     raw(prompts)
 
-    train_path = "../data/couplet/train.tsv"
+    train_path = "../data/couplet/test.tsv"
     test_path = "../data/couplet/test.tsv"
     finetune(prompts, train_path, test_path)

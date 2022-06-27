@@ -152,7 +152,7 @@ class LanguageGenerationModel:
             self.model.resize_token_embeddings(len(self.tokenizer))
         self.model.to(self.device)
 
-    def generate(self, prompt=None, args=None, verbose=True):
+    def generate(self, prompt=None, args=None, verbose=False):
 
         """
         Generate text using a LanguageGenerationModel
@@ -208,6 +208,11 @@ class LanguageGenerationModel:
             repetition_penalty=args.repetition_penalty,
             do_sample=args.do_sample,
             num_return_sequences=args.num_return_sequences,
+            length_penalty=args.length_penalty,
+            early_stopping=args.early_stopping,
+            bos_token_id=self.tokenizer.bos_token_id,
+            pad_token_id=self.tokenizer.eos_token_id,  # tokenizer.pad_token_ids is None
+            eos_token_id=self.tokenizer.eos_token_id,
         )
 
         # Remove the batch dimension when returning multiple sequences
@@ -218,30 +223,16 @@ class LanguageGenerationModel:
 
         for generated_sequence_idx, generated_sequence in enumerate(output_sequences):
             if verbose:
-                logger.info(
-                    "=== GENERATED SEQUENCE {} ===".format(generated_sequence_idx + 1)
-                )
+                logger.info("=== GENERATED SEQUENCE {} ===".format(generated_sequence_idx + 1))
             generated_sequence = generated_sequence.tolist()
-
             # Decode text
-            text = tokenizer.decode(
-                generated_sequence, clean_up_tokenization_spaces=True
-            )
-
+            text = tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
             # Remove all text after the stop token
             text = text[: text.find(args.stop_token) if args.stop_token else None]
 
             # Add the prompt at the beginning of the sequence. Remove the excess text that was used for pre-processing
-            total_sequence = (
-                    prompt_text
-                    + text[
-                      len(
-                          tokenizer.decode(
-                              encoded_prompt[0], clean_up_tokenization_spaces=True
-                          )
-                      ):
-                      ]
-            )
+            total_sequence = (prompt_text + text[len(tokenizer.decode(encoded_prompt[0],
+                                                                      clean_up_tokenization_spaces=True)):])
 
             generated_sequences.append(total_sequence)
             if verbose:
