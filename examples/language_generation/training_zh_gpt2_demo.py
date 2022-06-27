@@ -16,8 +16,7 @@ def raw(prompts):
     for prompt in prompts:
         # Generate text using the model. Verbose set to False to prevent logging generated sequences.
         generated = model.generate(prompt, verbose=False)
-
-        generated = ".".join(generated[0].split(".")[:-1]) + "."
+        generated = generated[0]
         print("=" * 42)
         print(generated)
         print("=" * 42)
@@ -47,8 +46,7 @@ def finetune(prompts, train_path, test_path):
     for prompt in prompts:
         # Generate text using the model. Verbose set to False to prevent logging generated sequences.
         generated = model.generate(prompt, verbose=False)
-
-        generated = ".".join(generated[0].split(".")[:-1]) + "."
+        generated = generated[0]
         print("=" * 42)
         print(generated)
         print("=" * 42)

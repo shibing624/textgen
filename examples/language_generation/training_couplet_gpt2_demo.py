@@ -16,8 +16,7 @@ def raw(prompts):
     for prompt in prompts:
         # Generate text using the model. Verbose set to False to prevent logging generated sequences.
         generated = model.generate(prompt, verbose=False)
-
-        generated = ".".join(generated[0].split(".")[:-1]) + "."
+        generated = generated[0]
         print("=" * 42)
         print(generated)
         print("=" * 42)
@@ -35,7 +34,7 @@ def finetune(prompts, train_path, test_path):
         "num_train_epochs": 3,
         "mlm": False,
         "output_dir": f"outputs/couplet-fine-tuned/",
-        # "dataset_type": "line_by_line",
+        # "dataset_type": "text",
     }
 
     model = LanguageModelingModel("gpt2", "ckiplab/gpt2-base-chinese", args=train_args)
@@ -48,8 +47,7 @@ def finetune(prompts, train_path, test_path):
     for prompt in prompts:
         # Generate text using the model. Verbose set to False to prevent logging generated sequences.
         generated = model.generate(prompt, verbose=False)
-
-        generated = ".".join(generated[0].split(".")[:-1]) + "."
+        generated = generated[0]
         print("=" * 42)
         print(generated)
         print("=" * 42)
