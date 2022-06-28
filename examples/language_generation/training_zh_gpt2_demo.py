@@ -56,19 +56,10 @@ def main():
         model = LanguageGenerationModel(args.model_type, args.output_dir, args={"max_length": args.max_seq_length},
                                         tokenizer=tokenizer)
 
-        """
-        王语嫣知道表哥神智已乱，富贵梦越做越深，不禁凄然。
-
-        段誉见到阿碧的神情，怜惜之念大起，只盼招呼她和慕容复回去大理，妥为安顿，却见她瞧着慕容复的眼色中柔情无限，
-        而慕容复也是一副志得意满之态，心中登时一凛：“各有各的缘法，慕容兄与阿碧如此，我觉得他们可怜，其实他们心中，
-        焉知不是心满意足？我又何必多事？”轻轻拉了拉王语嫣的衣袖，做个手势。
-
-        众人都悄悄退了开去。但见慕容复在土坟上南面而坐，口中兀自喃喃不休。
-        """
         prompts = [
-            "王语嫣知道表哥神智已乱",
-            "段誉见到阿碧的神情，怜惜之念大起，只盼",
-            "众人都悄悄退了开去。但见慕容复在土坟上南面而坐"
+            "你好啊",
+            "好漂亮啊小姐姐",
+            "你是军人吗？"
         ]
         for prompt in prompts:
             # Generate text using the model. Verbose set to False to prevent logging generated sequences.
