@@ -46,8 +46,8 @@ def main():
         }
 
         model = LanguageModelingModel(args.model_type, args.model_name, args=train_args)
-        model.train_model(args.train_path, eval_file=args.test_path)
-        print(model.eval_model(args.test_path))
+        model.train_model(args.train_file, eval_file=args.test_file)
+        print(model.eval_model(args.test_file))
 
     if args.do_predict:
         logger.info('Predict...')
