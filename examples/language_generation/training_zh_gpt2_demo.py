@@ -18,7 +18,7 @@ def main():
     parser.add_argument('--train_file', default='../data/zh_article.txt', type=str, help='Training data file')
     parser.add_argument('--test_file', default='../data/zh_article.txt', type=str, help='Test data file')
     parser.add_argument('--model_type', default='gpt2', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='ckiplab/gpt2-base-chinese', type=str,
+    parser.add_argument('--model_name', default='uer/gpt2-distil-chinese-cluecorpussmall', type=str,
                         help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
@@ -44,8 +44,8 @@ def main():
             "mlm": False,
             "output_dir": args.output_dir,
         }
-
-        model = LanguageModelingModel(args.model_type, args.model_name, args=train_args)
+        tokenizer = BertTokenizerFast.from_pretrained(args.output_dir)
+        model = LanguageModelingModel(args.model_type, args.model_name, args=train_args, tokenizer=tokenizer)
         model.train_model(args.train_file, eval_file=args.test_file)
         print(model.eval_model(args.test_file))
 
