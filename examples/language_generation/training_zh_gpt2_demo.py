@@ -22,7 +22,7 @@ def main():
                         help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--output_dir', default='./outputs/couplet-fine-tuned/', type=str,
+    parser.add_argument('--output_dir', default='./outputs/zh-article-fine-tuned/', type=str,
                         help='Model output directory')
     parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
     parser.add_argument('--num_epochs', default=10, type=int, help='Number of training epochs')
@@ -42,6 +42,7 @@ def main():
             "gradient_accumulation_steps": 8,
             "num_train_epochs": args.num_epochs,
             "mlm": False,
+            "save_best_model": True,
             "output_dir": args.output_dir,
         }
         tokenizer = BertTokenizerFast.from_pretrained(args.output_dir)
