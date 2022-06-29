@@ -198,6 +198,7 @@ class LanguageGenerationModel:
             encoded_prompt = [tokenizer.cls_token_id] + tokenizer.encode(
                 prompt_text, add_special_tokens=False
             )
+            encoded_prompt = torch.tensor([encoded_prompt], dtype=torch.long)
         else:
             encoded_prompt = tokenizer.encode(
                 prompt_text, add_special_tokens=False, return_tensors="pt"

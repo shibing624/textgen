@@ -45,7 +45,7 @@ def main():
             "save_best_model": True,
             "output_dir": args.output_dir,
         }
-        tokenizer = BertTokenizerFast.from_pretrained(args.output_dir)
+        tokenizer = BertTokenizerFast.from_pretrained(args.model_name)
         model = LanguageModelingModel(args.model_type, args.model_name, args=train_args, tokenizer=tokenizer)
         model.train_model(args.train_file, eval_file=args.test_file)
         print(model.eval_model(args.test_file))

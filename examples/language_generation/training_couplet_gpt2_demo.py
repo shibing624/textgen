@@ -6,10 +6,10 @@
 from loguru import logger
 import argparse
 from transformers import BertTokenizerFast
+import torch
 from torch.utils.data import Dataset
 import os
 import pickle
-import pandas as pd
 from tqdm.auto import tqdm
 import sys
 
@@ -18,76 +18,58 @@ from textgen.language_generation import LanguageGenerationModel
 from textgen.language_modeling import LanguageModelingModel
 
 
-def load_data(file_path):
-    data = []
-    with open(file_path, 'r', encoding='utf-8') as f:
-        for line in f:
-            line = line.strip('\n')
-            terms = line.split('\t')
-            if len(terms) == 2:
-                data.append([terms[0], terms[1]])
-            else:
-                logger.warning(f'line error: {line}, split size: {len(terms)}')
-    return data
-
-
-def preprocess_data(data):
-    input_text, target_text, tokenizer, args = data
-
+def encode(data):
+    tokenizer, line = data
     cls_id = tokenizer.cls_token_id
     sep_id = tokenizer.sep_token_id
-    input_ids = [cls_id]
-    input_ids += tokenizer.encode(input_text, add_special_tokens=False)
-    input_ids.append(sep_id)
-    input_ids += tokenizer.encode(target_text, add_special_tokens=False)
-    input_ids.append(sep_id)
-
+    src, trg = line.split('\t')
+    input_ids = [cls_id] + tokenizer.encode(src, add_special_tokens=False) + [sep_id] + \
+        tokenizer.encode(trg, add_special_tokens=False) + [sep_id]
     return input_ids
 
-
 class SrcTrgDataset(Dataset):
-    def __init__(self, tokenizer, args, data, mode, block_size=512):
+    def __init__(self, tokenizer, args, file_path, mode, block_size=512, special_tokens_count=2):
+        block_size = block_size - special_tokens_count
+        directory, filename = os.path.split(file_path)
         cached_features_file = os.path.join(
-            args.cache_dir,
-            args.model_name.replace("/", "_")
-            + "_cached_"
-            + str(args.max_seq_length)
-            + str(len(data)),
+            args.cache_dir, args.model_type + "_cached_lm_" + str(block_size) + "_" + filename
         )
 
         if os.path.exists(cached_features_file) and (
                 (not args.reprocess_input_data and not args.no_cache)
                 or (mode == "dev" and args.use_cached_eval_features and not args.no_cache)
         ):
-            logger.info(" Loading features from cached file %s" % cached_features_file)
+            logger.info(f" Loading features from cached file {cached_features_file}")
             with open(cached_features_file, "rb") as handle:
                 self.examples = pickle.load(handle)
         else:
-            logger.info(" Creating features from dataset file at %s" % args.cache_dir)
+            logger.info(f" Creating features from dataset file at {args.cache_dir}")
 
-            data = [
-                (input_text, target_text, tokenizer, args)
-                for input_text, target_text in zip(
-                    data["input_text"], data["target_text"]
-                )
-            ]
+            with open(file_path, encoding="utf-8") as f:
+                lines = [
+                    (tokenizer, line) for line in f.read().splitlines() if (len(line) > 0 and not line.isspace())
+                ]
 
-            self.examples = [
-                preprocess_data(d) for d in tqdm(data, disable=args.silent)
-            ]
+            self.examples = [encode(line) for line in lines]
 
-            if not args.no_cache:
-                logger.info(
-                    " Saving features into cached file %s" % cached_features_file
-                )
-                with open(cached_features_file, "wb") as handle:
-                    pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            self.examples = [token for tokens in self.examples for token in tokens]
+            if len(self.examples) > block_size:
+                self.examples = [
+                    tokenizer.build_inputs_with_special_tokens(self.examples[i: i + block_size])
+                    for i in tqdm(range(0, len(self.examples) - block_size + 1, block_size))
+                ]
+            else:
+                self.examples = [tokenizer.build_inputs_with_special_tokens(self.examples)]
+
+            logger.info(f" Saving features into cached file {cached_features_file}")
+            with open(cached_features_file, "wb") as handle:
+                pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def __len__(self):
         return len(self.examples)
 
-    def __getitem__(self, index):
-        return self.examples[index]
+    def __getitem__(self, item):
+        return torch.tensor(self.examples[item], dtype=torch.long)
 
 
 def main():
@@ -109,12 +91,6 @@ def main():
 
     if args.do_train:
         logger.info('Training...')
-        train_data = load_data(args.train_file)
-        logger.debug('train_data: {}'.format(train_data[:10]))
-        train_df = pd.DataFrame(train_data, columns=["input_text", "target_text"])
-
-        eval_data = load_data(args.test_file)[:10]
-        eval_df = pd.DataFrame(eval_data, columns=["input_text", "target_text"])
 
         train_args = {
             "dataset_class": SrcTrgDataset,
@@ -129,10 +105,11 @@ def main():
             "mlm": False,
             "save_best_model": True,
             "output_dir": args.output_dir,
+            "evaluate_during_training": True,
         }
-        tokenizer = BertTokenizerFast.from_pretrained(args.output_dir)
+        tokenizer = BertTokenizerFast.from_pretrained(args.model_name)
         model = LanguageModelingModel(args.model_type, args.model_name, args=train_args, tokenizer=tokenizer)
-        model.train_model(train_df, eval_file=eval_df)
+        model.train_model(args.train_file, eval_file=args.test_file)
         print(model.eval_model(args.test_file))
 
     if args.do_predict:
