@@ -46,7 +46,7 @@ def preprocess_data(data):
 
 
 class SrcTrgDataset(Dataset):
-    def __init__(self, tokenizer, args, data, mode):
+    def __init__(self, tokenizer, args, data, mode, block_size=512):
         cached_features_file = os.path.join(
             args.cache_dir,
             args.model_name.replace("/", "_")
