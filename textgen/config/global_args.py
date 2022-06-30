@@ -50,7 +50,7 @@ global_args = {
     "train_batch_size": 8,
     "use_cached_eval_features": False,
     "use_early_stopping": False,
-    "use_multiprocessing": True,
+    "use_multiprocessing": False,
     "wandb_kwargs": {},
     "wandb_project": None,
     "warmup_ratio": 0.06,

@@ -97,8 +97,8 @@ class ModelArgs:
     use_cached_eval_features: bool = False
     use_early_stopping: bool = False
     use_hf_datasets: bool = False
-    use_multiprocessing: bool = True
-    use_multiprocessing_for_evaluation: bool = True
+    use_multiprocessing: bool = False
+    use_multiprocessing_for_evaluation: bool = False
     wandb_kwargs: dict = field(default_factory=dict)
     wandb_project: str = None
     warmup_ratio: float = 0.06
@@ -179,7 +179,7 @@ class T5Args(ModelArgs):
     special_tokens_list: list = field(default_factory=list)
     top_k: float = None
     top_p: float = None
-    use_multiprocessed_decoding: bool = True
+    use_multiprocessed_decoding: bool = False
 
 
 @dataclass

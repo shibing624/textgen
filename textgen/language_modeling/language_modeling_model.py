@@ -402,7 +402,7 @@ class LanguageModelingModel:
 
         def collate(examples: List[torch.Tensor]):
             if tokenizer._pad_token is None:
-                return pad_sequence(examples, batch_first=True)
+                return pad_sequence(examples, batch_first=True, padding_value=-100)
             return pad_sequence(examples, batch_first=True, padding_value=tokenizer.pad_token_id)
 
         if self.is_world_master():

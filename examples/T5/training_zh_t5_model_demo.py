@@ -63,7 +63,7 @@ def main():
             "evaluate_generated_text": True,
             "evaluate_during_training": True,
             "evaluate_during_training_verbose": True,
-            "use_multiprocessing": True,
+            "use_multiprocessing": False,
             "save_best_model": True,
             "output_dir": args.output_dir,
             "use_early_stopping": True,
