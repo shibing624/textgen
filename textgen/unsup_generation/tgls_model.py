@@ -4,14 +4,24 @@
 @description: 生成仿真评论
 """
 import os
-from textgen.unsup_generation.phrase import load_list, caculate_word_idf, text2review, find_word_phrase, get_seg_pos
+from textgen.unsup_generation.phrase import (
+    load_list,
+    caculate_word_idf,
+    text2review,
+    find_word_phrase,
+    get_seg_pos
+)
 from textgen.unsup_generation.util import (
-    text2seg_pos, get_aspect_express, get_candidate_aspect,
-    merge_aspect_express, fake_review_filter, generate_reviews, NSDict,
+    text2seg_pos,
+    get_aspect_express,
+    get_candidate_aspect,
+    merge_aspect_express,
+    fake_review_filter,
+    generate_reviews,
+    NSDict,
     PairPattSort
 )
 from loguru import logger
-
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
 default_stopwords_path = os.path.join(pwd_path, '../data/stopwords.txt')
