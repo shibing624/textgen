@@ -1211,7 +1211,7 @@ class LanguageModelingModel:
             if optimizer and scheduler and self.args.save_optimizer_and_scheduler:
                 torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
                 torch.save(scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
-            #self.save_model_args(output_dir)
+            self.save_model_args(output_dir)
 
         if results:
             output_eval_file = os.path.join(output_dir, "eval_results.txt")

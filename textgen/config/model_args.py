@@ -218,7 +218,8 @@ class LanguageModelingArgs(ModelArgs):
             args_dict = self.get_args_for_saving()
             if args_dict["dataset_class"] is not None:
                 args_dict["dataset_class"] = type(args_dict["dataset_class"]).__name__
-            json.dump(self.get_args_for_saving(), f)
+            # json.dump(self.get_args_for_saving(), f)
+            json.dump(args_dict, f)
 
     def load(self, input_dir):
         if input_dir:
@@ -272,7 +273,7 @@ class Seq2SeqArgs(ModelArgs):
             args_dict = self.get_args_for_saving()
             if args_dict["dataset_class"] is not None:
                 args_dict["dataset_class"] = type(args_dict["dataset_class"]).__name__
-            json.dump(self.get_args_for_saving(), f)
+            json.dump(args_dict, f)
 
     def load(self, input_dir):
         if input_dir:

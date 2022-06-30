@@ -103,7 +103,6 @@ def main():
             "gradient_accumulation_steps": 8,
             "num_train_epochs": args.num_epochs,
             "mlm": False,
-            "save_best_model": True,
             "output_dir": args.output_dir,
             "evaluate_during_training": True,
         }
