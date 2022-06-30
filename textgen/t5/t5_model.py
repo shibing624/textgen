@@ -9,14 +9,19 @@ import os
 import random
 import warnings
 from dataclasses import asdict
-from multiprocessing import Pool, cpu_count
-from loguru import logger
+from multiprocessing import Pool
+
 import numpy as np
 import pandas as pd
 import torch
+from loguru import logger
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
 from tqdm.auto import tqdm, trange
+from transformers import ByT5Tokenizer
+from transformers import MT5Config, MT5ForConditionalGeneration
+from transformers import T5Config, T5ForConditionalGeneration, T5Tokenizer
+from transformers.optimization import AdamW, Adafactor
 from transformers.optimization import (
     get_constant_schedule,
     get_constant_schedule_with_warmup,
@@ -25,10 +30,6 @@ from transformers.optimization import (
     get_cosine_with_hard_restarts_schedule_with_warmup,
     get_polynomial_decay_schedule_with_warmup,
 )
-from transformers.optimization import AdamW, Adafactor
-from transformers import MT5Config, MT5ForConditionalGeneration
-from transformers import ByT5Tokenizer
-from transformers import T5Config, T5ForConditionalGeneration, T5Tokenizer
 
 from textgen.config.model_args import T5Args
 from textgen.t5.t5_utils import T5Dataset, load_hf_dataset
