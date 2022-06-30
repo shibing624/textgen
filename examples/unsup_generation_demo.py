@@ -7,7 +7,7 @@ import os
 import sys
 
 sys.path.append('..')
-from textgen.unsup_generation import Generate
+from textgen.unsup_generation import TglsModel
 from textgen.unsup_generation.phrase import load_list
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
@@ -28,7 +28,7 @@ docs_text = [
      ],
     samples
 ]
-m = Generate(docs_text)
+m = TglsModel(docs_text)
 r = m.generate(samples[:500])
 print('size:', len(r))
 for review in r:

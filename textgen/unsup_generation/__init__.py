@@ -4,4 +4,4 @@
 @description: 
 """
 
-from textgen.unsup_generation.generate import Generate
+from textgen.unsup_generation.tgls_model import TglsModel

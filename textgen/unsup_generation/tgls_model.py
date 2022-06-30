@@ -18,7 +18,7 @@ default_stopwords_path = os.path.join(pwd_path, '../data/stopwords.txt')
 default_pos_adj_word_path = os.path.join(pwd_path, '../data/HowNetPOSWord.txt')
 
 
-class Generate:
+class TglsModel:
     def __init__(self, docs):
         logger.info(f'docs_text len: {len(docs)}')
         # 加载停用词

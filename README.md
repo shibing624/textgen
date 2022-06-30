@@ -36,13 +36,12 @@
 
 # Feature
 
-- UDA(非核心词替换)：基于Google提出的UDA(非核心词替换)算法，将文本中一定比例的不重要词替换为同义词，从而产生新的文本，本项目基于TFIDF实现UDA功能。
-- BT(回译)：本项目基于百度翻译API实现回译，把中文句子翻译为英文，再把英文翻译为新的中文。
-- GPT2：基于Transformer的decode结果的自回归生成模型，本项目实现了PyTorch的GPT2模型。
-- Seq2Seq：基于Encoder-Decoder结构，序列到序列生成新的文本，本项目实现了PyTorch的ConvSeq2Seq模型和BART模型。
-- T5：基于Google提出的T5模型，本项目实现了PyTorch的T5模型，可以用于文本摘要、文本翻译、问题回答等文本生成任务。
-- TGLS：无监督文本生成模型，本项目实现了[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)模型，一种基于“先搜索后学习”的无监督文本生成方法，
-  模型反复迭代，最终能生成较高质量的文本。
+- [UDA(非核心词替换)](textgen/augment/word_level_augment.py)：本项目参考Google的UDA(非核心词替换)算法，基于TF-IDF将句子中部分不重要词替换为同义词，产生新的文本，实现了文本扩增
+- [BT(回译)](textgen/augment/sentence_level_augment.py)：本项目基于百度翻译API实现了回译功能，先把中文句子翻译为英文，再把英文翻译为新的中文
+- [Seq2Seq](textgen/seq2seq)：本项目基于PyTorch实现了Seq2Seq、ConvSeq2Seq、BART模型的训练和预测，可以用于文本翻译、对话生成、摘要生成等文本生成任务
+- [T5](textgen/t5)：本项目基于PyTorch实现了T5模型训练和预测，可以用于文本翻译、对话生成、对联生成等文本生成任务
+- [GPT2](textgen/language_modeling)：本项目基于PyTorch实现了GTP2模型训练和预测，可以用于文章生成、对联生成等文本生成任务
+- [TGLS](textgen/unsup_generation)：本项目实现了[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)无监督相似文本生成模型，是一种“先搜索后学习”的文本生成方法，通过反复迭代学习候选集，最终模型能生成与候选集较高质量的相似文本
 
 
 # Demo
@@ -75,7 +74,7 @@ python3 setup.py install
 
 # Usage
 
-### Text Augmentation(EDA、UDA文本数据增强)
+## Text Augmentation(EDA、UDA文本数据增强)
 
 example: [examples/text_augmentation_demo.py](examples/text_augmentation_demo.py)
 
@@ -125,9 +124,9 @@ mix-0.1: ('主要受限于机器学习、深度学习、计算机视觉、智能
 bt: ('主要研究机器学习、深度学习、计算机视觉和智能对话系统', [])
 ```
 
-### Seq2Seq 模型
+## Seq2Seq 模型
 
-#### ConvSeq2Seq
+### ConvSeq2Seq
 训练并预测ConvSeq2Seq模型：
 
 example: [examples/seq2sesq/training_convseq2seq_model_demo.py](examples/seq2seq/training_convseq2seq_model_demo.py)
@@ -179,7 +178,7 @@ inputs: ["什么是ai", "你是什么类型的计算机", "你知道热力学吗
 outputs: ['人工智能是工程和科学的分支,致力于构建思维的机器。', '我的程序运行在python,所以我在任何运脑上工作！', '我不能错热是一个疯狂的人工智能"200年。']
 ```
 
-#### BART
+### BART
 训练并预测BART模型：
 
 example: [examples/seq2sesq/training_bartseq2seq_zh_demo.py](examples/seq2seq/training_bartseq2seq_zh_demo.py)
@@ -193,7 +192,7 @@ outputs: ['人工智能是工程和科学的分支,致力于构', '我的程序�
 ```
 
 
-### T5 模型
+## T5 模型
 
 example: [examples/T5/training_zh_t5_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/T5/training_zh_t5_model_demo.py)
 
@@ -293,15 +292,15 @@ inputs: ['什么是ai', '你是什么类型的计算机', '你知道热力学吗
 outputs: ['人工智能有两个广义的定义,任何拟人的机械,如在卡雷尔capeks', '我的程序运行在Python,所以我在任何电脑上工作!', '什么是热力学']
 ```
 
-### GPT2 模型
+## GPT2 模型
 
-#### 中文GPT2 - 文章生成
+### 中文GPT2 - 文章生成
 
 使用中文数据集（段落格式，`\n`间隔），训练GPT2模型，可以用于诗歌生成、文章生成等任务。
 
 example: [examples/language_generation/training_zh_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_gpt2_demo.py)
 
-#### 中文GPT2 - 对联生成
+### 中文GPT2 - 对联生成
 
 使用中文对联数据集（tsv格式，`\t`间隔），自定义数据集读取Dataset，训练GPT2模型，可以用于对联生成、对话生成等任务。
 
@@ -314,7 +313,7 @@ example: [examples/language_generation/training_couplet_gpt2_demo.py](https://gi
 4. T5的对联生成效果好于GPT2、GPT2的诗词生成效果好于T5
 
 
-### TGLS 模型（无监督生成）
+## TGLS 模型（无监督相似文本生成模型）
 
 无监督的中文电商评论生成：从**电商评论**中提取用户表达观点的短句并进行组合来生成仿真评论。
 
@@ -325,7 +324,7 @@ import os
 import sys
 
 sys.path.append('..')
-from textgen.unsup_generation import Generate
+from textgen.unsup_generation import TglsModel
 from textgen.unsup_generation.phrase import load_list
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
@@ -346,7 +345,7 @@ docs_text = [
      ],
     samples
 ]
-m = Generate(docs_text)
+m = TglsModel(docs_text)
 r = m.generate(samples[:500])
 print('size:', len(r))
 for review in r:
