@@ -75,7 +75,7 @@ python3 setup.py install
 
 # Usage
 
-### 1. Text Augmentation(EDA、UDA文本数据增强)
+### Text Augmentation(EDA、UDA文本数据增强)
 
 example: [examples/text_augmentation_demo.py](examples/text_augmentation_demo.py)
 
@@ -124,11 +124,8 @@ tfidf-0.2: ('主要原因研究机器学习、深度学习、计算机硬件视�
 mix-0.1: ('主要受限于机器学习、深度学习、计算机视觉、智能对话系统相关内容', [('研究', '受限于', 2, 5)])
 bt: ('主要研究机器学习、深度学习、计算机视觉和智能对话系统', [])
 ```
-### 2. GPT2 模型
 
-example: [examples/language_generation/training_zh_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_gpt2_demo.py)
-
-### 3. Seq2Seq 模型
+### Seq2Seq 模型
 
 #### ConvSeq2Seq
 训练并预测ConvSeq2Seq模型：
@@ -196,7 +193,7 @@ outputs: ['人工智能是工程和科学的分支,致力于构', '我的程序�
 ```
 
 
-### 4. T5 模型
+### T5 模型
 
 example: [examples/T5/training_zh_t5_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/T5/training_zh_t5_model_demo.py)
 
@@ -296,8 +293,28 @@ inputs: ['什么是ai', '你是什么类型的计算机', '你知道热力学吗
 outputs: ['人工智能有两个广义的定义,任何拟人的机械,如在卡雷尔capeks', '我的程序运行在Python,所以我在任何电脑上工作!', '什么是热力学']
 ```
 
+### GPT2 模型
 
-### 5. TGLS 模型（无监督生成）
+#### 中文GPT2 - 文章生成
+
+使用中文数据集（段落格式，`\n`间隔），训练GPT2模型，可以用于诗歌生成、文章生成等任务。
+
+example: [examples/language_generation/training_zh_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_gpt2_demo.py)
+
+#### 中文GPT2 - 对联生成
+
+使用中文对联数据集（tsv格式，`\t`间隔），自定义数据集读取Dataset，训练GPT2模型，可以用于对联生成、对话生成等任务。
+
+example: [examples/language_generation/training_couplet_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_couplet_gpt2_demo.py)
+
+- GPT2 vs T5：
+1. 都是从Transformer改进来的，T5同时有编码器和解码器，GPT2只有解码器
+2. T5的模型优势是处理给定输入，产出对应输出的任务，如翻译、对话、问答等
+3. GPT2的模型优势是自由创作，如写一篇短文
+4. T5的对联生成效果好于GPT2、GPT2的诗词生成效果好于T5
+
+
+### TGLS 模型（无监督生成）
 
 无监督的中文电商评论生成：从**电商评论**中提取用户表达观点的短句并进行组合来生成仿真评论。
 

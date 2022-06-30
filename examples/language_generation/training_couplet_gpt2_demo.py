@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 @author:XuMing(xuming624@qq.com)
-@description: 
+@description: 使用GPT2模型做对联生成任务，prompt为上联，自动对下联
+
+本示例自定义了GPT2模型的Dataset，使其完成类似seq2seq的生成任务，可以适配对话生成、对联生成、诗歌生成等任务
 """
 from loguru import logger
 import argparse
@@ -18,6 +20,7 @@ from textgen.language_modeling import LanguageModelingModel
 
 
 def encode(data):
+    """Encode data to src trg token ids"""
     tokenizer, line = data
     cls_id = tokenizer.cls_token_id
     sep_id = tokenizer.sep_token_id
@@ -28,6 +31,7 @@ def encode(data):
 
 
 class SrcTrgDataset(Dataset):
+    """Custom dataset, use it by dataset_class from train args"""
     def __init__(self, tokenizer, args, file_path, mode, block_size=512, special_tokens_count=2):
         block_size = block_size - special_tokens_count
         directory, filename = os.path.split(file_path)
