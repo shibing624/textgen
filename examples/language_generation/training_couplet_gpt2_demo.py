@@ -24,8 +24,9 @@ def encode(data):
     sep_id = tokenizer.sep_token_id
     src, trg = line.split('\t')
     input_ids = [cls_id] + tokenizer.encode(src, add_special_tokens=False) + [sep_id] + \
-        tokenizer.encode(trg, add_special_tokens=False) + [sep_id]
+                tokenizer.encode(trg, add_special_tokens=False) + [sep_id]
     return input_ids
+
 
 class SrcTrgDataset(Dataset):
     def __init__(self, tokenizer, args, file_path, mode, block_size=512, special_tokens_count=2):
@@ -51,15 +52,6 @@ class SrcTrgDataset(Dataset):
                 ]
 
             self.examples = [encode(line) for line in lines]
-
-            self.examples = [token for tokens in self.examples for token in tokens]
-            if len(self.examples) > block_size:
-                self.examples = [
-                    tokenizer.build_inputs_with_special_tokens(self.examples[i: i + block_size])
-                    for i in tqdm(range(0, len(self.examples) - block_size + 1, block_size))
-                ]
-            else:
-                self.examples = [tokenizer.build_inputs_with_special_tokens(self.examples)]
 
             logger.info(f" Saving features into cached file {cached_features_file}")
             with open(cached_features_file, "wb") as handle:
@@ -108,8 +100,16 @@ def main():
         }
         tokenizer = BertTokenizerFast.from_pretrained(args.model_name)
         model = LanguageModelingModel(args.model_type, args.model_name, args=train_args, tokenizer=tokenizer)
-        model.train_model(args.train_file, eval_file=args.test_file)
-        print(model.eval_model(args.test_file))
+
+        def count_matches(labels, preds):
+            logger.debug(f"labels: {labels[:10]}")
+            logger.debug(f"preds: {preds[:10]}")
+            match = sum([1 if label == pred else 0 for label, pred in zip(labels, preds)])
+            logger.debug(f"match: {match}")
+            return match
+
+        model.train_model(args.train_file, eval_file=args.test_file, matches=count_matches)
+        print(model.eval_model(args.test_file, matches=count_matches))
 
     if args.do_predict:
         logger.info('Predict...')
