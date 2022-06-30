@@ -10,7 +10,6 @@ import torch
 from torch.utils.data import Dataset
 import os
 import pickle
-from tqdm.auto import tqdm
 import sys
 
 sys.path.append('../..')
@@ -100,16 +99,9 @@ def main():
         }
         tokenizer = BertTokenizerFast.from_pretrained(args.model_name)
         model = LanguageModelingModel(args.model_type, args.model_name, args=train_args, tokenizer=tokenizer)
-
-        def count_matches(labels, preds):
-            logger.debug(f"labels: {labels[:10]}")
-            logger.debug(f"preds: {preds[:10]}")
-            match = sum([1 if label == pred else 0 for label, pred in zip(labels, preds)])
-            logger.debug(f"match: {match}")
-            return match
-
-        model.train_model(args.train_file, eval_file=args.test_file, matches=count_matches)
-        print(model.eval_model(args.test_file, matches=count_matches))
+        # Train model for pair data (format: src \t trg)
+        model.train_model(args.train_file, eval_file=args.test_file)
+        print(model.eval_model(args.test_file))
 
     if args.do_predict:
         logger.info('Predict...')
