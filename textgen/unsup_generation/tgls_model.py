@@ -20,6 +20,9 @@ default_pos_adj_word_path = os.path.join(pwd_path, '../data/HowNetPOSWord.txt')
 
 class TglsModel:
     def __init__(self, docs):
+        """
+        Initialize the model with the given docs
+        """
         logger.info(f'docs_text len: {len(docs)}')
         # 加载停用词
         self.stopwords = set(load_list(default_stopwords_path))
@@ -34,6 +37,9 @@ class TglsModel:
         self.pos_adj_word = load_list(default_pos_adj_word_path)
 
     def generate(self, doc, num=1000, is_uniq=True):
+        """
+        Generate similar texts from a given doc
+        """
         seg_pos_text = [get_seg_pos(l) for l in doc]
         seg_list, pos_list, seg_review_list = text2seg_pos(seg_pos_text, pattern='[。！？，～]')
         raw_aspect_list = get_candidate_aspect(seg_list, pos_list, self.pos_adj_word, self.stopwords, self.word_idf)
@@ -60,7 +66,7 @@ class TglsModel:
         aspect_express = get_aspect_express(seg_review_list, pair_useful)
         # 字符匹配合并aspect
         merged_aspect_express, opinion_set = merge_aspect_express(aspect_express, pair_useful)
-        # 生成假评论
+        # 生成相似评论
         generated_raw_reviews = generate_reviews(merged_aspect_express, num=num)
         results = fake_review_filter(generated_raw_reviews, opinion_set, is_uniq=is_uniq)
 
