@@ -17,7 +17,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
 from tqdm.auto import tqdm, trange
-from transformers.models.t5 import T5Config, T5ForConditionalGeneration, T5Tokenizer
+from transformers import T5Config, T5ForConditionalGeneration, T5Tokenizer
 from transformers.optimization import (
     get_constant_schedule,
     get_constant_schedule_with_warmup,
