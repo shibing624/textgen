@@ -8,10 +8,19 @@ import pandas as pd
 from loguru import logger
 import os
 from transformers import BertTokenizerFast
+from transformers import BartForConditionalGeneration, Text2TextGenerationPipeline
 import sys
 
 sys.path.append('../..')
 from textgen.seq2seq import BartSeq2SeqModel
+
+
+def model_fill_mask():
+    tokenizer = BertTokenizerFast.from_pretrained("fnlp/bart-base-chinese")
+    model = BartForConditionalGeneration.from_pretrained("fnlp/bart-base-chinese")
+    text2text_generator = Text2TextGenerationPipeline(model, tokenizer)
+    r = text2text_generator("北京是[MASK]的首都", max_length=50, do_sample=False)
+    print(r)
 
 
 def load_data(file_path):
@@ -98,11 +107,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-    from transformers import BertTokenizerFast, BartForConditionalGeneration, Text2TextGenerationPipeline
-
-    tokenizer = BertTokenizerFast.from_pretrained("fnlp/bart-base-chinese")
-    model = BartForConditionalGeneration.from_pretrained("fnlp/bart-base-chinese")
-    text2text_generator = Text2TextGenerationPipeline(model, tokenizer)
-    r = text2text_generator("北京是[MASK]的首都", max_length=50, do_sample=False)
-    print(r)
+    model_fill_mask()
