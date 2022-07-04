@@ -3,8 +3,10 @@
 @author:XuMing(xuming624@qq.com)
 @description: Tokenization
 """
-
+import jieba
 import re
+
+jieba.setLogLevel(log_level="ERROR")
 
 
 def tokenize_words(text):
@@ -13,7 +15,6 @@ def tokenize_words(text):
     sentences = split_2_short_text(text, include_symbol=True)
     for sentence, idx in sentences:
         if is_chinese_string(sentence):
-            import jieba
             output.extend(jieba.lcut(sentence))
         else:
             output.extend(whitespace_tokenize(sentence))
@@ -79,40 +80,6 @@ def whitespace_tokenize(text):
         return []
     tokens = text.split()
     return tokens
-
-
-def segment(sentence, is_cut2char=False, enable_pos=False):
-    """
-    切词
-    :param sentence:
-    :param is_cut2char: False use jieba.lcut; True use list(sentence)
-    :param enable_pos: bool, enable POS
-    :return: list
-    """
-    import jieba
-    from jieba import posseg
-
-    jieba.setLogLevel(log_level="ERROR")
-    if enable_pos:
-        if not is_cut2char:
-            word_pos_seq = posseg.lcut(sentence)
-            word_seq, pos_seq = [], []
-            for w, p in word_pos_seq:
-                word_seq.append(w)
-                pos_seq.append(p)
-            return word_seq, pos_seq
-        else:
-            word_seq = list(sentence)
-            pos_seq = []
-            for w in word_seq:
-                w_p = posseg.lcut(w)
-                pos_seq.append(w_p[0].flag)
-            return word_seq, pos_seq
-    else:
-        if not is_cut2char:
-            return jieba.lcut(sentence)
-        else:
-            return list(sentence)
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@
 """
 import os
 import jieba
-import jieba.posseg as pseg
+import jieba.posseg
 import math
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
@@ -20,9 +20,7 @@ ADVERB_MARK = ['d', 'df', 'dg']  # 副词
 ENG_MARK = ['eng']
 
 RESERVED_MARK = NOUN_MARK + VERB_MARK + ADJECTIVE_MARK + ADVERB_MARK + ENG_MARK  # 用于发现新词
-
 jieba.setLogLevel(log_level="ERROR")
-jieba.load_userdict(os.path.join(pwd_path, '../data/user_dict.txt'))
 
 
 def text2review(seg_pos_text):
@@ -171,7 +169,7 @@ def get_seg_pos(line, type='word'):
     获取文档的分词以及词性标注结果，分词的方式可以为按词切分或者按字切分
     """
     if type == 'word':
-        line_cut = pseg.cut(line.strip())
+        line_cut = jieba.posseg.cut(line.strip())
         wordlist = []
         for term in line_cut:
             wordlist.append('%s/%s' % (term.word, term.flag))
@@ -183,7 +181,7 @@ def get_seg_pos(line, type='word'):
 
 if __name__ == '__main__':
     default_stopwords_path = os.path.join(pwd_path, '../data/stopwords.txt')
-    sample1 = load_list(os.path.join(pwd_path, '../data/10475.txt'))
+    sample1 = load_list(os.path.join(pwd_path, '../../examples/data/ecommerce_comments_100.txt'))
     docs_text = [["挺好的，速度很快，也很实惠，不知效果如何",
                   "产品没得说，买了以后就降价，心情不美丽。",
                   "刚收到，包装很完整，不错",
