@@ -13,14 +13,14 @@ sys.path.append('../..')
 from textgen.t5 import T5Model
 
 
-def load_data(file_path):
+def load_data(prefix, file_path):
     data = []
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
             line = line.strip('\n')
             terms = line.split('\t')
             if len(terms) == 2:
-                data.append(['QA', terms[0], terms[1]])
+                data.append([prefix, terms[0], terms[1]])
             else:
                 logger.warning(f'line error: {line}')
     return data
@@ -33,6 +33,7 @@ def main():
     parser.add_argument('--model_name', default='google/byt5-small', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
+    parser.add_argument('--prefix', default='QA', type=str, help='Prefix str')
     parser.add_argument('--output_dir', default='./outputs/byt5_zh/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
     parser.add_argument('--num_epochs', default=3, type=int, help='Number of training epochs')
@@ -46,11 +47,11 @@ def main():
         #   - `prefix`: A string indicating the task to perform. (E.g. `"question"`, `"stsb"`)
         #   - `input_text`: The input text. `prefix` is prepended to form the full input. (<prefix>: <input_text>)
         #   - `target_text`: The target sequence
-        train_data = load_data(args.train_file)
+        train_data = load_data(args.prefix, args.train_file)
         logger.debug('train_data: {}'.format(train_data[:10]))
         train_df = pd.DataFrame(train_data, columns=["prefix", "input_text", "target_text"])
 
-        eval_data = load_data(args.train_file)[:10]
+        eval_data = load_data(args.prefix, args.train_file)[:10]
         eval_df = pd.DataFrame(eval_data, columns=["prefix", "input_text", "target_text"])
 
         model_args = {
@@ -85,8 +86,9 @@ def main():
     if args.do_predict:
         model = T5Model(args.model_type, args.output_dir)
         sentences = ["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
+        sentences_add_prefix = [args.prefix + ": " + i for i in sentences]
         print("inputs:", sentences)
-        print("outputs:", model.predict(sentences))
+        print("outputs:", model.predict(sentences_add_prefix))
 
 
 if __name__ == '__main__':
