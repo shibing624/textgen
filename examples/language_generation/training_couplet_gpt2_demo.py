@@ -32,6 +32,7 @@ def encode(data):
 
 class SrcTrgDataset(Dataset):
     """Custom dataset, use it by dataset_class from train args"""
+
     def __init__(self, tokenizer, args, file_path, mode, block_size=512, special_tokens_count=2):
         block_size = block_size - special_tokens_count
         directory, filename = os.path.split(file_path)
@@ -78,9 +79,11 @@ def main():
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/couplet-fine-tuned/', type=str,
                         help='Model output directory')
-    parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
+    parser.add_argument('--max_seq_length', default=50, type=int, help='Input max sequence length')
+    parser.add_argument('--max_length', default=50, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=10, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
+    parser.add_argument('--num_return_sequences', default=3, type=int, help='Number of return seqs')
     args = parser.parse_args()
     logger.info(args)
 
@@ -99,7 +102,9 @@ def main():
             "num_train_epochs": args.num_epochs,
             "mlm": False,
             "output_dir": args.output_dir,
+            "save_best_model": True,
             "evaluate_during_training": True,
+            "num_return_sequences": args.num_return_sequences,
         }
         tokenizer = BertTokenizerFast.from_pretrained(args.model_name)
         model = LanguageModelingModel(args.model_type, args.model_name, args=train_args, tokenizer=tokenizer)
@@ -112,7 +117,8 @@ def main():
         # Use fine-tuned model
         tokenizer = BertTokenizerFast.from_pretrained(args.output_dir)
         model = LanguageGenerationModel(args.model_type, args.output_dir,
-                                        args={"max_length": args.max_seq_length},
+                                        args={"max_length": args.max_length,
+                                              "num_return_sequences": args.num_return_sequences},
                                         tokenizer=tokenizer)
 
         couplet_prompts = [
@@ -122,8 +128,7 @@ def main():
         ]
         for prompt in couplet_prompts:
             # Generate text using the model. Verbose set to False to prevent logging generated sequences.
-            generated = model.generate(prompt, verbose=False, add_cls_head=True)
-            generated = generated[0]
+            generated = model.generate(prompt, verbose=False, add_cls_head=True, split_on_space=False, keep_prompt=True)
             print("inputs:", prompt)
             print("outputs:", generated)
 
