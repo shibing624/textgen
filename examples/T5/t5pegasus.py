@@ -21,12 +21,12 @@ from textgen.t5.t5_utils import ZHTokenizer
 # t5-copy-summary	imxly/t5-copy-summary
 
 # torch版本
-model_name = 'imxly/t5-copy'
+model_name = 'imxly/t5-pegasus'
 tokenizer = ZHTokenizer.from_pretrained(model_name)
 model = MT5ForConditionalGeneration.from_pretrained(model_name)
 
 sents = [
-    "蓝蓝的天上有一朵白白的云",
+    "蓝蓝的天上有一朵白白的云,",
     "五一假期欢乐多，我这几天也玩开心了，放假第二天，我就和姐姐一起去了外公家，现在这季节正是插秧的好时机，",
     "我的心爱之物 我有一只可爱的珍珠鳖，我们有一段特别的感情。 记得它是几个月前，叔叔从河边给我带来的。这只小鳖是灰黑色的，"
 ]
