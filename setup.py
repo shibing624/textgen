@@ -2,13 +2,12 @@
 
 from setuptools import setup, find_packages
 
-__version__ = '0.1.2'
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
 
 setup(
     name='textgen',
-    version=__version__,
+    version='0.1.3',
     description='Text Generation Model',
     long_description=readme,
     long_description_content_type='text/markdown',
@@ -42,6 +41,6 @@ setup(
     packages=find_packages(exclude=['tests']),
     package_dir={'textgen': 'textgen'},
     package_data={
-        'textgen': ['*.*', ],
+        'textgen': ['*.*', 'data/*'],
     }
 )
