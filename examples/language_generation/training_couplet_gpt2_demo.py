@@ -89,7 +89,6 @@ def main():
 
     if args.do_train:
         logger.info('Training...')
-
         train_args = {
             "dataset_class": SrcTrgDataset,
             "reprocess_input_data": True,

@@ -656,12 +656,6 @@ class LanguageModelingModel:
                         loss = g_loss + args.discriminator_loss_weight * d_loss
                     else:
                         loss = outputs[0]
-                    # if loss.item() < 1:
-                    #     masked = (labels[0] != -100).nonzero()
-                    #     print(labels[0][masked])
-                    #     preds = outputs[1][0, masked, :].clone().detach().cpu().numpy()
-                    #     print(np.argmax(preds, axis=2))
-
                 if args.n_gpu > 1:
                     loss = loss.mean()  # mean() to average on multi-gpu parallel training
 

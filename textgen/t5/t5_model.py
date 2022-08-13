@@ -191,10 +191,6 @@ class T5Model:
 
         if args:
             self.args.update_from_dict(args)
-
-        # if self.args.silent:
-        #     show_running_loss = False
-
         if self.args.evaluate_during_training and eval_data is None:
             raise ValueError(
                 "evaluate_during_training is enabled but eval_data is not specified."
