@@ -306,12 +306,14 @@ example: [examples/language_generation/training_zh_gpt2_demo.py](https://github.
 
 example: [examples/language_generation/training_couplet_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_couplet_gpt2_demo.py)
 
-- GPT2 vs T5：
+#### GPT2 vs T5：
 1. 都是从Transformer改进来的，T5同时有编码器和解码器，GPT2只有解码器
 2. T5的模型优势是处理给定输入，产出对应输出的任务，如翻译、对话、问答等
 3. GPT2的模型优势是自由创作，如写一篇短文
 4. T5的对联生成效果好于GPT2、GPT2的诗词生成效果好于T5
 
+- [对联生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%AF%B9%E8%81%94%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)
+- [古诗生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%8F%A4%E8%AF%97%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)
 
 ## TGLS 模型（无监督相似文本生成模型）
 
