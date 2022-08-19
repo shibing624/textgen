@@ -1,6 +1,7 @@
 loguru
 jieba>=0.39
 transformers
+sentencepiece
 datasets
 gensim>=4.0.0
 text2vec
