@@ -183,6 +183,36 @@ class T5Args(ModelArgs):
 
 
 @dataclass
+class CopyT5Args(ModelArgs):
+    """
+    Model args for a CopyT5Model
+    """
+
+    model_class: str = "CopyT5Model"
+    dataset_class: Dataset = None
+    do_sample: bool = False
+    early_stopping: bool = True
+    evaluate_generated_text: bool = False
+    length_penalty: float = 2.0
+    max_length: int = 20
+    max_steps: int = -1
+    num_beams: int = 1
+    num_return_sequences: int = 1
+    preprocess_inputs: bool = True
+    repetition_penalty: float = 1.0
+    scheduler: str = "linear_schedule_with_warmup"
+    adafactor_relative_step: bool = False
+    adafactor_scale_parameter: bool = False
+    adafactor_warmup_init: bool = False
+    learning_rate: float = 1e-3
+    optimizer: str = "Adafactor"
+    special_tokens_list: list = field(default_factory=list)
+    top_k: float = None
+    top_p: float = None
+    use_multiprocessed_decoding: bool = False
+
+
+@dataclass
 class LanguageModelingArgs(ModelArgs):
     """
     Model args for a LanguageModelingModel

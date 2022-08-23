@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 @author:XuMing(xuming624@qq.com)
-@description: adjust for chinese tokenizer
+@description: 
 """
+
 import os
 import pickle
 from multiprocessing import Pool
@@ -10,12 +11,27 @@ from multiprocessing import Pool
 import jieba
 from datasets import Dataset as HFDataset
 from datasets import load_dataset
+import torch
+import torch.nn as nn
 from torch.utils.data import Dataset
 from tqdm.auto import tqdm
-from transformers import BertTokenizer
 from loguru import logger
+import json
+import torch.nn.functional as F
+import numpy as np
+from torch.utils.data import DataLoader, Dataset, Subset
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+import re
+import collections
+from transformers import AdamW, get_linear_schedule_with_warmup, T5ForConditionalGeneration
+from transformers import T5ForConditionalGeneration, BertTokenizer, AutoTokenizer
+from tqdm import tqdm
+import copy
 
 jieba.setLogLevel('ERROR')
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.multiprocessing.set_start_method('spawn')
 
 
 class ZHTokenizer(BertTokenizer):
@@ -32,6 +48,38 @@ class ZHTokenizer(BertTokenizer):
             else:
                 split_tokens.extend(super()._tokenize(text))
         return split_tokens
+
+
+def mask_select(inputs, mask):
+    input_dim = inputs.ndim
+    mask_dim = mask.ndim
+    mask = mask.reshape(-1).bool()
+    if input_dim > mask_dim:
+        inputs = inputs.reshape((int(mask.size(-1)), -1))[mask]
+    else:
+        inputs = inputs.reshape(-1)[mask]
+    return inputs
+
+
+def copy_loss(inputs, targets, mask, eps=1e-6):
+    mask = mask[:, 1:]
+    inputs = inputs[:, :-1]
+    targets = targets[:, 1:]
+    inputs = mask_select(inputs, mask)
+    targets = mask_select(targets, mask)
+    log_preds = (inputs + eps).log()
+    loss = F.nll_loss(log_preds, targets)
+    return loss
+
+
+def ce_loss(inputs, targets, mask):
+    mask = mask[:, 1:]
+    inputs = inputs[:, :-1]
+    targets = targets[:, 1:]
+    inputs = mask_select(inputs, mask)
+    targets = mask_select(targets, mask)
+    loss = F.cross_entropy(inputs, targets)
+    return loss
 
 
 def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):
@@ -93,32 +141,21 @@ def load_hf_dataset(data, tokenizer, args):
 def preprocess_data(data):
     prefix, input_text, target_text, tokenizer, args = data
 
-    # Add EOS again if truncated?
-    if args.preprocess_inputs:
-        batch = tokenizer.prepare_seq2seq_batch(
-            src_texts=[prefix + ": " + input_text],
-            tgt_texts=[target_text],
-            max_length=args.max_seq_length,
-            padding="max_length",
-            return_tensors="pt",
-            truncation=True,
-        )
-    else:
-        batch = tokenizer.prepare_seq2seq_batch(
-            src_texts=[prefix + ": " + input_text],
-            tgt_texts=[target_text],
-            max_length=args.max_seq_length,
-            padding="max_length",
-            return_tensors="pt",
-            truncation=True,
-        )
+    batch = tokenizer.prepare_seq2seq_batch(
+        src_texts=[prefix + ": " + input_text],
+        tgt_texts=[target_text],
+        max_length=args.max_seq_length,
+        padding="max_length",
+        return_tensors="pt",
+        truncation=True,
+    )
     input_ids = batch["input_ids"][0]
     attention_mask = batch["attention_mask"][0]
     labels = batch["labels"][0]
     return (input_ids, attention_mask, labels)
 
 
-class T5Dataset(Dataset):
+class CopyT5Dataset(Dataset):
     def __init__(self, tokenizer, args, data, mode):
         cached_features_file = os.path.join(
             args.cache_dir,
