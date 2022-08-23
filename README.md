@@ -46,7 +46,7 @@
 
 # Demo
 
-Demo: https://huggingface.co/spaces/shibing624/textgen
+HuggingFace Demo: https://huggingface.co/spaces/shibing624/chinese-couplet-generate
 
 ![](docs/hf.png)
 
