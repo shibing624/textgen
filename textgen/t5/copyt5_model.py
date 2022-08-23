@@ -117,7 +117,7 @@ class CopyT5Model:
             self.tokenizer_class = tokenizer_class
             if self.args.tokenizer_name:
                 self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name)
-            elif self.args.model_name:
+            else:
                 self.tokenizer = tokenizer_class.from_pretrained(model_name, **kwargs)
                 self.args.tokenizer_name = self.args.model_name
             new_tokens = ['，', '（', '）', '_', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
