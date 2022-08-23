@@ -997,12 +997,13 @@ class T5Model:
 
         return results
 
-    def predict(self, to_predict):
+    def predict(self, to_predict, split_on_space=False):
         """
         Performs predictions on a list of text.
 
         Args:
             to_predict: A python list of text (str) to be sent to the model for prediction. Note that the prefix should be prepended to the text.
+            split_on_space (optional): If True, input is english string, if False, input is chinese string.
 
         Returns:
             preds: A python list of the generated sequences.
@@ -1075,7 +1076,8 @@ class T5Model:
                 )
                 for output_id in all_outputs
             ]
-
+        if not split_on_space:
+            outputs = [''.join(gen_text.split(' ')) for gen_text in outputs]
         if self.args.num_return_sequences > 1:
             return [
                 outputs[i: i + self.args.num_return_sequences]
