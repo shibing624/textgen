@@ -505,7 +505,7 @@ class CopyT5Model:
 
                 batch = tuple(t.to(self.device) for t in batch)
                 labels = batch[2]
-                decoder_attention_mask = batch[1]
+                decoder_attention_mask = batch[3]
                 loss = copy_loss(outputs.logits, labels, decoder_attention_mask)
                 if args.n_gpu > 1:
                     loss = (
@@ -971,7 +971,7 @@ class CopyT5Model:
 
                 batch = tuple(t.to(self.device) for t in batch)
                 labels = batch[2]
-                decoder_attention_mask = batch[1]
+                decoder_attention_mask = batch[3]
                 loss = copy_loss(outputs.logits, labels, decoder_attention_mask)
                 if self.args.n_gpu > 1:
                     loss = loss.mean()
@@ -1013,22 +1013,11 @@ class CopyT5Model:
                 desc="Generating outputs",
                 disable=self.args.silent,
         ):
-            input_batch = self.tokenizer.prepare_seq2seq_batch(
-                src_texts=batch,
-                max_length=self.args.max_seq_length,
-                padding="max_length",
-                return_tensors="pt",
-                truncation=True,
-            )
-            input_ids = input_batch["input_ids"]
-            attention_mask = input_batch["attention_mask"]
-
-            input_ids = input_ids.to(self.device)
-            attention_mask = attention_mask.to(self.device)
+            inputs = self.tokenizer(batch, padding=True, max_length=max_length, truncation=True, return_tensors='pt').to(self.device)
 
             outputs = self.model.generate(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
+                input_ids=inputs['input_ids'],
+                attention_mask=inputs['attention_mask'],
                 num_beams=self.args.num_beams,
                 max_length=self.args.max_length,
                 length_penalty=self.args.length_penalty,
@@ -1040,7 +1029,7 @@ class CopyT5Model:
                 num_return_sequences=self.args.num_return_sequences,
                 eos_token_id=self.tokenizer.sep_token_id,
                 decoder_start_token_id=self.tokenizer.cls_token_id,
-                src=input_ids,
+                src=inputs['input_ids'],
             )
             all_outputs.extend(outputs.cpu().numpy())
 
@@ -1126,11 +1115,13 @@ class CopyT5Model:
             attention_mask = batch[1]
             labels = batch[2]
             labels[labels == self.tokenizer.pad_token_id] = -100
-            
+            decoder_attention_mask = batch[3]
+
             inputs = {
                 "input_ids": input_ids,
                 "attention_mask": attention_mask,
                 "labels": labels,
+                "decoder_attention_mask": decoder_attention_mask,
             }
 
             return inputs

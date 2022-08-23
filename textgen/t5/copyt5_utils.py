@@ -136,8 +136,15 @@ def preprocess_data(data):
     input_ids = batch["input_ids"][0]
     attention_mask = batch["attention_mask"][0]
     labels = batch["labels"][0]
+    tgt = tokenizer([target_text],
+            max_length=args.max_seq_length,
+            padding="max_length",
+            return_tensors="pt",
+            truncation=True,
+    )
+    decoder_attention_mask = tgt["attention_mask"][0]
 
-    return input_ids, attention_mask, labels
+    return input_ids, attention_mask, labels, decoder_attention_mask
 
 
 class CopyT5Dataset(Dataset):
