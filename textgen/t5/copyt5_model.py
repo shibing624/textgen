@@ -110,8 +110,7 @@ class CopyT5Model:
             self.config = self.args.config
             self.model = model_class(config=self.config)
         else:
-            self.config = config_class.from_pretrained(model_name, **self.args.config)
-            self.model = model_class.from_pretrained(model_name, config=self.config)
+            self.model = model_class.from_pretrained(model_name)
 
         if tokenizer is None:
             self.tokenizer_class = tokenizer_class
@@ -1013,24 +1012,25 @@ class CopyT5Model:
                 desc="Generating outputs",
                 disable=self.args.silent,
         ):
-            inputs = self.tokenizer(batch, padding=True, max_length=max_length, truncation=True, return_tensors='pt').to(self.device)
-
-            outputs = self.model.generate(
-                input_ids=inputs['input_ids'],
-                attention_mask=inputs['attention_mask'],
-                num_beams=self.args.num_beams,
-                max_length=self.args.max_length,
-                length_penalty=self.args.length_penalty,
-                early_stopping=self.args.early_stopping,
-                repetition_penalty=self.args.repetition_penalty,
-                do_sample=self.args.do_sample,
-                top_k=self.args.top_k,
-                top_p=self.args.top_p,
-                num_return_sequences=self.args.num_return_sequences,
-                eos_token_id=self.tokenizer.sep_token_id,
-                decoder_start_token_id=self.tokenizer.cls_token_id,
-                src=inputs['input_ids'],
-            )
+            inputs = self.tokenizer(batch, padding=True, max_length=self.args.max_length, truncation=True, 
+                return_tensors='pt').to(self.device)
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    input_ids=inputs['input_ids'],
+                    attention_mask=inputs['attention_mask'],
+                    num_beams=self.args.num_beams,
+                    max_length=self.args.max_length,
+                    length_penalty=self.args.length_penalty,
+                    early_stopping=self.args.early_stopping,
+                    repetition_penalty=self.args.repetition_penalty,
+                    do_sample=self.args.do_sample,
+                    top_k=self.args.top_k,
+                    top_p=self.args.top_p,
+                    num_return_sequences=self.args.num_return_sequences,
+                    eos_token_id=self.tokenizer.sep_token_id,
+                    decoder_start_token_id=self.tokenizer.cls_token_id,
+                    src=inputs['input_ids'],
+                )
             all_outputs.extend(outputs.cpu().numpy())
 
         if self.args.use_multiprocessed_decoding:
@@ -1056,7 +1056,6 @@ class CopyT5Model:
                 self.tokenizer.decode(
                     output_id,
                     skip_special_tokens=self.args.skip_special_tokens,
-                    clean_up_tokenization_spaces=True,
                 )
                 for output_id in all_outputs
             ]
@@ -1075,7 +1074,6 @@ class CopyT5Model:
         return self.tokenizer.decode(
             output_id,
             skip_special_tokens=self.args.skip_special_tokens,
-            clean_up_tokenization_spaces=True,
         )
 
     def compute_metrics(self, labels, preds, **kwargs):
