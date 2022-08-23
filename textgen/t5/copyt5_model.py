@@ -502,11 +502,11 @@ class CopyT5Model:
                         outputs = model(**inputs)
                 else:
                     outputs = model(**inputs)
+
                 batch = tuple(t.to(self.device) for t in batch)
-                input_ids = batch[0]
-                attention_mask = batch[1]
                 labels = batch[2]
-                loss = copy_loss(outputs.logits, labels, attention_mask)
+                decoder_attention_mask = batch[3]
+                loss = copy_loss(outputs.logits, labels, decoder_attention_mask)
                 if args.n_gpu > 1:
                     loss = (
                         loss.mean()
@@ -968,11 +968,11 @@ class CopyT5Model:
                         outputs = model(**inputs)
                 else:
                     outputs = model(**inputs)
+
                 batch = tuple(t.to(self.device) for t in batch)
-                input_ids = batch[0]
-                attention_mask = batch[1]
                 labels = batch[2]
-                loss = copy_loss(outputs.logits, labels, attention_mask)
+                decoder_attention_mask = batch[3]
+                loss = copy_loss(outputs.logits, labels, decoder_attention_mask)
                 if self.args.n_gpu > 1:
                     loss = loss.mean()
                 eval_loss += loss.item()
@@ -1125,12 +1125,16 @@ class CopyT5Model:
             input_ids = batch[0]
             attention_mask = batch[1]
             labels = batch[2]
+            decoder_attention_mask = batch[3]
+            decoder_input_ids = batch[4]
             labels[labels == self.tokenizer.pad_token_id] = -100
 
             inputs = {
                 "input_ids": input_ids,
                 "attention_mask": attention_mask,
                 "labels": labels,
+                "decoder_attention_mask": decoder_attention_mask,
+                "decoder_input_ids": decoder_input_ids,
             }
 
             return inputs

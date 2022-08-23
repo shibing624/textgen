@@ -125,18 +125,26 @@ def load_hf_dataset(data, tokenizer, args):
 def preprocess_data(data):
     prefix, input_text, target_text, tokenizer, args = data
 
-    batch = tokenizer.prepare_seq2seq_batch(
-        src_texts=[prefix + ": " + input_text],
-        tgt_texts=[target_text],
-        max_length=args.max_seq_length,
-        padding="max_length",
-        return_tensors="pt",
-        truncation=True,
-    )
-    input_ids = batch["input_ids"][0]
-    attention_mask = batch["attention_mask"][0]
-    labels = batch["labels"][0]
-    return (input_ids, attention_mask, labels)
+    src = tokenizer([prefix + ": " + input_text],
+                    max_length=args.max_seq_length,
+                    padding=True,
+                    return_tensors="pt",
+                    truncation=True,
+                    return_attention_mask=True,
+                    )
+    tgt = tokenizer([target_text],
+                    max_length=args.max_seq_length,
+                    padding=True,
+                    return_tensors="pt",
+                    truncation=True,
+                    return_attention_mask=True,
+                    )
+    input_ids = src["input_ids"][0]
+    attention_mask = src["attention_mask"][0]
+    labels = tgt['input_ids'][0]
+    decoder_attention_mask = tgt['attention_mask'][0]
+    decoder_input_ids = tgt['input_ids'][0]
+    return input_ids, attention_mask, labels, decoder_attention_mask, decoder_input_ids
 
 
 class CopyT5Dataset(Dataset):
