@@ -3,29 +3,23 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-import re
 import os
 import pickle
 from multiprocessing import Pool
+
 import jieba
-import json
-import numpy as np
-import copy
+import torch.nn.functional as F
 from datasets import Dataset as HFDataset
 from datasets import load_dataset
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from loguru import logger
 from torch.utils.data import Dataset
 from tqdm.auto import tqdm
-from loguru import logger
 from transformers import BertTokenizer
 
 jieba.setLogLevel('ERROR')
 
 
 class ZHTokenizer(BertTokenizer):
-
     def __init__(self, pre_tokenizer=lambda x: jieba.cut(x, HMM=False), *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.pre_tokenizer = pre_tokenizer

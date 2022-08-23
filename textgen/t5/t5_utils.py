@@ -7,31 +7,11 @@ import os
 import pickle
 from multiprocessing import Pool
 
-import jieba
 from datasets import Dataset as HFDataset
 from datasets import load_dataset
 from torch.utils.data import Dataset
 from tqdm.auto import tqdm
-from transformers import BertTokenizer
 from loguru import logger
-
-jieba.setLogLevel('ERROR')
-
-
-class ZHTokenizer(BertTokenizer):
-
-    def __init__(self, pre_tokenizer=lambda x: jieba.cut(x, HMM=False), *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.pre_tokenizer = pre_tokenizer
-
-    def _tokenize(self, text, *arg, **kwargs):
-        split_tokens = []
-        for text in self.pre_tokenizer(text):
-            if text in self.vocab:
-                split_tokens.append(text)
-            else:
-                split_tokens.extend(super()._tokenize(text))
-        return split_tokens
 
 
 def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):

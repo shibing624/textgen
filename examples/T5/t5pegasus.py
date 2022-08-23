@@ -12,7 +12,7 @@ import sys
 from transformers.models.mt5 import MT5ForConditionalGeneration
 
 sys.path.append('../..')
-from textgen.t5.t5_utils import ZHTokenizer
+from textgen import ZHTokenizer
 
 # 模型名	MODEL_NAME
 # t5-pegasus-base	imxly/t5-pegasus
