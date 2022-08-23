@@ -196,7 +196,7 @@ class CopyT5Args(ModelArgs):
     length_penalty: float = 2.0
     max_length: int = 20
     max_steps: int = -1
-    num_beams: int = 1
+    num_beams: int = 3
     num_return_sequences: int = 1
     preprocess_inputs: bool = True
     repetition_penalty: float = 1.0
@@ -205,7 +205,7 @@ class CopyT5Args(ModelArgs):
     adafactor_scale_parameter: bool = False
     adafactor_warmup_init: bool = False
     learning_rate: float = 1e-3
-    optimizer: str = "Adafactor"
+    optimizer: str = "AdamW"
     special_tokens_list: list = field(default_factory=list)
     top_k: float = None
     top_p: float = None

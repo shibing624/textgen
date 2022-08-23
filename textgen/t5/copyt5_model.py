@@ -118,7 +118,7 @@ class CopyT5Model:
             if self.args.tokenizer_name:
                 self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name)
             else:
-                self.tokenizer = tokenizer_class.from_pretrained(model_name, **kwargs)
+                self.tokenizer = tokenizer_class.from_pretrained(model_name, do_lower_case=False, **kwargs)
                 self.args.tokenizer_name = self.args.model_name
             new_tokens = ['，', '（', '）', '_', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
                           'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
@@ -502,6 +502,7 @@ class CopyT5Model:
                         outputs = model(**inputs)
                 else:
                     outputs = model(**inputs)
+                batch = tuple(t.to(self.device) for t in batch)
                 input_ids = batch[0]
                 attention_mask = batch[1]
                 labels = batch[2]
@@ -967,6 +968,7 @@ class CopyT5Model:
                         outputs = model(**inputs)
                 else:
                     outputs = model(**inputs)
+                batch = tuple(t.to(self.device) for t in batch)
                 input_ids = batch[0]
                 attention_mask = batch[1]
                 labels = batch[2]

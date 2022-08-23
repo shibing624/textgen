@@ -3,35 +3,25 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-
+import re
 import os
 import pickle
 from multiprocessing import Pool
-
 import jieba
+import json
+import numpy as np
+import copy
 from datasets import Dataset as HFDataset
 from datasets import load_dataset
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import Dataset
 from tqdm.auto import tqdm
 from loguru import logger
-import json
-import torch.nn.functional as F
-import numpy as np
-from torch.utils.data import DataLoader, Dataset, Subset
-from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
-import re
-import collections
-from transformers import AdamW, get_linear_schedule_with_warmup, T5ForConditionalGeneration
-from transformers import T5ForConditionalGeneration, BertTokenizer, AutoTokenizer
-from tqdm import tqdm
-import copy
+from transformers import BertTokenizer
 
 jieba.setLogLevel('ERROR')
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-torch.multiprocessing.set_start_method('spawn')
 
 
 class ZHTokenizer(BertTokenizer):
