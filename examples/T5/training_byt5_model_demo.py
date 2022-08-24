@@ -80,7 +80,7 @@ def main():
                 return 0.0
             same = set(text1) & set(text2)
             m = len(same)
-            n = len(text1) if len(text1) > len(text2) else len(text2)
+            n = len(set(text1)) if len(set(text1)) > len(set(text2)) else len(set(text2))
             return m / n
 
         def count_matches(labels, preds):
