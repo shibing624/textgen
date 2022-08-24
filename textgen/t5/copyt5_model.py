@@ -501,11 +501,8 @@ class CopyT5Model:
                         outputs = model(**inputs)
                 else:
                     outputs = model(**inputs)
-
-                batch = tuple(t.to(self.device) for t in batch)
-                labels = batch[2]
-                decoder_attention_mask = batch[3]
-                loss = copy_loss(outputs.logits, labels, decoder_attention_mask)
+                # logger.info(f"batch labels: {inputs['labels']}, {inputs['decoder_attention_mask']}")
+                loss = copy_loss(outputs.logits, inputs['labels'], inputs['decoder_attention_mask'])
                 if args.n_gpu > 1:
                     loss = (
                         loss.mean()
@@ -967,11 +964,7 @@ class CopyT5Model:
                         outputs = model(**inputs)
                 else:
                     outputs = model(**inputs)
-
-                batch = tuple(t.to(self.device) for t in batch)
-                labels = batch[2]
-                decoder_attention_mask = batch[3]
-                loss = copy_loss(outputs.logits, labels, decoder_attention_mask)
+                loss = copy_loss(outputs.logits, inputs['labels'], inputs['decoder_attention_mask'])
                 if self.args.n_gpu > 1:
                     loss = loss.mean()
                 eval_loss += loss.item()
@@ -1001,6 +994,7 @@ class CopyT5Model:
         """  # noqa: ignore flake8"
 
         self._move_model_to_device()
+        self.model.eval()
 
         all_outputs = []
         # Batching
@@ -1102,6 +1096,10 @@ class CopyT5Model:
         self.model.to(self.device)
 
     def _get_inputs_dict(self, batch):
+        """
+        Get input dict, to device
+        format: input_ids, attention_mask, labels, decoder_attention_mask, decoder_input_ids
+        """
         if self.args.use_hf_datasets:
             inputs = {**batch, "labels": batch["input_ids"]}
 
@@ -1114,12 +1112,14 @@ class CopyT5Model:
             labels = batch[2]
             labels[labels == self.tokenizer.pad_token_id] = -100
             decoder_attention_mask = batch[3]
+            decoder_input_ids = batch[4]
 
             inputs = {
                 "input_ids": input_ids,
                 "attention_mask": attention_mask,
                 "labels": labels,
                 "decoder_attention_mask": decoder_attention_mask,
+                "decoder_input_ids": decoder_input_ids,
             }
 
             return inputs
