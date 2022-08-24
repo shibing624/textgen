@@ -34,10 +34,10 @@ def main():
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--prefix', default='QA', type=str, help='Prefix str')
     parser.add_argument('--output_dir', default='./outputs/copyt5_zh/', type=str, help='Model output directory')
-    parser.add_argument('--max_seq_length', default=50, type=int, help='Input max sequence length')
-    parser.add_argument('--max_length', default=50, type=int, help='Output max sequence length')
+    parser.add_argument('--max_seq_length', default=100, type=int, help='Input max sequence length')
+    parser.add_argument('--max_length', default=100, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=10, type=int, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
 
@@ -76,7 +76,7 @@ def main():
         def sim_text_chars(text1, text2):
             if not text1 or not text2:
                 return 0.0
-            same = set(text1) | set(text2)
+            same = set(text1) & set(text2)
             m = len(same)
             n = len(text1) if len(text1) > len(text2) else len(text2)
             return m / n

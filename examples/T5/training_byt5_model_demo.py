@@ -78,7 +78,7 @@ def main():
         def sim_text_chars(text1, text2):
             if not text1 or not text2:
                 return 0.0
-            same = set(text1) | set(text2)
+            same = set(text1) & set(text2)
             m = len(same)
             n = len(text1) if len(text1) > len(text2) else len(text2)
             return m / n
