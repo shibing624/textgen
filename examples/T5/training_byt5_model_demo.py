@@ -71,6 +71,7 @@ def main():
             "save_best_model": True,
             "output_dir": args.output_dir,
             "use_early_stopping": True,
+            "best_model_dir": os.path.join(args.output_dir, "best_model"),
         }
         # model_type: t5  model_name: Langboat/mengzi-t5-base
         model = T5Model(args.model_type, args.model_name, args=model_args)

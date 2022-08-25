@@ -6,6 +6,7 @@
 import argparse
 from loguru import logger
 import pandas as pd
+import time
 import sys
 
 sys.path.append('../..')
@@ -70,6 +71,7 @@ def main():
             "save_best_model": True,
             "output_dir": args.output_dir,
             "use_early_stopping": True,
+            "best_model_dir": os.path.join(args.output_dir, "best_model"),
         }
         # model_type: t5  model_name: Langboat/mengzi-t5-base
         model = T5Model(args.model_type, args.model_name, args=model_args)
@@ -93,11 +95,17 @@ def main():
         print(model.eval_model(eval_df, matches=count_matches))
 
     if args.do_predict:
-        model = T5Model(args.model_type, args.output_dir)
+        model = T5Model(args.model_type, args.output_dir, args={"eval_batch_size": args.batch_size})
         sentences = ["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
         sentences_add_prefix = [args.prefix + ": " + i for i in sentences]
         print("inputs:", sentences)
         print("outputs:", model.predict(sentences_add_prefix))
+
+        sentences_add_prefix = sentences_add_prefix * 50
+        t1 = time.time()
+        res = model.predict(sentences_add_prefix)
+        print(type(res), len(res))
+        logger.info(f'spend time: {time.time() - t1}, size: {len(sentences_add_prefix)}')
 
 
 if __name__ == '__main__':

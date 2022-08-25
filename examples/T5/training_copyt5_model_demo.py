@@ -5,6 +5,7 @@
 """
 import argparse
 from loguru import logger
+import time
 import pandas as pd
 import sys
 
@@ -34,8 +35,8 @@ def main():
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--prefix', default='QA', type=str, help='Prefix str')
     parser.add_argument('--output_dir', default='./outputs/copyt5_zh/', type=str, help='Model output directory')
-    parser.add_argument('--max_seq_length', default=100, type=int, help='Input max sequence length')
-    parser.add_argument('--max_length', default=100, type=int, help='Output max sequence length')
+    parser.add_argument('--max_seq_length', default=200, type=int, help='Input max sequence length')
+    parser.add_argument('--max_length', default=200, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=10, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
     args = parser.parse_args()
@@ -70,6 +71,7 @@ def main():
             "save_best_model": True,
             "output_dir": args.output_dir,
             "use_early_stopping": True,
+            "best_model_dir": os.path.join(args.output_dir, "best_model"),
         }
         model = CopyT5Model(args.model_type, args.model_name, args=model_args)
 
@@ -92,11 +94,22 @@ def main():
         print(model.eval_model(eval_df, matches=count_matches))
 
     if args.do_predict:
-        model = CopyT5Model(args.model_type, args.output_dir)
+        model = CopyT5Model(args.model_type, args.output_dir, args={"eval_batch_size": args.batch_size})
         sentences = ["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
         sentences_add_prefix = [args.prefix + ": " + i for i in sentences]
         print("inputs:", sentences)
         print("outputs:", model.predict(sentences_add_prefix))
+
+        eval_data = load_data(args.prefix, args.train_file)[:50]
+        eval_df = pd.DataFrame(eval_data, columns=["prefix", "input_text", "target_text"])
+        sentences = eval_df['input_text'].tolist()
+        sentences_add_prefix = [args.prefix + ": " + i for i in sentences]
+        print(sentences_add_prefix)
+        t1 = time.time()
+        res = model.predict(sentences_add_prefix)
+        print(type(res), len(res))
+        print(res)
+        logger.info(f'spend time: {time.time() - t1}, size: {len(sentences_add_prefix)}')
 
 
 if __name__ == '__main__':
