@@ -227,6 +227,7 @@ class Seq2SeqModel:
         self.dropout = dropout
         self.model = None
         self.model_path = os.path.join(self.model_dir, 'seq2seq.pth')
+        logger.debug(f"Device: {device}")
         self.loss_fn = LanguageModelCriterion().to(device)
         self.src_vocab_path = os.path.join(self.model_dir, "src_vocab.txt")
         self.trg_vocab_path = os.path.join(self.model_dir, "trg_vocab.txt")

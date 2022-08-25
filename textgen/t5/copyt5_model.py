@@ -101,11 +101,10 @@ class CopyT5Model:
                 )
         else:
             self.device = "cpu"
+        logger.debug(f"Device: {self.device}")
 
         self.results = {}
-
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
-
         if model_name is None:
             self.config = self.args.config
             self.model = model_class(config=self.config)

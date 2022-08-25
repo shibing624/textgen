@@ -112,6 +112,7 @@ class T5Model:
                 )
         else:
             self.device = "cpu"
+        logger.debug(f"Device: {self.device}")
 
         self.results = {}
 

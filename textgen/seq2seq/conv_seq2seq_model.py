@@ -301,6 +301,7 @@ class ConvSeq2SeqModel:
         self.dropout = dropout
         self.model = None
         self.model_path = os.path.join(self.model_dir, 'convseq2seq.pth')
+        logger.debug(f"Device: {device}")
         self.loss_fn = nn.CrossEntropyLoss()
         self.src_vocab_path = os.path.join(self.model_dir, "src_vocab.txt")
         self.trg_vocab_path = os.path.join(self.model_dir, "trg_vocab.txt")
