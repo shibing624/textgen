@@ -6,7 +6,6 @@
 import math
 import os
 import random
-import warnings
 from dataclasses import asdict
 from multiprocessing import Pool
 
@@ -116,11 +115,9 @@ class CopyT5Model:
             if self.args.tokenizer_name:
                 self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name)
             else:
-                self.tokenizer = tokenizer_class.from_pretrained(model_name, do_lower_case=False, **kwargs)
+                self.tokenizer = tokenizer_class.from_pretrained(model_name, **kwargs)
                 self.args.tokenizer_name = self.args.model_name
-            new_tokens = ['，', '（', '）', '_', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-                          'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-            self.tokenizer.add_tokens(new_tokens)
+            self.tokenizer.add_tokens(['_'])
             self.model.resize_token_embeddings(len(self.tokenizer))
         else:
             self.tokenizer = tokenizer
