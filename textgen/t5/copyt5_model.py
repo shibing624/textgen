@@ -1045,6 +1045,7 @@ class CopyT5Model:
                 self.tokenizer.decode(
                     output_id,
                     skip_special_tokens=self.args.skip_special_tokens,
+                    clean_up_tokenization_spaces=True,
                 )
                 for output_id in all_outputs
             ]
@@ -1063,6 +1064,7 @@ class CopyT5Model:
         return self.tokenizer.decode(
             output_id,
             skip_special_tokens=self.args.skip_special_tokens,
+            clean_up_tokenization_spaces=True,
         )
 
     def compute_metrics(self, labels, preds, **kwargs):
