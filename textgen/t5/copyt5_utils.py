@@ -126,24 +126,24 @@ def preprocess_data(data):
     prefix, input_text, target_text, tokenizer, args = data
 
     src = tokenizer([prefix + ": " + input_text],
-            padding="max_length",
-            return_tensors='pt',
-            max_length=args.max_seq_length,
-            truncation=True,
-            return_attention_mask=True,
-            return_token_type_ids=False,
-    )
+                    padding="max_length",
+                    return_tensors='pt',
+                    max_length=args.max_seq_length,
+                    truncation=True,
+                    return_attention_mask=True,
+                    return_token_type_ids=False,
+                    )
     input_ids = src["input_ids"][0]
     attention_mask = src["attention_mask"][0]
     with tokenizer.as_target_tokenizer():
         tgt = tokenizer([target_text],
-                padding="max_length",
-                return_tensors='pt',
-                max_length=args.max_seq_length,
-                truncation=True,
-                return_attention_mask=True,
-                return_token_type_ids=False,
-        )
+                        padding="max_length",
+                        return_tensors='pt',
+                        max_length=args.max_seq_length,
+                        truncation=True,
+                        return_attention_mask=True,
+                        return_token_type_ids=False,
+                        )
     labels = tgt["input_ids"][0]
     decoder_attention_mask = tgt["attention_mask"][0]
     decoder_input_ids = tgt['input_ids'][0]

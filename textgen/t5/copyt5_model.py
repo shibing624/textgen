@@ -41,7 +41,6 @@ has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
-
 MODEL_CLASSES = {
     "copyt5": (T5Config, CopyT5ForConditionalGeneration, ZHTokenizer),
 }
@@ -1002,8 +1001,8 @@ class CopyT5Model:
                 desc="Generating outputs",
                 disable=self.args.silent,
         ):
-            inputs = self.tokenizer(batch, padding=True, max_length=self.args.max_length, truncation=True, 
-                return_tensors='pt').to(self.device)
+            inputs = self.tokenizer(batch, padding=True, max_length=self.args.max_length, truncation=True,
+                                    return_tensors='pt').to(self.device)
             with torch.no_grad():
                 outputs = self.model.generate(
                     input_ids=inputs['input_ids'],
