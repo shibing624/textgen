@@ -33,7 +33,7 @@ class TglsModel:
         """
         Initialize the model with the given docs
         """
-        logger.info(f'docs_text len: {len(docs)}')
+        logger.debug(f'docs_text len: {len(docs)}')
         # 加载停用词
         self.stopwords = set(load_list(default_stopwords_path))
         # 计算除去停用词的每个词的idf值
@@ -41,12 +41,12 @@ class TglsModel:
 
         review_list, all_word = text2review(self.seg_pos_text)
         phrase_list = find_word_phrase(all_word, review_list)
-        logger.info(f'find new word done, size: {len(phrase_list)}, top10: {phrase_list[:10]}')
+        logger.debug(f'find new word done, size: {len(phrase_list)}, top10: {phrase_list[:10]}')
 
         # 加载正向情感词典
         self.pos_adj_word = load_list(default_pos_adj_word_path)
 
-    def generate(self, doc, num=1000, is_uniq=True):
+    def generate(self, doc, num_steps=1000, is_uniq=True):
         """
         Generate similar texts from a given doc
         """
@@ -77,7 +77,10 @@ class TglsModel:
         # 字符匹配合并aspect
         merged_aspect_express, opinion_set = merge_aspect_express(aspect_express, pair_useful)
         # 生成相似评论
-        generated_raw_reviews = generate_reviews(merged_aspect_express, num=num)
+        generated_raw_reviews = generate_reviews(merged_aspect_express, num_steps=num_steps)
+        if len(generated_raw_reviews) == 0:
+            logger.warning(f'generated is empty, given doc min size: 100, now doc size: {len(doc)}, please add data.')
+        # 去除低质量评论
         results = fake_review_filter(generated_raw_reviews, opinion_set, is_uniq=is_uniq)
 
         return results

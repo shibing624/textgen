@@ -30,6 +30,6 @@ docs_text = [
 ]
 m = TglsModel(docs_text)
 r = m.generate(samples[:500])
-print('size:', len(r))
+print('generated size:', len(r))
 for review in r:
     print('\t' + review)

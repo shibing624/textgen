@@ -62,7 +62,6 @@ def get_candidate_aspect(seg_list, pos_list, adj_word, stop_word, word_idf):
     输入的数据为用逗号隔开的短句，
     利用开窗口的方式，根据情感词典抽名词得到候选的aspect
     """
-    logger.info("Using emotion dictionary to extract aspect candidates...")
     aspect_dict = {}
     for i, sentence in enumerate(seg_list):
         for j, word in enumerate(sentence):
@@ -76,13 +75,12 @@ def get_candidate_aspect(seg_list, pos_list, adj_word, stop_word, word_idf):
                         else:
                             aspect_dict[seg_list[i][k]] = 1
 
-    temp = aspect_dict.items()
-    temp = list(filter(lambda x: len(x[0]) > 1, temp))  # 经过词组发现之后，删去一个字的词
-    temp = [item[0] for item in temp if item[0] not in stop_word]  # 删去停用词
-    temp = [item for item in temp if word_idf[item] != 0]  # 删去IDF值为0的词
-    aspect_list = temp
-    logger.info(f"Extract aspect candidates done, size: {len(aspect_list)}")
-    return aspect_list
+    candidates = aspect_dict.items()
+    candidates = list(filter(lambda x: len(x[0]) > 1, candidates))  # 经过词组发现之后，删去一个字的词
+    candidates = [item[0] for item in candidates if item[0] not in stop_word]  # 删去停用词
+    candidates = [item if (item in word_idf and word_idf[item] != 0) else item for item in candidates]  # 删去IDF值为0的词
+    logger.debug(f"Extract aspect candidates done, size: {len(candidates)}, top 10: {candidates[:10]}")
+    return candidates
 
 
 class NSDict:
@@ -143,10 +141,9 @@ class NSDict:
             del dict[str]
 
     def build_nsdict(self):
-        logger.info("Stage 1：extract pair and pattern...")
+        logger.debug("Stage 1：extract pair and pattern")
         self._seg2nsd(self.raw_aspect_list)
         self._noise_del()
-        logger.info("Stage 1: done")
         return self.ns_dict
 
 
@@ -235,11 +232,10 @@ class PairPattSort:
         self.patt_score = self._norm(self.patt_score, self.patt_len)
 
     def sort_pair(self):
-        logger.info("Stage 2：pair sort...")
+        logger.debug("Stage 2：pair sort")
         for i in range(100):
             self._iterative()
         pair_score = sorted(self.pair_score.items(), key=lambda d: d[1], reverse=True)
-        logger.info("Stage 2：done")
         return pair_score
 
 
@@ -301,7 +297,6 @@ def get_aspect_express(seg_review_list, pair_useful):
                                 raw_aspect_express[word].append(sentence)
                                 raw_aspect_express_count[word] += 1
                                 find_opinion_flag = True  # 只要找到一个opinion word就算命中一个短句了
-
     # 筛选得到保留的aspect
     aspect_express = {}
     for aspect in raw_aspect_express:
@@ -317,12 +312,10 @@ def merge_aspect_express(aspect_express, pair_useful):
     对相似的观点表达进行合并, 同时输出最终的aspect_opinion_pair
     """
     aspects = list(aspect_express.keys())
-    length = len(aspects)
     aspects.sort()  # 排成字典序
-    merged_aspects = [[aspects[0]]]
+    merged_aspects = [[aspects[0]]] if aspects else [[]]
     merged_express = {}
     opinion_set = []
-
     def check_is_same(word1, word2):
         """
         判断两个词当中是否存在相同的字
@@ -331,13 +324,11 @@ def merge_aspect_express(aspect_express, pair_useful):
             if i in word2:
                 return True
         return False
-
-    for i in range(1, length):
+    for i in range(1, len(aspects)):
         if check_is_same(merged_aspects[-1][-1], aspects[i]):
             merged_aspects[-1].append(aspects[i])
         else:
             merged_aspects.append([aspects[i]])
-
     for a_list in merged_aspects:
         # 收集全部的形容词
         for i in a_list:
@@ -347,9 +338,7 @@ def merge_aspect_express(aspect_express, pair_useful):
         merged_express[_l] = []
         for i in a_list:
             merged_express[_l] += aspect_express[i]
-
     opinion_set = set(opinion_set)
-
     return merged_express, opinion_set
 
 
@@ -385,9 +374,7 @@ def build_dataset_express(seg_review_list, pair_useful):
                 if word in pair_useful:  # 当前的word属于aspect
                     source.append(word)
                     find_opinion_flag = True  # 只要找到一个opinion word就算命中一个短句了
-
         train_data.append((list(source), target))
-
     max_source_length = 0
 
     # 筛选训练数据
@@ -414,16 +401,17 @@ def build_dataset_express(seg_review_list, pair_useful):
             max_source_length = max(max_source_length, len(item[0]))
             legal_train_data.append(item)
 
-    logger.info(f'max source length: {max_source_length}')
+    logger.debug(f'max source length: {max_source_length}')
     return legal_train_data
 
 
-def generate_reviews(aspect_express, num=1000):
+def generate_reviews(aspect_express, num_steps=1000):
     """
     根据候选集合生成假评论
     """
+    res = []
     all_aspect = list(aspect_express.keys())
-    logger.info(f'Aspect: {all_aspect}')
+    logger.debug(f'Aspect: {all_aspect}')
 
     # 根据不同aspect出现的概率分配不同权重
     aspect_length_dict = {}
@@ -432,9 +420,9 @@ def generate_reviews(aspect_express, num=1000):
     weight_aspect_list = []
     for aspect in aspect_length_dict:
         weight_aspect_list += [aspect] * aspect_length_dict[aspect]
-
-    res = []
-    for _ in range(num):
+    if not weight_aspect_list:
+        return res
+    for _ in range(num_steps):
         num_aspect = random.choice([1, 2, 3, 4, 5, 6])
         review = []
         used_aspect = []
@@ -447,7 +435,6 @@ def generate_reviews(aspect_express, num=1000):
             a_s = a_s[:-1] + ['#']  # 丢掉标点，换位#作为切分点
             review += a_s
         res.append(review)
-
     return res
 
 
@@ -466,7 +453,6 @@ def fake_review_filter(reviews, opinion_set, is_uniq=True):
                 opinion_used[word] += 1
                 if opinion_used[word] >= 2:
                     flag = False
-                    # logger.info('Fake:{}'.format(''.join(review)))
                     break
         if flag:
             _s = ''.join(review)
@@ -478,8 +464,7 @@ def fake_review_filter(reviews, opinion_set, is_uniq=True):
                 if a_s:
                     review += a_s + random.choice(pu)
             if not review:
-                logger.info('error:')
-                logger.info(review)
+                logger.warning(f'error: {review}')
             review = review[:-1] + '。'
             if is_uniq:
                 if review not in results:
