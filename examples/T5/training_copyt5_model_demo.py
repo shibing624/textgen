@@ -29,16 +29,16 @@ def load_data(prefix, file_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', default='../data/zh_dialog.tsv', type=str, help='Training data file')
+    parser.add_argument('--train_file', default='../data/zh_couplet_train.tsv', type=str, help='Training data file')
     parser.add_argument('--model_type', default='copyt5', type=str, help='Transformers model type')
     parser.add_argument('--model_name', default='imxly/t5-copy', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--prefix', default='QA', type=str, help='Prefix str')
-    parser.add_argument('--output_dir', default='./outputs/copyt5_zh/', type=str, help='Model output directory')
+    parser.add_argument('--prefix', default='对联', type=str, help='Prefix str')
+    parser.add_argument('--output_dir', default='./outputs/copyt5_zh_couplet/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=200, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=200, type=int, help='Output max sequence length')
-    parser.add_argument('--num_epochs', default=10, type=int, help='Number of training epochs')
+    parser.add_argument('--num_epochs', default=3, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
@@ -96,7 +96,7 @@ def main():
 
     if args.do_predict:
         model = CopyT5Model(args.model_type, args.output_dir, args={"eval_batch_size": args.batch_size})
-        sentences = ["什么是ai", "你是什么类型的计算机", "你知道热力学吗"]
+        sentences = ["友聚黄梅，三楚人文昭八表", "劲节虚心竹翠", "轻舟摇晚照"]
         sentences_add_prefix = [args.prefix + ": " + i for i in sentences]
         print("inputs:", sentences)
         print("outputs:", model.predict(sentences_add_prefix))
@@ -108,9 +108,9 @@ def main():
         print(sentences_add_prefix)
         t1 = time.time()
         res = model.predict(sentences_add_prefix)
+        logger.info(f'spend time: {time.time() - t1}, size: {len(sentences_add_prefix)}')
         print(type(res), len(res))
         print(res)
-        logger.info(f'spend time: {time.time() - t1}, size: {len(sentences_add_prefix)}')
 
 
 if __name__ == '__main__':
