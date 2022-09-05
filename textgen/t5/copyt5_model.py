@@ -116,8 +116,6 @@ class CopyT5Model:
             else:
                 self.tokenizer = tokenizer_class.from_pretrained(model_name, **kwargs)
                 self.args.tokenizer_name = self.args.model_name
-            self.tokenizer.add_tokens(['_'])
-            self.model.resize_token_embeddings(len(self.tokenizer))
         else:
             self.tokenizer = tokenizer
 
