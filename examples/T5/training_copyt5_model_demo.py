@@ -73,8 +73,10 @@ def main():
             "output_dir": args.output_dir,
             "use_early_stopping": True,
             "best_model_dir": os.path.join(args.output_dir, "best_model"),
+            "special_tokens_list": ['[unused1]', '[unused2]', '[unused3]', '[unused4]', '[unused5]']
         }
         model = CopyT5Model(args.model_type, args.model_name, args=model_args)
+        logger.debug(model.tokenizer.all_special_tokens)
 
         def sim_text_chars(text1, text2):
             if not text1 or not text2:
@@ -95,8 +97,8 @@ def main():
         print(model.eval_model(eval_df, matches=count_matches))
 
     if args.do_predict:
-        model = CopyT5Model(args.model_type, args.output_dir, args={"eval_batch_size": args.batch_size})
-        sentences = ["友聚黄梅，三楚人文昭八表", "劲节虚心竹翠", "轻舟摇晚照"]
+        model = CopyT5Model(args.model_type, args.output_dir, args={"eval_batch_size": args.batch_size,})
+        sentences = ["倚玉难藏拙", "友聚黄梅，三楚人文昭八表", "劲节虚心竹翠", "轻舟摇晚照"]
         sentences_add_prefix = [args.prefix + ": " + i for i in sentences]
         print("inputs:", sentences)
         print("outputs:", model.predict(sentences_add_prefix))

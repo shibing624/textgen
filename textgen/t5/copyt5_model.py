@@ -130,9 +130,8 @@ class CopyT5Model:
             self.args.fp16 = False
 
         if self.args.special_tokens_list:
-            self.tokenizer.add_tokens(
-                self.args.special_tokens_list, special_tokens=True
-            )
+            self.tokenizer.add_tokens(self.args.special_tokens_list, special_tokens=True)
+            self.tokenizer.add_special_tokens({"additional_special_tokens": self.args.special_tokens_list})
             self.model.resize_token_embeddings(len(self.tokenizer))
 
         self.args.model_type = model_type
