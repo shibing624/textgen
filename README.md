@@ -39,9 +39,9 @@
 - [UDA(非核心词替换)](textgen/augment/word_level_augment.py)：本项目参考Google的UDA(非核心词替换)算法，基于TF-IDF将句子中部分不重要词替换为同义词，产生新的文本，实现了文本扩增
 - [BT(回译)](textgen/augment/sentence_level_augment.py)：本项目基于百度翻译API实现了回译功能，先把中文句子翻译为英文，再把英文翻译为新的中文
 - [Seq2Seq](textgen/seq2seq)：本项目基于PyTorch实现了Seq2Seq、ConvSeq2Seq、BART模型的训练和预测，可以用于文本翻译、对话生成、摘要生成等文本生成任务
-- [T5](textgen/t5)：本项目基于PyTorch实现了T5模型训练和预测，可以用于文本翻译、对话生成、对联生成等文本生成任务
+- [T5](textgen/t5)：本项目基于PyTorch实现了T5和CopyT5模型训练和预测，可以用于文本翻译、对话生成、对联生成、文案撰写等文本生成任务
 - [GPT2](textgen/language_modeling)：本项目基于PyTorch实现了GTP2模型训练和预测，可以用于文章生成、对联生成等文本生成任务
-- [TGLS](textgen/unsup_generation)：本项目实现了[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)无监督相似文本生成模型，是一种“先搜索后学习”的文本生成方法，通过反复迭代学习候选集，最终模型能生成类似候选集的较高质量的相似文本
+- [TGLS](textgen/unsup_generation)：本项目实现了[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)无监督相似文本生成模型，是一种“先搜索后学习”的文本生成方法，通过反复迭代学习候选集，最终模型能生成类似候选集的高质量相似文本
 
 
 # Demo
@@ -89,7 +89,6 @@ if __name__ == '__main__':
             '晚上肚子好难受',
             '你会武功吗，我不会',
             '组装标题质量受限于广告主自提物料的片段质量，且表达丰富度有限',
-            '晚上一个人好孤单，想:找附近的人陪陪我.',
             ]
     m = TextAugment(sentence_list=docs)
     a = docs[0]

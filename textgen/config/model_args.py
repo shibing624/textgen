@@ -346,3 +346,32 @@ class LanguageGenerationArgs(ModelArgs):
     config_name: str = None
     tokenizer_name: str = None
     special_tokens_list: list = field(default_factory=list)
+
+
+@dataclass
+class SongNetArgs:
+    """
+    Model args for a SongNetModel
+    """
+
+    model_class: str = "SongNetModel"
+    do_sample: bool = False
+    early_stopping: bool = True
+    evaluate_generated_text: bool = False
+    length_penalty: float = 2.0
+    max_length: int = 20
+    max_steps: int = -1
+    num_beams: int = 3
+    num_return_sequences: int = 1
+    preprocess_inputs: bool = True
+    repetition_penalty: float = 1.0
+    scheduler: str = "linear_schedule_with_warmup"
+    adafactor_relative_step: bool = False
+    adafactor_scale_parameter: bool = False
+    adafactor_warmup_init: bool = False
+    learning_rate: float = 1e-3
+    optimizer: str = "AdamW"
+    special_tokens_list: list = field(default_factory=list)
+    top_k: float = None
+    top_p: float = None
+    use_multiprocessed_decoding: bool = False

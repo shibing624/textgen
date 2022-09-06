@@ -7,13 +7,13 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='textgen',
-    version='0.1.4',
+    version='0.1.5',
     description='Text Generation Model',
     long_description=readme,
     long_description_content_type='text/markdown',
     author='XuMing',
     author_email='xuming624@qq.com',
-    url='https://github.com/shibing624/text-generation',
+    url='https://github.com/shibing624/textgen',
     license="Apache 2.0",
     classifiers=[
         'Intended Audience :: Developers',
