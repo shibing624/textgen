@@ -4,14 +4,13 @@
 @description: 生成仿真评论
 """
 import os
-from textgen.unsup_generation.phrase import (
+from loguru import logger
+from textgen.unsup_generation.tgls_util import (
     load_list,
     caculate_word_idf,
     text2review,
     find_word_phrase,
-    get_seg_pos
-)
-from textgen.unsup_generation.util import (
+    get_seg_pos,
     text2seg_pos,
     get_aspect_express,
     get_candidate_aspect,
@@ -19,9 +18,8 @@ from textgen.unsup_generation.util import (
     fake_review_filter,
     generate_reviews,
     NSDict,
-    PairPattSort
+    PairPattSort,
 )
-from loguru import logger
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
 default_stopwords_path = os.path.join(pwd_path, '../data/stopwords.txt')
@@ -29,22 +27,22 @@ default_pos_adj_word_path = os.path.join(pwd_path, '../data/HowNetPOSWord.txt')
 
 
 class TglsModel:
-    def __init__(self, docs):
+    def __init__(self, docs, stopwords_path=default_stopwords_path, pos_adj_word_path=default_pos_adj_word_path):
         """
         Initialize the model with the given docs
         """
-        logger.debug(f'docs_text len: {len(docs)}')
+        logger.debug(f'Docs size: {len(docs)}')
         # 加载停用词
-        self.stopwords = set(load_list(default_stopwords_path))
+        self.stopwords = set(load_list(stopwords_path))
         # 计算除去停用词的每个词的idf值
         self.word_idf, self.seg_pos_text = caculate_word_idf(docs, self.stopwords)
 
         review_list, all_word = text2review(self.seg_pos_text)
         phrase_list = find_word_phrase(all_word, review_list)
-        logger.debug(f'find new word done, size: {len(phrase_list)}, top10: {phrase_list[:10]}')
+        logger.debug(f'Find {len(phrase_list)} new words, top10: {phrase_list[:10]}')
 
         # 加载正向情感词典
-        self.pos_adj_word = load_list(default_pos_adj_word_path)
+        self.pos_adj_word = load_list(pos_adj_word_path)
 
     def generate(self, doc, num_steps=1000, is_uniq=True):
         """

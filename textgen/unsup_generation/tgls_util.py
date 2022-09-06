@@ -1,12 +1,22 @@
 # -*- coding: utf-8 -*-
 """
 @author:XuMing(xuming624@qq.com)
-@description: 用于无监督抽取用户观点表达的函数。
+@description: 无监督抽取用户观点
 参考: https://github.com/rainarch/SentiBridge
+
+jieba分词的效果还不足以支持电商评论，例如"痘痘肌"、"炒鸡棒"、"t字区"等词是jieba无法处理的。
+新增新词发现功能(PMI+左右熵)的方法来找出新词，参考：https://www.matrix67.com/blog/archives/5044
 """
 import random
 from loguru import logger
+import os
+import jieba
+import jieba.posseg
+import math
+import re
 
+pwd_path = os.path.abspath(os.path.dirname(__file__))
+jieba.setLogLevel(log_level="ERROR")
 WINDOW_SIZE = 5
 PUNCTUATION_MARK = ['x']  # 标点
 PUNCTUATION = ['。', '！', '？', '，', '～']
@@ -15,17 +25,233 @@ VERB_MARK = ['v', 'vd', 'vg', 'vi', 'vn', 'vq']  # 动词
 ADJECTIVE_MARK = ['a', 'ad', 'an', 'ag']  # 形容词
 ADVERB_MARK = ['d', 'df', 'dg']  # 副词
 ENG_MARK = ['eng']
-
 EMOJI = ['😀', '😁', '😂', '😃', '😄', '😆', '😉', '😊',
          '😋', '😎', '😍', '😘', '😗', '😙', '😚', '😇',
          '😏', '😝']
-
 YANWENZI = ['ヽ(✿ﾟ▽ﾟ)ノ', 'φ(≧ω≦*)♪', '╰(*°▽°*)╯', 'o(￣▽￣)ｄ', 'o( =•ω•= )m']
-
 ILLEGAL_WORD = ['考拉', '网易', '淘宝', '京东', '拼多多', '不过', '因为', '而且', '但是', '但', '所以', '因此', '如果']  # 过滤词
 
 RESERVED_MARK = NOUN_MARK + VERB_MARK + ADJECTIVE_MARK + ADVERB_MARK + ENG_MARK  # 用于发现新词
 ASPECT_MARK = NOUN_MARK + VERB_MARK
+
+PUNCTUATION_MAP = {".": "。", ",": "，", "!": "！", "?": "？", "~": "～"}
+keep_p = ['，', '。', '！', '？', '～', '、']
+
+
+def convert(content):
+    """转化标点符号为中文符号"""
+    nc = []
+    for c in content:
+        if c in PUNCTUATION_MAP:
+            nc.append(PUNCTUATION_MAP[c])
+            continue
+        nc.append(c)
+    return "".join(nc)
+
+
+def clean(line):
+    """清洗无意义字符"""
+    if line == "":
+        return
+    line = convert(line)
+    c_content = []
+    for char in line:
+        if re.search("[\u4e00-\u9fa5]", char):
+            c_content.append(char)
+        elif re.search("[a-zA-Z0-9]", char):
+            c_content.append(char)
+        elif char in keep_p:
+            c_content.append(char)
+        elif char == ' ':  # 很多用户喜欢用空格替代标点
+            c_content.append('，')
+        else:
+            c_content.append('')
+    nc_content = []
+    c = 0
+    for char in c_content:
+        if char in keep_p:
+            c += 1
+        else:
+            c = 0
+        if c < 2:
+            nc_content.append(char)
+    result = ''.join(nc_content)
+    result = result.strip()
+    result = result.lower()  # 所有英文转成小写字母
+    return result
+
+
+def clean_review(text):
+    """
+    对原始评论进行清理，删去非法字符，统一标点，删去无用评论
+    """
+    review_set = []
+    for line in text:
+        line = line.lstrip()
+        line = line.rstrip()
+        line = clean(line)
+        if len(line) < 7:  # 过于短的评论需要删除
+            continue
+        if line and line not in ['该用户没有填写评论。', '用户晒单。']:
+            review_set.append(line)
+
+    return review_set
+
+
+def text2review(seg_pos_text):
+    """
+    经过分词的文档，得到原始用户的每条评论
+    """
+    review_list = []  # 保存全部的按照指定标点切分的句子
+    all_word = set()  # 全部单词
+    for seg_pos in seg_pos_text:
+        cur_review = []
+        for term in seg_pos:
+            word, flag = term.split('/')
+            cur_review.append(word)
+            if flag in RESERVED_MARK:
+                all_word.add(word)
+        review_list.append(cur_review)
+
+    return review_list, all_word
+
+
+def find_word_phrase(all_word, seg_list):
+    """
+    根据点互信息以及信息熵发现词组，主要目的是提升分词效果
+    """
+    res = []
+    word_count = {k: 0 for k in all_word}  # 记录全部词出现的次数
+
+    all_word_count = 0
+    all_bi_gram_count = 0
+    for sentence in seg_list:
+        all_word_count += len(sentence)
+        all_bi_gram_count += len(sentence) - 1
+        for idx, word in enumerate(sentence):
+            if word in word_count:
+                word_count[word] += 1
+
+    bi_gram_count = {}
+    bi_gram_lcount = {}
+    bi_gram_rcount = {}
+    for sentence in seg_list:
+        for idx, _ in enumerate(sentence):
+            left_word = sentence[idx - 1] if idx != 0 else ''
+            right_word = sentence[idx + 2] if idx < len(sentence) - 2 else ''
+
+            first = sentence[idx]
+            second = sentence[idx + 1] if idx + 1 < len(sentence) else ''
+            if first in word_count and second in word_count:
+                if (first, second) in bi_gram_count:
+                    bi_gram_count[(first, second)] += 1
+                else:
+                    bi_gram_count[(first, second)] = 1
+                    bi_gram_lcount[(first, second)] = {}
+                    bi_gram_rcount[(first, second)] = {}
+
+                if left_word in bi_gram_lcount[(first, second)]:
+                    bi_gram_lcount[(first, second)][left_word] += 1
+                elif left_word != '':
+                    bi_gram_lcount[(first, second)][left_word] = 1
+
+                if right_word in bi_gram_rcount[(first, second)]:
+                    bi_gram_rcount[(first, second)][right_word] += 1
+                elif right_word != '':
+                    bi_gram_rcount[(first, second)][right_word] = 1
+
+    bi_gram_count = dict(filter(lambda x: x[1] >= 5, bi_gram_count.items()))
+
+    bi_gram_le = {}  # 全部bi_gram的左熵
+    bi_gram_re = {}  # 全部bi_gram的右熵
+    for phrase in bi_gram_count:
+        le = 0
+        for l_word in bi_gram_lcount[phrase]:
+            p_aw_w = bi_gram_lcount[phrase][l_word] / bi_gram_count[phrase]  # P(aW | W)
+            le += p_aw_w * math.log2(p_aw_w)
+        le = -le
+        bi_gram_le[phrase] = le
+
+    for phrase in bi_gram_count:
+        re = 0
+        for r_word in bi_gram_rcount[phrase]:
+            p_wa_w = bi_gram_rcount[phrase][r_word] / bi_gram_count[phrase]  # P(Wa | W)
+            re += p_wa_w * math.log2(p_wa_w)
+        re = -re
+        bi_gram_re[phrase] = re
+
+    PMI = {}
+    for phrase in bi_gram_count:
+        p_first = word_count[phrase[0]] / all_word_count
+        p_second = word_count[phrase[1]] / all_word_count
+        p_bi_gram = bi_gram_count[phrase] / all_bi_gram_count
+        PMI[phrase] = math.log2(p_bi_gram / (p_first * p_second))
+
+    phrase_score = []
+    for phrase in PMI:
+        le = bi_gram_le[phrase]
+        re = bi_gram_re[phrase]
+        score = PMI[phrase] + le + re
+        phrase_score.append((phrase, score))
+
+    phrase_score = sorted(phrase_score, key=lambda x: x[1], reverse=True)
+
+    for item in phrase_score:
+        res.append('{}:{}'.format(''.join(item[0]), item[1]))
+
+    return res
+
+
+def load_list(path):
+    return [l for l in open(path, 'r', encoding='utf-8').read().split()]
+
+
+def caculate_word_idf(docs, stopwords):
+    """
+    计算所有文档中的每个词的idf
+    docs: list(list(str)), 数据集
+    stop_word: list, 停用词list
+
+    return: 所有词的idf值
+    """
+    word_IDF = {}  # word-IDF 记录每个word在不同的doc出现过的次数,然后计算IDF
+    num_doc = len(docs)  # 商品数量
+    seg_pos_text = []
+    for doc in docs:
+        cur_doc_word_set = set()  # 记录当前文档中出现的不同的词
+        for line in doc:
+            line = line.strip()
+            seg_pos_list = get_seg_pos(line, type='word')
+            seg_pos_text.append(seg_pos_list)
+            word_list = [term.split('/')[0] for term in seg_pos_list]
+            for w in word_list:
+                # 如果这个词在停用词表中就不添加
+                if w in stopwords:
+                    continue
+                cur_doc_word_set.add(w)
+        for w in cur_doc_word_set:
+            if w in word_IDF:
+                word_IDF[w] += 1
+            else:
+                word_IDF[w] = 1
+    for w in word_IDF:
+        word_IDF[w] = math.log10(num_doc / word_IDF[w])
+    return word_IDF, seg_pos_text
+
+
+def get_seg_pos(line, type='word'):
+    """
+    获取文档的分词以及词性标注结果，分词的方式可以为按词切分或者按字切分
+    """
+    if type == 'word':
+        line_cut = jieba.posseg.cut(line.strip())
+        wordlist = []
+        for term in line_cut:
+            wordlist.append('%s/%s' % (term.word, term.flag))
+        res = wordlist
+    else:
+        res = list(line.strip())
+    return res
 
 
 def text2seg_pos(seg_pos_text, pattern='[。！？]'):
@@ -79,7 +305,7 @@ def get_candidate_aspect(seg_list, pos_list, adj_word, stop_word, word_idf):
     candidates = list(filter(lambda x: len(x[0]) > 1, candidates))  # 经过词组发现之后，删去一个字的词
     candidates = [item[0] for item in candidates if item[0] not in stop_word]  # 删去停用词
     candidates = [item if (item in word_idf and word_idf[item] != 0) else item for item in candidates]  # 删去IDF值为0的词
-    logger.debug(f"Extract aspect candidates done, size: {len(candidates)}, top 10: {candidates[:10]}")
+    logger.debug(f"Extract {len(candidates)} aspect candidates, top10: {candidates[:10]}")
     return candidates
 
 
@@ -141,7 +367,7 @@ class NSDict:
             del dict[str]
 
     def build_nsdict(self):
-        logger.debug("Stage 1：extract pair and pattern")
+        """Stage 1：extract pair and pattern"""
         self._seg2nsd(self.raw_aspect_list)
         self._noise_del()
         return self.ns_dict
@@ -232,7 +458,7 @@ class PairPattSort:
         self.patt_score = self._norm(self.patt_score, self.patt_len)
 
     def sort_pair(self):
-        logger.debug("Stage 2：pair sort")
+        """Stage 2：pair sort"""
         for i in range(100):
             self._iterative()
         pair_score = sorted(self.pair_score.items(), key=lambda d: d[1], reverse=True)
@@ -316,6 +542,7 @@ def merge_aspect_express(aspect_express, pair_useful):
     merged_aspects = [[aspects[0]]] if aspects else [[]]
     merged_express = {}
     opinion_set = []
+
     def check_is_same(word1, word2):
         """
         判断两个词当中是否存在相同的字
@@ -324,6 +551,7 @@ def merge_aspect_express(aspect_express, pair_useful):
             if i in word2:
                 return True
         return False
+
     for i in range(1, len(aspects)):
         if check_is_same(merged_aspects[-1][-1], aspects[i]):
             merged_aspects[-1].append(aspects[i])
@@ -472,3 +700,33 @@ def fake_review_filter(reviews, opinion_set, is_uniq=True):
             else:
                 results.append(review)
     return results
+
+
+if __name__ == '__main__':
+    # 使用了(PMI+左右熵)的方法来找出新词
+    default_stopwords_path = os.path.join(pwd_path, '../data/stopwords.txt')
+    sample1 = load_list(os.path.join(pwd_path, '../../examples/data/ecommerce_comments_100.txt'))
+    docs_text = [["挺好的，速度很快，也很实惠，不知效果如何",
+                  "产品没得说，买了以后就降价，心情不美丽。",
+                  "刚收到，包装很完整，不错",
+                  "发货速度很快，物流也不错，同一时间买的两个东东，一个先到一个还在路上。这个水水很喜欢，不过盖子真的开了。盖不牢了现在。",
+                  "包装的很好，是正品",
+                  "被种草兰蔻粉水三百元一大瓶囤货，希望是正品好用，收到的时候用保鲜膜包裹得严严实实，只敢买考拉自营的护肤品",
+                  ],
+                 ['很温和，清洗的也很干净，不油腻，很不错，会考虑回购，第一次考拉买护肤品，满意',
+                  '这款卸妆油我会无限回购的。即使我是油痘皮，也不会闷痘，同时在脸部按摩时，还能解决白头的脂肪粒的问题。用清水洗完脸后，非常的清爽。',
+                  '自从用了fancl之后就不用其他卸妆了，卸的舒服又干净',
+                  '买贵了，大润发才卖79。9。',
+                  ],
+                 sample1
+                 ]
+    print('docs_text len:', len(docs_text))
+    # 加载停用词
+    stopwords = set(load_list(default_stopwords_path))
+    # 计算除去停用词的每个词的idf值
+    word_idf, seg_pos_text = caculate_word_idf(docs_text, stopwords)
+
+    review_list, all_word = text2review(seg_pos_text)
+
+    phrase_list = find_word_phrase(all_word, review_list)
+    print(phrase_list)
