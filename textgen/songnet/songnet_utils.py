@@ -20,13 +20,15 @@ BUFSIZE = 4096000
 
 class ZHCharTokenizer(object):
     def __init__(self, vocab_file, min_occur_cnt=1, specials=None):
-        idx2token = [PAD, UNK, BOS, EOS] + [BOC, EOC, LS, RS, SP] + CS + SS + PS + TS \
+        special_tokens = [PAD, UNK, BOS, EOS, BOC, EOC, LS, RS]
+        idx2token = special_tokens + [SP] + CS + SS + PS + TS \
                     + (specials if specials is not None else [])
         idx2token += self.load_vocab(vocab_file, min_occur_cnt)
         self._token2idx = dict(zip(idx2token, range(len(idx2token))))
         self._idx2token = idx2token
         self._padding_idx = self._token2idx[PAD]
         self._unk_idx = self._token2idx[UNK]
+        self.special_tokens = special_tokens
 
     @staticmethod
     def load_vocab(vocab_file, min_occur_cnt=1):

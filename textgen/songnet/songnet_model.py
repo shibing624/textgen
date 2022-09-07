@@ -659,7 +659,7 @@ class SongNetModel:
     def eval_model(self, eval_df):
         pass
 
-    def _top_k_inc(self, enc, src_padding_mask, inp_ys_tpl, inp_ys_seg, inp_ys_pos, s, k=32):
+    def _top_k_inc(self, enc, src_padding_mask, inp_ys_tpl, inp_ys_seg, inp_ys_pos, s, k=32, skip_special_tokens=True):
         incremental_state = None
         inp_y, m = s2t(s, self.tokenizer)
         inp_y = inp_y.to(self.device)
@@ -680,7 +680,6 @@ class SongNetModel:
                 if ctk != "<c1>" and ctk != "<c2>" and ctk != "<c0>":
                     next_tk.append(ctk)
                     continue
-
                 if l == 0:
                     logits = probs[len(s[i]) - 1, i]
                 else:
@@ -706,6 +705,8 @@ class SongNetModel:
             inp_y = inp_y.to(self.device)
             bidx = torch.BoolTensor(bidx).to(self.device)
             incremental_state["bidx"] = bidx
+            if skip_special_tokens:
+                sents = [s for s in sents if s not in self.tokenizer.special_tokens]
             res += sents
         return res
 
