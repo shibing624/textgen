@@ -659,7 +659,7 @@ class SongNetModel:
     def eval_model(self, eval_df):
         pass
 
-    def _top_k_inc(self, enc, src_padding_mask, inp_ys_tpl, inp_ys_seg, inp_ys_pos, s, k=32, skip_special_tokens=True):
+    def _top_k_inc(self, enc, src_padding_mask, inp_ys_tpl, inp_ys_seg, inp_ys_pos, s, k=32):
         incremental_state = None
         inp_y, m = s2t(s, self.tokenizer)
         inp_y = inp_y.to(self.device)
@@ -694,7 +694,7 @@ class SongNetModel:
             bidx = [1] * len(s)
             for idx, (sent, t) in enumerate(zip(s, next_tk)):
                 if t == "<eos>":
-                    res.append(sent)
+                    sents.append(sent)
                     bidx[idx] = 0
                 else:
                     sents.append(sent + [t])
@@ -705,12 +705,10 @@ class SongNetModel:
             inp_y = inp_y.to(self.device)
             bidx = torch.BoolTensor(bidx).to(self.device)
             incremental_state["bidx"] = bidx
-            if skip_special_tokens:
-                sents = [s for s in sents if s not in self.tokenizer.special_tokens]
             res += sents
         return res
 
-    def predict(self, sentences):
+    def predict(self, sentences, skip_special_tokens=True):
         """
         Performs predictions on a list of text.
 
@@ -738,11 +736,13 @@ class SongNetModel:
             ys_pos = ys_pos.to(self.device)
             enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
             s = [['<bos>']]
-            res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
-            all_outputs.append(''.join(res[-1]))
+            res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)[-1]
+            if skip_special_tokens:
+                res = [s for s in res if s not in self.tokenizer.special_tokens]
+            all_outputs.append(''.join(res))
         return all_outputs
 
-    def predict_mask(self, sentences):
+    def predict_mask(self, sentences, skip_special_tokens=True):
         """
         Performs mask predictions on a list of text.
 
@@ -770,8 +770,10 @@ class SongNetModel:
             ys_pos = ys_pos.to(self.device)
             enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
             s = [['<bos>']]
-            res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
-            all_outputs.append(''.join(res[-1]))
+            res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)[-1]
+            if skip_special_tokens:
+                res = [s for s in res if s not in self.tokenizer.special_tokens]
+            all_outputs.append(''.join(res))
         return all_outputs
 
     def _move_model_to_device(self):
