@@ -349,7 +349,7 @@ class LanguageGenerationArgs(ModelArgs):
 
 
 @dataclass
-class SongNetArgs:
+class SongNetArgs(ModelArgs):
     """
     Model args for a SongNetModel
     """
