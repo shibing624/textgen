@@ -708,7 +708,7 @@ class SongNetModel:
             res += sents
         return res
 
-    def predict(self, sentences, skip_special_tokens=True):
+    def predict(self, sentences):
         """
         Performs predictions on a list of text.
 
@@ -737,12 +737,12 @@ class SongNetModel:
             enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
             s = [['<bos>']]
             res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)[-1]
-            if skip_special_tokens:
+            if self.args.skip_special_tokens:
                 res = [s for s in res if s not in self.tokenizer.special_tokens]
             all_outputs.append(''.join(res))
         return all_outputs
 
-    def predict_mask(self, sentences, skip_special_tokens=True):
+    def predict_mask(self, sentences):
         """
         Performs mask predictions on a list of text.
 
@@ -771,7 +771,7 @@ class SongNetModel:
             enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
             s = [['<bos>']]
             res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)[-1]
-            if skip_special_tokens:
+            if self.args.skip_special_tokens:
                 res = [s for s in res if s not in self.tokenizer.special_tokens]
             all_outputs.append(''.join(res))
         return all_outputs
