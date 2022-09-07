@@ -627,8 +627,9 @@ class SongNetModel:
         if model_path and vocab_path:
             ckpt = torch.load(model_path, map_location='cpu')
             model_args = ckpt['args']
-            tokenizer = ZHCharTokenizer.from_pretrained(vocab_path, min_occur_cnt=model_args.min_occur_cnt, **kwargs)
-            device = 0 if self.device == 'cuda' else -1
+            logger.debug(f'model args: {model_args}')
+            tokenizer = ZHCharTokenizer(vocab_path, min_occur_cnt=model_args.min_occur_cnt, **kwargs)
+            device = 0 if self.device != 'cpu' else 0
             model = SongNet(
                 tokenizer,
                 device,
@@ -637,7 +638,7 @@ class SongNetModel:
                 num_heads=model_args.num_heads,
                 dropout=model_args.dropout,
                 layers=model_args.layers,
-                smoothing_factor=model_args.smoothing_factor,
+                smoothing_factor=model_args.smoothing,
                 approx=None
             )
             model.load_state_dict(ckpt['model'])
@@ -721,23 +722,12 @@ class SongNetModel:
 
         self._move_model_to_device()
         self.model.eval()
-        cp_size = 1
         all_outputs = []
         # Batching
-        for batch in tqdm(
-                [
-                    sentences[i: i + self.args.eval_batch_size]
-                    for i in range(0, len(sentences), self.args.eval_batch_size)
-                ],
-                desc="Generating outputs",
-                disable=self.args.silent,
-        ):
-            input_batch = []
-            for line in batch:
-                input_batch += [line for i in range(cp_size)]
-            print(input_batch)
+        for sent in sentences:
+            batch = [sent]
             xs_tpl, xs_seg, xs_pos, ys_truth, ys_inp, ys_tpl, ys_seg, ys_pos, msk = \
-                s2xy(input_batch, self.tokenizer, self.model_args.max_len, min_len=2)
+                s2xy(batch, self.tokenizer, self.model_args.max_len, min_len=2)
 
             xs_tpl = xs_tpl.to(self.device)
             xs_seg = xs_seg.to(self.device)
@@ -746,9 +736,9 @@ class SongNetModel:
             ys_seg = ys_seg.to(self.device)
             ys_pos = ys_pos.to(self.device)
             enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
-            s = [['<bos>']] * self.args.eval_batch_size * cp_size
+            s = [['<bos>']]
             res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
-            all_outputs.extend(res)
+            all_outputs.append(''.join(res[-1]))
         return all_outputs
 
     def predict_mask(self, sentences):
@@ -764,23 +754,12 @@ class SongNetModel:
 
         self._move_model_to_device()
         self.model.eval()
-        cp_size = 1
         all_outputs = []
         # Batching
-        for batch in tqdm(
-                [
-                    sentences[i: i + self.args.eval_batch_size]
-                    for i in range(0, len(sentences), self.args.eval_batch_size)
-                ],
-                desc="Generating outputs",
-                disable=self.args.silent,
-        ):
-            input_batch = []
-            for line in batch:
-                input_batch += [line for i in range(cp_size)]
-            print(input_batch)
+        for sent in sentences:
+            batch = [sent]
             xs_tpl, xs_seg, xs_pos, ys_truth, ys_inp, ys_tpl, ys_seg, ys_pos, msk = \
-                s2xy_polish(input_batch, self.tokenizer, self.model_args.max_len, min_len=2)
+                s2xy_polish(batch, self.tokenizer, self.model_args.max_len, min_len=2)
 
             xs_tpl = xs_tpl.to(self.device)
             xs_seg = xs_seg.to(self.device)
@@ -789,9 +768,9 @@ class SongNetModel:
             ys_seg = ys_seg.to(self.device)
             ys_pos = ys_pos.to(self.device)
             enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
-            s = [['<bos>']] * self.args.eval_batch_size * cp_size
+            s = [['<bos>']]
             res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
-            all_outputs.extend(res)
+            all_outputs.append(''.join(res[-1]))
         return all_outputs
 
     def _move_model_to_device(self):

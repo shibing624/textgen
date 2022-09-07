@@ -33,11 +33,12 @@ class ZHCharTokenizer(object):
         vocabs = set()
         with open(vocab_file, encoding='utf8') as f:
             for line in f:
-                line = line.strip()
+                line = line.strip('\n')
                 if line:
-                    terms = line.split()
-                    if len(terms) == 2 and int(terms[1]) >= min_occur_cnt:
-                        vocabs.add(terms[0])
+                    terms = line.split('\t')
+                    if len(terms) == 2:
+                        if int(terms[1]) >= min_occur_cnt and terms[0].strip():
+                            vocabs.add(terms[0].strip())
                     else:
                         vocabs.add(line)
         return list(vocabs)
