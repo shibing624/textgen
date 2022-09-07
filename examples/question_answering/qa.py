@@ -8,7 +8,7 @@ import os
 import sys
 
 sys.path.append('../..')
-from textgen.question_answering import QuestionAnsweringModel
+from textgen import QuestionAnsweringModel
 
 
 def main():

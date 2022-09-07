@@ -652,10 +652,13 @@ class SongNetModel:
         else:
             self.args.model_name = model_name
 
-    def train(self):
+    def train_model(self, train_df, eval_df=None):
         pass
 
-    def top_k_inc(self, enc, src_padding_mask, inp_ys_tpl, inp_ys_seg, inp_ys_pos, s, k=32):
+    def eval_model(self, eval_df):
+        pass
+
+    def _top_k_inc(self, enc, src_padding_mask, inp_ys_tpl, inp_ys_seg, inp_ys_pos, s, k=32):
         incremental_state = None
         inp_y, m = s2t(s, self.tokenizer)
         inp_y = inp_y.to(self.device)
@@ -744,7 +747,7 @@ class SongNetModel:
             ys_pos = ys_pos.to(self.device)
             enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
             s = [['<bos>']] * self.args.eval_batch_size * cp_size
-            res = self.top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
+            res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
             all_outputs.extend(res)
         return all_outputs
 
@@ -787,7 +790,7 @@ class SongNetModel:
             ys_pos = ys_pos.to(self.device)
             enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
             s = [['<bos>']] * self.args.eval_batch_size * cp_size
-            res = self.top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
+            res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
             all_outputs.extend(res)
         return all_outputs
 
