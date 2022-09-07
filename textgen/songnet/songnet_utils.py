@@ -30,18 +30,18 @@ class ZHCharTokenizer(object):
 
     @staticmethod
     def load_vocab(vocab_file, min_occur_cnt=1):
-        vocabs = set()
+        vocabs = []
         with open(vocab_file, encoding='utf8') as f:
             for line in f:
                 line = line.strip('\n')
                 if line:
                     terms = line.split('\t')
                     if len(terms) == 2:
-                        if int(terms[1]) >= min_occur_cnt and terms[0].strip():
-                            vocabs.add(terms[0].strip())
+                        if int(terms[1]) >= min_occur_cnt and terms[0]:
+                            vocabs.append(terms[0])
                     else:
-                        vocabs.add(line)
-        return list(vocabs)
+                        vocabs.append(line)
+        return vocabs
 
     @property
     def size(self):
@@ -83,25 +83,19 @@ class ZHCharTokenizer(object):
         return tokenizer
 
 
-def lists2tensor(xs, vocab=None):
+def lists2tensor(xs, tokenizer=None):
     max_len = max(len(x) for x in xs)
     ys = []
     for x in xs:
-        if vocab is not None:
-            y = vocab.token2idx(x) + [vocab.padding_idx] * (max_len - len(x))
+        if tokenizer is not None:
+            y = tokenizer.token2idx(x) + [tokenizer.padding_idx] * (max_len - len(x))
         else:
             y = x + [0] * (max_len - len(x))
         ys.append(y)
     return ys
 
 
-def _back_to_text_for_check(x, vocab):
-    w = x.t().tolist()
-    for sent in vocab.idx2token(w):
-        print(' '.join(sent))
-
-
-def batchify(data, vocab):
+def batchify(data, tokenizer):
     xs_tpl, xs_seg, xs_pos, \
     ys_truth, ys_inp, \
     ys_tpl, ys_seg, ys_pos, msk = [], [], [], [], [], [], [], [], []
@@ -118,37 +112,37 @@ def batchify(data, vocab):
 
         msk.append([1 for i in range(len(ys_i))])
 
-    xs_tpl = torch.LongTensor(lists2tensor(xs_tpl, vocab)).t_().contiguous()
-    xs_seg = torch.LongTensor(lists2tensor(xs_seg, vocab)).t_().contiguous()
-    xs_pos = torch.LongTensor(lists2tensor(xs_pos, vocab)).t_().contiguous()
-    ys_truth = torch.LongTensor(lists2tensor(ys_truth, vocab)).t_().contiguous()
-    ys_inp = torch.LongTensor(lists2tensor(ys_inp, vocab)).t_().contiguous()
-    ys_tpl = torch.LongTensor(lists2tensor(ys_tpl, vocab)).t_().contiguous()
-    ys_seg = torch.LongTensor(lists2tensor(ys_seg, vocab)).t_().contiguous()
-    ys_pos = torch.LongTensor(lists2tensor(ys_pos, vocab)).t_().contiguous()
+    xs_tpl = torch.LongTensor(lists2tensor(xs_tpl, tokenizer)).t_().contiguous()
+    xs_seg = torch.LongTensor(lists2tensor(xs_seg, tokenizer)).t_().contiguous()
+    xs_pos = torch.LongTensor(lists2tensor(xs_pos, tokenizer)).t_().contiguous()
+    ys_truth = torch.LongTensor(lists2tensor(ys_truth, tokenizer)).t_().contiguous()
+    ys_inp = torch.LongTensor(lists2tensor(ys_inp, tokenizer)).t_().contiguous()
+    ys_tpl = torch.LongTensor(lists2tensor(ys_tpl, tokenizer)).t_().contiguous()
+    ys_seg = torch.LongTensor(lists2tensor(ys_seg, tokenizer)).t_().contiguous()
+    ys_pos = torch.LongTensor(lists2tensor(ys_pos, tokenizer)).t_().contiguous()
     msk = torch.FloatTensor(lists2tensor(msk)).t_().contiguous()
     return xs_tpl, xs_seg, xs_pos, ys_truth, ys_inp, ys_tpl, ys_seg, ys_pos, msk
 
 
-def s2t(strs, vocab):
+def s2t(strs, tokenizer):
     inp, msk = [], []
     for x in strs:
         inp.append(x)
         msk.append([1 for i in range(len(x))])
 
-    inp = torch.LongTensor(lists2tensor(inp, vocab)).t_().contiguous()
+    inp = torch.LongTensor(lists2tensor(inp, tokenizer)).t_().contiguous()
     msk = torch.FloatTensor(lists2tensor(msk)).t_().contiguous()
     return inp, msk
 
 
-def s2xy(lines, vocab, max_len, min_len):
+def s2xy(lines, tokenizer, max_len, min_len):
     data = []
     for line in lines:
         res = parse_line(line, max_len, min_len)
         if not res:
             continue
         data.append(res)
-    return batchify(data, vocab)
+    return batchify(data, tokenizer)
 
 
 def parse_line(line, max_len, min_len):
@@ -212,12 +206,12 @@ def parse_line(line, max_len, min_len):
     return xs_tpl, xs_seg, xs_pos, ys, ys_tpl, ys_seg, ys_pos
 
 
-def s2xy_polish(lines, vocab, max_len, min_len=2):
+def s2xy_polish(lines, tokenizer, max_len, min_len=2):
     data = []
     for line in lines:
         res = parse_line_polish(line, max_len, min_len)
         data.append(res)
-    return batchify(data, vocab)
+    return batchify(data, tokenizer)
 
 
 def parse_line_polish(line, max_len, min_len):
@@ -279,9 +273,9 @@ def parse_line_polish(line, max_len, min_len):
 
 
 class DataLoader(object):
-    def __init__(self, vocab, filename, batch_size, max_len_y, min_len_y):
+    def __init__(self, tokenizer, filename, batch_size, max_len_y, min_len_y):
         self.batch_size = batch_size
-        self.vocab = vocab
+        self.tokenizer = tokenizer
         self.max_len_y = max_len_y
         self.min_len_y = min_len_y
         self.filename = filename
@@ -299,7 +293,7 @@ class DataLoader(object):
             lines = self.stream.readlines(BUFSIZE)
 
         data = []
-        for line in lines[:-1]:  # the last sent may be imcomplete
+        for line in lines:
             res = parse_line(line, self.max_len_y, self.min_len_y)
             if not res:
                 continue
@@ -309,5 +303,5 @@ class DataLoader(object):
 
         idx = 0
         while idx < len(data):
-            yield batchify(data[idx:idx + self.batch_size], self.vocab)
+            yield batchify(data[idx:idx + self.batch_size], self.tokenizer)
             idx += self.batch_size
