@@ -372,6 +372,7 @@ class SongNetArgs(ModelArgs):
     learning_rate: float = 1e-3
     optimizer: str = "AdamW"
     special_tokens_list: list = field(default_factory=list)
+    k: int = 1
     top_k: float = None
     top_p: float = None
     use_multiprocessed_decoding: bool = False

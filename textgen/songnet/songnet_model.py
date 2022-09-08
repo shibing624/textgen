@@ -659,7 +659,46 @@ class SongNetModel:
     def eval_model(self, eval_df):
         pass
 
-    def _top_k_inc(self, enc, src_padding_mask, inp_ys_tpl, inp_ys_seg, inp_ys_pos, s, k=32):
+    def _top_k(self, enc, src_padding_mask, inp_ys_tpl, inp_ys_seg, inp_ys_pos, s):
+        inp_y, m = s2t(s, self.tokenizer)
+        inp_y = inp_y.to(self.device)
+        res = []
+        for l in range(inp_ys_tpl.size(0)):
+            probs, pred = self.model.work(
+                enc,
+                src_padding_mask,
+                inp_y,
+                inp_ys_tpl[0:l + 1, :],
+                inp_ys_seg[0:l + 1, :],
+                inp_ys_pos[0:l + 1, :]
+            )
+            next_tk = []
+            for i in range(len(s)):
+                ctk = self.tokenizer.idx2token(inp_ys_tpl[l, i].item())
+                if ctk != "<c1>" and ctk != "<c2>" and ctk != "<c0>":
+                    next_tk.append(ctk)
+                    continue
+                logits = probs[len(s[i]) - 1, i]
+                ps, idx = torch.topk(logits, k=self.args.k)
+                ps = ps / torch.sum(ps)
+                sampled = torch.multinomial(ps, num_samples=1)
+                sampled_idx = idx[sampled]
+                next_tk.append(self.tokenizer.idx2token(sampled_idx.item()))
+            s_ = []
+            for sent, t in zip(s, next_tk):
+                if t == "<eos>":
+                    res.append(sent)
+                else:
+                    s_.append(sent + [t])
+            if not s_:
+                break
+            s = s_
+            inp_y, m = s2t(s, self.tokenizer)
+            inp_y = inp_y.to(self.device)
+        res += s_
+        return res
+
+    def _top_k_inc(self, enc, src_padding_mask, inp_ys_tpl, inp_ys_seg, inp_ys_pos, s):
         incremental_state = None
         inp_y, m = s2t(s, self.tokenizer)
         inp_y = inp_y.to(self.device)
@@ -684,12 +723,11 @@ class SongNetModel:
                     logits = probs[len(s[i]) - 1, i]
                 else:
                     logits = probs[0, i]
-                ps, idx = torch.topk(logits, k=k)
+                ps, idx = torch.topk(logits, k=self.args.k)
                 ps = ps / torch.sum(ps)
                 sampled = torch.multinomial(ps, num_samples=1)
                 sampled_idx = idx[sampled]
                 next_tk.append(self.tokenizer.idx2token(sampled_idx.item()))
-
             sents = []
             bidx = [1] * len(s)
             for idx, (sent, t) in enumerate(zip(s, next_tk)):
@@ -706,7 +744,7 @@ class SongNetModel:
             bidx = torch.BoolTensor(bidx).to(self.device)
             incremental_state["bidx"] = bidx
             res += sents
-        return res
+        return res[-1]
 
     def predict(self, sentences):
         """
@@ -727,7 +765,6 @@ class SongNetModel:
             batch = [sent]
             xs_tpl, xs_seg, xs_pos, ys_truth, ys_inp, ys_tpl, ys_seg, ys_pos, msk = \
                 s2xy(batch, self.tokenizer, self.model_args.max_len, min_len=2)
-
             xs_tpl = xs_tpl.to(self.device)
             xs_seg = xs_seg.to(self.device)
             xs_pos = xs_pos.to(self.device)
@@ -736,7 +773,7 @@ class SongNetModel:
             ys_pos = ys_pos.to(self.device)
             enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
             s = [['<bos>']]
-            res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)[-1]
+            res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
             if self.args.skip_special_tokens:
                 res = [s for s in res if s not in self.tokenizer.special_tokens]
             all_outputs.append(''.join(res))
@@ -761,7 +798,6 @@ class SongNetModel:
             batch = [sent]
             xs_tpl, xs_seg, xs_pos, ys_truth, ys_inp, ys_tpl, ys_seg, ys_pos, msk = \
                 s2xy_polish(batch, self.tokenizer, self.model_args.max_len, min_len=2)
-
             xs_tpl = xs_tpl.to(self.device)
             xs_seg = xs_seg.to(self.device)
             xs_pos = xs_pos.to(self.device)
@@ -770,7 +806,7 @@ class SongNetModel:
             ys_pos = ys_pos.to(self.device)
             enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
             s = [['<bos>']]
-            res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)[-1]
+            res = self._top_k_inc(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
             if self.args.skip_special_tokens:
                 res = [s for s in res if s not in self.tokenizer.special_tokens]
             all_outputs.append(''.join(res))
