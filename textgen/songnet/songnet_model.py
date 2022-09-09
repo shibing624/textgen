@@ -1690,7 +1690,7 @@ class SongNetModel:
         os.makedirs(output_dir, exist_ok=True)
 
         if model and not self.args.no_save:
-            # Take care of distributed/parallel training
+            # Save model and tokenizer
             self.tokenizer.save_pretrained(output_dir)
             torch.save(model.state_dict(), os.path.join(output_dir, 'pytorch_model.bin'))
             torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
