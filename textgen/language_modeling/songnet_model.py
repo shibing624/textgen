@@ -31,7 +31,11 @@ from textgen.config.model_args import SongNetArgs
 from textgen.language_modeling.songnet_utils import (
     ZHCharTokenizer, s2t, s2xy, s2xy_polish,
     SongNetDataLoader,
-    BOS, EOS,
+    BOS,
+    EOS,
+    PRETRAINED_MODELS,
+    LOCAL_DIR,
+    http_get,
 )
 
 has_cuda = torch.cuda.is_available()
@@ -594,7 +598,7 @@ class SongNetModel:
     def __init__(
             self,
             model_type='songnet',
-            model_name='shibing624/songnet-base-chinese-couplet',
+            model_name='songnet-base-chinese',
             args=None,
             use_cuda=has_cuda,
             cuda_device=-1,
@@ -644,6 +648,17 @@ class SongNetModel:
         self.results = {}
 
         if model_name:
+            bin_path = os.path.join(model_name, 'pytorch_model.bin')
+            if not os.path.exists(bin_path):
+                if model_name in PRETRAINED_MODELS:
+                    local_model_dir = os.path.join(LOCAL_DIR, model_name)
+                    local_bin_path = os.path.join(local_model_dir, 'pytorch_model.bin')
+                    if not os.path.exists(bin_path):
+                        url = PRETRAINED_MODELS[model_name]
+                        http_get(url, local_model_dir)
+                    else:
+                        logger.warning(f'Model {bin_path} not exists, use local model {local_bin_path}')
+                    model_name = local_model_dir
             self.tokenizer = ZHCharTokenizer.from_pretrained(model_name, **kwargs)
             self.model = SongNet(
                 self.tokenizer,
@@ -655,7 +670,7 @@ class SongNetModel:
                 num_layers=self.args.num_layers,
                 smoothing_factor=self.args.smoothing_factor,
             )
-            self.model.load_state_dict(torch.load(os.path.join(model_name, 'pytorch_model.bin')))
+            self.model.load_state_dict(torch.load(bin_path))
 
         self.args.model_type = model_type
         if model_name is None:
