@@ -71,10 +71,18 @@ def main():
             args=model_args
         )
 
+        def sim_text_chars(text1, text2):
+            if not text1 or not text2:
+                return 0.0
+            same = set(text1) & set(text2)
+            m = len(same)
+            n = len(set(text1)) if len(set(text1)) > len(set(text2)) else len(set(text2))
+            return m / n
+
         def count_matches(labels, preds):
             logger.debug(f"labels: {labels[:10]}")
             logger.debug(f"preds: {preds[:10]}")
-            match = sum([1 if label == pred else 0 for label, pred in zip(labels, preds)])
+            match = sum([sim_text_chars(label, pred) for label, pred in zip(labels, preds)]) / len(labels)
             logger.debug(f"match: {match}")
             return match
 

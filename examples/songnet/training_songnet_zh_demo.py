@@ -3,6 +3,7 @@
 @author:XuMing(xuming624@qq.com)
 @description:
 """
+import os
 import argparse
 import pandas as pd
 from loguru import logger
@@ -12,16 +13,16 @@ sys.path.append('../..')
 from textgen.songnet import SongNetModel
 
 
-def load_data(file_path):
+def load_data(prefix, file_path):
     data = []
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
             line = line.strip('\n')
             terms = line.split('\t')
             if len(terms) == 2:
-                data.append([terms[0], terms[1]])
+                data.append([prefix, terms[0], terms[1]])
             else:
-                logger.warning(f'line error: {line}, split size: {len(terms)}')
+                logger.warning(f'line error: {line}')
     return data
 
 
@@ -34,6 +35,7 @@ def main():
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/couplet_songnet_zh/', type=str,
                         help='Model output directory')
+    parser.add_argument('--prefix', default='对联', type=str, help='Prefix str')
     parser.add_argument('--max_length', default=128, type=int, help='Max sequence length')
     parser.add_argument('--num_epochs', default=30, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=32, type=int, help='Batch size')
@@ -42,12 +44,12 @@ def main():
 
     if args.do_train:
         logger.info('Loading data...')
-        train_data = load_data(args.train_file)
+        train_data = load_data(args.prefix, args.train_file)
         logger.debug('train_data: {}'.format(train_data[:10]))
-        train_df = pd.DataFrame(train_data, columns=["input_text", "target_text"])
+        train_df = pd.DataFrame(train_data, columns=["prefix", "input_text", "target_text"])
 
-        eval_data = load_data(args.train_file)[:10]
-        eval_df = pd.DataFrame(eval_data, columns=["input_text", "target_text"])
+        eval_data = load_data(args.prefix, args.train_file)[:10]
+        eval_df = pd.DataFrame(eval_data, columns=["prefix", "input_text", "target_text"])
 
         model_args = {
             "reprocess_input_data": True,
@@ -63,6 +65,7 @@ def main():
             "use_multiprocessing": True,
             "save_best_model": True,
             "output_dir": args.output_dir,
+            "best_model_dir": os.path.join(args.output_dir, "best_model"),
             "use_early_stopping": True,
         }
         model = SongNetModel(
@@ -71,10 +74,18 @@ def main():
             args=model_args
         )
 
+        def sim_text_chars(text1, text2):
+            if not text1 or not text2:
+                return 0.0
+            same = set(text1) & set(text2)
+            m = len(same)
+            n = len(set(text1)) if len(set(text1)) > len(set(text2)) else len(set(text2))
+            return m / n
+
         def count_matches(labels, preds):
             logger.debug(f"labels: {labels[:10]}")
             logger.debug(f"preds: {preds[:10]}")
-            match = sum([1 if label == pred else 0 for label, pred in zip(labels, preds)])
+            match = sum([sim_text_chars(label, pred) for label, pred in zip(labels, preds)]) / len(labels)
             logger.debug(f"match: {match}")
             return match
 
