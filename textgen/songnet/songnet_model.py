@@ -31,7 +31,12 @@ from transformers.optimization import (
 )
 
 from textgen.config.model_args import SongNetArgs
-from textgen.songnet.songnet_utils import ZHCharTokenizer, s2t, s2xy, s2xy_polish, DataLoader, SongNetDataset
+from textgen.songnet.songnet_utils import (
+    ZHCharTokenizer, s2t, s2xy, s2xy_polish,
+    DataLoader,
+    SongNetDataset,
+    BOS, EOS,
+)
 
 has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
@@ -1429,7 +1434,7 @@ class SongNetModel:
             next_tk = []
             for i in range(len(s)):
                 ctk = self.tokenizer.idx2token(inp_ys_tpl[l, i].item())
-                if ctk != "<c1>" and ctk != "<c2>" and ctk != "<c0>":
+                if ctk not in ["<c0>", "<c1>", "<c2>"]:
                     next_tk.append(ctk)
                     continue
                 logits = probs[len(s[i]) - 1, i]
@@ -1440,7 +1445,7 @@ class SongNetModel:
                 next_tk.append(self.tokenizer.idx2token(sampled_idx.item()))
             s_ = []
             for sent, t in zip(s, next_tk):
-                if t == "<eos>":
+                if t == EOS:
                     res.append(sent)
                 else:
                     s_.append(sent + [t])
@@ -1471,7 +1476,7 @@ class SongNetModel:
             next_tk = []
             for i in range(len(s)):
                 ctk = self.tokenizer.idx2token(inp_ys_tpl[l, i].item())
-                if ctk != "<c1>" and ctk != "<c2>" and ctk != "<c0>":
+                if ctk not in ["<c0>", "<c1>", "<c2>"]:
                     next_tk.append(ctk)
                     continue
                 if l == 0:
@@ -1486,7 +1491,7 @@ class SongNetModel:
             s_ = []
             bidx = [1] * len(s)
             for idx, (sent, t) in enumerate(zip(s, next_tk)):
-                if t == "<eos>":
+                if t == EOS:
                     res.append(sent)
                     bidx[idx] = 0
                 else:
@@ -1534,7 +1539,7 @@ class SongNetModel:
             ys_pos = ys_pos.to(self.device)
             with torch.no_grad():
                 enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
-            s = [['<bos>']]
+            s = [[BOS]]
             outputs = self._top_k(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
             if self.args.skip_special_tokens:
                 outputs = [s for s in outputs if s not in self.tokenizer.special_tokens]
@@ -1578,7 +1583,7 @@ class SongNetModel:
             ys_pos = ys_pos.to(self.device)
             with torch.no_grad():
                 enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
-            s = [['<bos>']]
+            s = [[BOS]]
             outputs = self._top_k(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
             if self.args.skip_special_tokens:
                 outputs = [s for s in outputs if s not in self.tokenizer.special_tokens]
