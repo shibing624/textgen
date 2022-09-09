@@ -6,6 +6,14 @@
 import random
 import torch
 import numpy as np
+import os
+import pickle
+from multiprocessing import Pool
+
+import torch.nn.functional as F
+from loguru import logger
+from torch.utils.data import Dataset
+from tqdm.auto import tqdm
 
 PAD, UNK, BOS, EOS = '<pad>', '<unk>', '<bos>', '<eos>'
 BOC, EOC = '<boc>', '<eoc>'
@@ -84,6 +92,15 @@ class ZHCharTokenizer(object):
             )
         return tokenizer
 
+    def save_pretrained(self, vocab_file):
+        r"""
+        Save vocab.
+        """
+        with open(vocab_file, 'w', encoding='utf8') as f:
+            for token, idx in self._token2idx.items():
+                f.write(token + '\n')
+            logger.info("Vocab saved in {}".format(vocab_file))
+
 
 def lists2tensor(xs, tokenizer=None):
     max_len = max(len(x) for x in xs)
@@ -147,7 +164,7 @@ def s2xy(lines, tokenizer, max_len, min_len):
     return batchify(data, tokenizer)
 
 
-def parse_line(line, max_len, min_len):
+def parse_line(line, max_len, min_len=2):
     line = line.strip()
     if not line:
         return None
@@ -307,3 +324,49 @@ class DataLoader(object):
         while idx < len(data):
             yield batchify(data[idx:idx + self.batch_size], self.tokenizer)
             idx += self.batch_size
+
+
+def preprocess_data(data):
+    prefix, input_text, target_text, tokenizer, args = data
+    data_one = parse_line(input_text, args.max_length)
+    xs_tpl, xs_seg, xs_pos, ys_truth, ys_inp, ys_tpl, ys_seg, ys_pos, msk = batchify([data_one], tokenizer)
+    return xs_tpl[0], xs_seg[0], xs_pos[0], ys_truth[0], ys_inp[0], ys_tpl[0], ys_seg[0], ys_pos[0], msk[0]
+
+
+class SongNetDataset(Dataset):
+    def __init__(self, tokenizer, args, data, mode):
+        cached_features_file = os.path.join(
+            args.cache_dir,
+            args.model_name.replace("/", "_")
+            + "_cached_"
+            + str(args.max_seq_length)
+            + str(len(data)),
+        )
+
+        if os.path.exists(cached_features_file) and (
+                (not args.reprocess_input_data and not args.no_cache)
+                or (mode == "dev" and args.use_cached_eval_features and not args.no_cache)
+        ):
+            logger.info(" Loading features from cached file %s" % cached_features_file)
+            with open(cached_features_file, "rb") as handle:
+                self.examples = pickle.load(handle)
+        else:
+            logger.info(" Creating features from dataset file at %s" % args.cache_dir)
+
+            data = [
+                (prefix, input_text, target_text, tokenizer, args)
+                for prefix, input_text, target_text in zip(
+                    data["prefix"], data["input_text"], data["target_text"]
+                )
+            ]
+            self.examples = [preprocess_data(d) for d in tqdm(data, disable=args.silent)]
+            if not args.no_cache:
+                logger.info(" Saving features into cached file %s" % cached_features_file)
+                with open(cached_features_file, "wb") as handle:
+                    pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def __len__(self):
+        return len(self.examples)
+
+    def __getitem__(self, index):
+        return self.examples[index]

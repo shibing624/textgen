@@ -3,15 +3,11 @@
 @author:XuMing(xuming624@qq.com)
 @description: SongNet model
 
-refer: ACL2020 paper: Rigid Formats Controlled Text Generation
-paper author: Piji Li
+refer: ACL2020 paper: Rigid Formats Controlled Text Generation, Piji Li
 url: https://www.aclweb.org/anthology/2020.acl-main.68
 """
 import os
 import sys
-import torch
-from torch import nn
-import torch.nn.functional as F
 import math
 import random
 import time
@@ -21,9 +17,21 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from tqdm.auto import tqdm, trange
+import torch
+from torch import nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+from transformers.optimization import AdamW, Adafactor
+from transformers.optimization import (
+    get_constant_schedule,
+    get_constant_schedule_with_warmup,
+    get_linear_schedule_with_warmup,
+    get_cosine_schedule_with_warmup,
+    get_polynomial_decay_schedule_with_warmup,
+)
 
 from textgen.config.model_args import SongNetArgs
-from textgen.songnet.songnet_utils import ZHCharTokenizer, batchify, s2t, s2xy, s2xy_polish, DataLoader
+from textgen.songnet.songnet_utils import ZHCharTokenizer, s2t, s2xy, s2xy_polish, DataLoader, SongNetDataset
 
 has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
@@ -409,8 +417,13 @@ class LearnedPositionalEmbedding(nn.Module):
 
 
 class SongNet(nn.Module):
+    """SongNet model network"""
+
     def __init__(self, tokenizer, device=0, embed_dim=768, ff_embed_dim=768 * 4, num_heads=12, dropout=0.2,
-                 layers=12, smoothing_factor=0.1, approx=None):
+                 num_layers=12, smoothing_factor=0.1):
+        """
+        Init model network
+        """
         super(SongNet, self).__init__()
         self.tokenizer = tokenizer
         self.embed_dim = embed_dim
@@ -419,7 +432,7 @@ class SongNet(nn.Module):
         self.pos_embed = LearnedPositionalEmbedding(embed_dim, device=device)
 
         self.layers = nn.ModuleList()
-        for i in range(layers):
+        for i in range(num_layers):
             self.layers.append(TransformerLayer(embed_dim, ff_embed_dim, num_heads, dropout, with_external=True))
         self.emb_layer_norm = LayerNorm(embed_dim)
         self.one_more = nn.Linear(embed_dim, embed_dim)
@@ -432,7 +445,6 @@ class SongNet(nn.Module):
         self.dropout = dropout
         self.device = device
 
-        self.approx = approx
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -479,12 +491,14 @@ class SongNet(nn.Module):
             self_attn_mask = None
 
         for layer in self.layers:
-            x, _, _ = layer.work_incremental(x, self_padding_mask=padding_mask,
-                                             self_attn_mask=self_attn_mask,
-                                             external_memories=enc,
-                                             external_padding_mask=src_padding_mask,
-                                             incremental_state=incremental_state)
-
+            x, _, _ = layer.work_incremental(
+                x,
+                self_padding_mask=padding_mask,
+                self_attn_mask=self_attn_mask,
+                external_memories=enc,
+                external_padding_mask=src_padding_mask,
+                incremental_state=incremental_state
+            )
         x = self.one_more_layer_norm(gelu(self.one_more(x)))
         probs = torch.softmax(self.out_proj(x), -1)
         _, pred_y = probs.max(-1)
@@ -501,15 +515,16 @@ class SongNet(nn.Module):
         if not padding_mask.any():
             padding_mask = None
         for layer in self.layers:
-            x, _, _ = layer(x, self_padding_mask=padding_mask,
-                            self_attn_mask=self_attn_mask,
-                            external_memories=enc,
-                            external_padding_mask=src_padding_mask, )
-
+            x, _, _ = layer(
+                x,
+                self_padding_mask=padding_mask,
+                self_attn_mask=self_attn_mask,
+                external_memories=enc,
+                external_padding_mask=src_padding_mask
+            )
         x = self.one_more_layer_norm(gelu(self.one_more(x)))
         probs = torch.softmax(self.out_proj(x), -1)
         _, pred_y = probs.max(-1)
-
         return probs, pred_y
 
     def encode(self, xs_tpl, xs_seg, xs_pos):
@@ -530,11 +545,13 @@ class SongNet(nn.Module):
         if not padding_mask.any():
             padding_mask = None
         for layer in self.layers:
-            x, _, _ = layer(x, self_padding_mask=padding_mask,
-                            self_attn_mask=self_attn_mask,
-                            external_memories=enc,
-                            external_padding_mask=src_padding_mask)
-
+            x, _, _ = layer(
+                x,
+                self_padding_mask=padding_mask,
+                self_attn_mask=self_attn_mask,
+                external_memories=enc,
+                external_padding_mask=src_padding_mask
+            )
         x = self.one_more_layer_norm(gelu(self.one_more(x)))
         pred = torch.softmax(self.out_proj(x), -1)
         nll, ppl = self.nll_loss(pred, ys_truth, msk)
@@ -552,29 +569,29 @@ class SongNet(nn.Module):
         if not padding_mask.any():
             padding_mask = None
         for layer in self.layers:
-            x, _, _ = layer(x, self_padding_mask=padding_mask,
-                            self_attn_mask=self_attn_mask,
-                            external_memories=enc,
-                            external_padding_mask=src_padding_mask)
-
+            x, _, _ = layer(
+                x,
+                self_padding_mask=padding_mask,
+                self_attn_mask=self_attn_mask,
+                external_memories=enc,
+                external_padding_mask=src_padding_mask
+            )
         x = self.one_more_layer_norm(gelu(self.one_more(x)))
         pred = torch.softmax(self.out_proj(x), -1)
 
         loss = self.label_smotthing_loss(pred, ys_truth, msk)
 
         _, pred_y = pred.max(-1)
-        tot_tokens = msk.float().sum().item()
+        n_tokens = msk.float().sum().item()
         acc = (torch.eq(pred_y, ys_truth).float() * msk).sum().item()
 
         nll, ppl = self.nll_loss(pred, ys_truth, msk)
-        return (pred_y, ys_truth), loss, acc, nll, ppl, tot_tokens, bsz
+        return (pred_y, ys_truth), loss, acc, nll, ppl, n_tokens, bsz
 
 
 class SongNetModel:
     def __init__(
             self,
-            model_path,
-            vocab_path,
             model_type='songnet',
             model_name='shibing624/songnet-base-chinese-couplet',
             args=None,
@@ -624,28 +641,23 @@ class SongNetModel:
         logger.debug(f"Device: {self.device}")
 
         self.results = {}
-        if model_path and vocab_path:
-            ckpt = torch.load(model_path, map_location='cpu')
-            model_args = ckpt['args']
-            logger.debug(f'model args: {model_args}')
-            tokenizer = ZHCharTokenizer(vocab_path, min_occur_cnt=model_args.min_occur_cnt, **kwargs)
-            device = 0 if self.device != 'cpu' else 0
+
+        if model_name:
+            # ckpt = torch.load(model_path, map_location='cpu')
+            self.tokenizer = ZHCharTokenizer.from_pretrained(
+                os.path.join(model_name, 'vocab.txt'), **kwargs)
             model = SongNet(
-                tokenizer,
-                device,
-                embed_dim=model_args.embed_dim,
-                ff_embed_dim=model_args.ff_embed_dim,
-                num_heads=model_args.num_heads,
-                dropout=model_args.dropout,
-                layers=model_args.layers,
-                smoothing_factor=model_args.smoothing,
-                approx=None
+                self.tokenizer,
+                device=0,
+                embed_dim=self.args.embed_dim,
+                ff_embed_dim=self.args.ff_embed_dim,
+                num_heads=self.args.num_heads,
+                dropout=self.args.dropout,
+                num_layers=self.args.num_layers,
+                smoothing_factor=self.args.smoothing_factor,
             )
-            model.load_state_dict(ckpt['model'])
-            model = model.to(self.device)
+            model.load_state_dict(torch.load(os.path.join(model_name, 'pytorch_model.bin')))
             self.model = model
-            self.tokenizer = tokenizer
-            self.model_args = model_args
 
         self.args.model_type = model_type
         if model_name is None:
@@ -653,11 +665,752 @@ class SongNetModel:
         else:
             self.args.model_name = model_name
 
-    def train_model(self, train_df, eval_df=None):
-        pass
+    def train_model(
+            self,
+            train_data,
+            output_dir=None,
+            show_running_loss=True,
+            args=None,
+            eval_data=None,
+            verbose=True,
+            **kwargs,
+    ):
+        """
+        Trains the model using 'train_data'
 
-    def eval_model(self, eval_df):
-        pass
+        Args:
+            train_data: Pandas DataFrame containing the 3 columns - `prefix`, `input_text`, `target_text`.
+                        - `prefix`: A string indicating the task to perform. (E.g. `"question"`, `"stsb"`)
+                        - `input_text`: The input text sequence. `prefix` is automatically prepended to form the full input. (<prefix>: <input_text>)
+                        - `target_text`: The target sequence
+            output_dir: The directory where model files will be saved. If not given, self.args.output_dir will be used.
+            show_running_loss (optional): Set to False to prevent running loss from being printed to console. Defaults to True.
+            args (optional): Optional changes to the args dict of the model. Any changes made will persist for the model.
+            eval_data (optional): A DataFrame against which evaluation will be performed when evaluate_during_training is enabled. Is required if evaluate_during_training is enabled.
+            **kwargs: Additional metrics that should be used. Pass in the metrics as keyword arguments (name of metric: function to use).
+                        A metric function should take in two parameters. The first parameter will be the true labels, and the second parameter will be the predictions. Both inputs
+                        will be lists of strings. Note that this will slow down training significantly as the predicted sequences need to be generated.
+
+        Returns:
+            global_step: Number of global steps trained
+            training_details: Average training loss if evaluate_during_training is False or full training progress scores if evaluate_during_training is True
+        """  # noqa: ignore flake8"
+
+        if args:
+            self.args.update_from_dict(args)
+        if self.args.evaluate_during_training and eval_data is None:
+            raise ValueError(
+                "evaluate_during_training is enabled but eval_data is not specified."
+                " Pass eval_data to model.train_model() if using evaluate_during_training."
+            )
+
+        if not output_dir:
+            output_dir = self.args.output_dir
+
+        if (
+                os.path.exists(output_dir)
+                and os.listdir(output_dir)
+                and not self.args.overwrite_output_dir
+        ):
+            raise ValueError(
+                "Output directory ({}) already exists and is not empty."
+                " Set args.overwrite_output_dir = True to overcome.".format(output_dir)
+            )
+
+        self._move_model_to_device()
+        train_dataset = self.load_and_cache_examples(train_data, verbose=verbose)
+        os.makedirs(output_dir, exist_ok=True)
+        global_step, training_details = self.train(
+            train_dataset,
+            output_dir,
+            show_running_loss=show_running_loss,
+            eval_data=eval_data,
+            verbose=verbose,
+            **kwargs,
+        )
+        self.save_model(model=self.model)
+
+        if verbose:
+            logger.info(
+                " Training of {} model complete. Saved to {}.".format(
+                    self.args.model_name, output_dir
+                )
+            )
+
+        return global_step, training_details
+
+    def train(
+            self,
+            train_dataset,
+            output_dir,
+            show_running_loss=True,
+            eval_data=None,
+            verbose=True,
+            **kwargs,
+    ):
+        """
+        Trains the model on train_dataset.
+
+        Utility function to be used by the train_model() method. Not intended to be used directly.
+        """
+
+        model = self.model
+        args = self.args
+        device = self.device
+
+        train_sampler = RandomSampler(train_dataset)
+        train_dataloader = DataLoader(
+            train_dataset,
+            sampler=train_sampler,
+            batch_size=args.train_batch_size,
+            num_workers=self.args.dataloader_num_workers,
+        )
+
+        if args.max_steps > 0:
+            t_total = args.max_steps
+            args.num_train_epochs = (
+                    args.max_steps
+                    // (len(train_dataloader) // args.gradient_accumulation_steps)
+                    + 1
+            )
+        else:
+            t_total = (
+                    len(train_dataloader)
+                    // args.gradient_accumulation_steps
+                    * args.num_train_epochs
+            )
+
+        no_decay = ["bias", "LayerNorm.weight"]
+
+        optimizer_grouped_parameters = []
+        custom_parameter_names = set()
+        for group in self.args.custom_parameter_groups:
+            params = group.pop("params")
+            custom_parameter_names.update(params)
+            param_group = {**group}
+            param_group["params"] = [
+                p for n, p in model.named_parameters() if n in params
+            ]
+            optimizer_grouped_parameters.append(param_group)
+
+        for group in self.args.custom_layer_parameters:
+            layer_number = group.pop("layer")
+            layer = f"layer.{layer_number}."
+            group_d = {**group}
+            group_nd = {**group}
+            group_nd["weight_decay"] = 0.0
+            params_d = []
+            params_nd = []
+            for n, p in model.named_parameters():
+                if n not in custom_parameter_names and layer in n:
+                    if any(nd in n for nd in no_decay):
+                        params_nd.append(p)
+                    else:
+                        params_d.append(p)
+                    custom_parameter_names.add(n)
+            group_d["params"] = params_d
+            group_nd["params"] = params_nd
+
+            optimizer_grouped_parameters.append(group_d)
+            optimizer_grouped_parameters.append(group_nd)
+
+        if not self.args.train_custom_parameters_only:
+            optimizer_grouped_parameters.extend(
+                [
+                    {
+                        "params": [
+                            p
+                            for n, p in model.named_parameters()
+                            if n not in custom_parameter_names
+                               and not any(nd in n for nd in no_decay)
+                        ],
+                        "weight_decay": args.weight_decay,
+                    },
+                    {
+                        "params": [
+                            p
+                            for n, p in model.named_parameters()
+                            if n not in custom_parameter_names
+                               and any(nd in n for nd in no_decay)
+                        ],
+                        "weight_decay": 0.0,
+                    },
+                ]
+            )
+
+        warmup_steps = math.ceil(t_total * args.warmup_ratio)
+        args.warmup_steps = (
+            warmup_steps if args.warmup_steps == 0 else args.warmup_steps
+        )
+
+        if args.optimizer == "AdamW":
+            optimizer = AdamW(
+                optimizer_grouped_parameters,
+                lr=args.learning_rate,
+                eps=args.adam_epsilon,
+            )
+        elif args.optimizer == "Adafactor":
+            optimizer = Adafactor(
+                optimizer_grouped_parameters,
+                lr=args.learning_rate,
+                eps=args.adafactor_eps,
+                clip_threshold=args.adafactor_clip_threshold,
+                decay_rate=args.adafactor_decay_rate,
+                beta1=args.adafactor_beta1,
+                weight_decay=args.weight_decay,
+                scale_parameter=args.adafactor_scale_parameter,
+                relative_step=args.adafactor_relative_step,
+                warmup_init=args.adafactor_warmup_init,
+            )
+
+        else:
+            raise ValueError(
+                "{} is not a valid optimizer class. Please use one of ('AdamW', 'Adafactor') instead.".format(
+                    args.optimizer
+                )
+            )
+
+        if args.scheduler == "constant_schedule":
+            scheduler = get_constant_schedule(optimizer)
+
+        elif args.scheduler == "constant_schedule_with_warmup":
+            scheduler = get_constant_schedule_with_warmup(
+                optimizer, num_warmup_steps=args.warmup_steps
+            )
+
+        elif args.scheduler == "linear_schedule_with_warmup":
+            scheduler = get_linear_schedule_with_warmup(
+                optimizer,
+                num_warmup_steps=args.warmup_steps,
+                num_training_steps=t_total,
+            )
+
+        elif args.scheduler == "cosine_schedule_with_warmup":
+            scheduler = get_cosine_schedule_with_warmup(
+                optimizer,
+                num_warmup_steps=args.warmup_steps,
+                num_training_steps=t_total,
+                num_cycles=args.cosine_schedule_num_cycles,
+            )
+
+        elif args.scheduler == "polynomial_decay_schedule_with_warmup":
+            scheduler = get_polynomial_decay_schedule_with_warmup(
+                optimizer,
+                num_warmup_steps=args.warmup_steps,
+                num_training_steps=t_total,
+                lr_end=args.polynomial_decay_schedule_lr_end,
+                power=args.polynomial_decay_schedule_power,
+            )
+
+        else:
+            raise ValueError("{} is not a valid scheduler.".format(args.scheduler))
+
+        if (
+                args.model_name
+                and os.path.isfile(os.path.join(args.model_name, "optimizer.pt"))
+                and os.path.isfile(os.path.join(args.model_name, "scheduler.pt"))
+        ):
+            # Load in optimizer and scheduler states
+            optimizer.load_state_dict(
+                torch.load(os.path.join(args.model_name, "optimizer.pt"))
+            )
+            scheduler.load_state_dict(
+                torch.load(os.path.join(args.model_name, "scheduler.pt"))
+            )
+
+        if args.n_gpu > 1:
+            model = torch.nn.DataParallel(model)
+
+        logger.info(" Training started")
+
+        global_step = 0
+        training_progress_scores = None
+        tr_loss, logging_loss = 0.0, 0.0
+        model.zero_grad()
+        train_iterator = trange(
+            int(args.num_train_epochs), desc="Epoch", disable=args.silent, mininterval=0
+        )
+        epoch_number = 0
+        best_eval_metric = None
+        early_stopping_counter = 0
+        steps_trained_in_current_epoch = 0
+        epochs_trained = 0
+
+        if args.model_name and os.path.exists(args.model_name):
+            try:
+                # set global_step to gobal_step of last saved checkpoint from model path
+                checkpoint_suffix = args.model_name.split("/")[-1].split("-")
+                if len(checkpoint_suffix) > 2:
+                    checkpoint_suffix = checkpoint_suffix[1]
+                else:
+                    checkpoint_suffix = checkpoint_suffix[-1]
+                global_step = int(checkpoint_suffix)
+                epochs_trained = global_step // (
+                        len(train_dataloader) // args.gradient_accumulation_steps
+                )
+                steps_trained_in_current_epoch = global_step % (
+                        len(train_dataloader) // args.gradient_accumulation_steps
+                )
+
+                logger.info(
+                    "   Continuing training from checkpoint, will skip to saved global_step"
+                )
+                logger.info("   Continuing training from epoch %d", epochs_trained)
+                logger.info("   Continuing training from global step %d", global_step)
+                logger.info(
+                    "   Will skip the first %d steps in the current epoch",
+                    steps_trained_in_current_epoch,
+                )
+            except ValueError:
+                logger.info("   Starting fine-tuning.")
+
+        if args.evaluate_during_training:
+            training_progress_scores = self._create_training_progress_scores(**kwargs)
+
+        for current_epoch in train_iterator:
+            model.train()
+            if epochs_trained > 0:
+                epochs_trained -= 1
+                continue
+            train_iterator.set_description(
+                f"Epoch {epoch_number + 1} of {args.num_train_epochs}"
+            )
+            batch_iterator = tqdm(
+                train_dataloader,
+                desc=f"Running Epoch {epoch_number} of {args.num_train_epochs}",
+                disable=args.silent,
+                mininterval=0,
+            )
+            for step, batch in enumerate(batch_iterator):
+                if steps_trained_in_current_epoch > 0:
+                    steps_trained_in_current_epoch -= 1
+                    continue
+
+                inputs = self._get_inputs_dict(batch)
+                res, loss, acc, nll, ppl, n_tokens, bsz = model(**inputs)
+
+                if args.n_gpu > 1:
+                    loss = (loss.mean())
+                current_loss = loss.item()
+                current_ppl = ppl / bsz
+
+                if show_running_loss:
+                    batch_iterator.set_description(
+                        f"Epochs {epoch_number}/{args.num_train_epochs}. "
+                        f"Running Loss: {current_loss:9.4f} PPL: {current_ppl:9.4f}"
+                    )
+
+                if args.gradient_accumulation_steps > 1:
+                    loss = loss / args.gradient_accumulation_steps
+
+                loss.backward()
+
+                if (step + 1) % args.gradient_accumulation_steps == 0:
+                    if args.optimizer == "AdamW":
+                        torch.nn.utils.clip_grad_norm_(
+                            model.parameters(), args.max_grad_norm
+                        )
+
+                    optimizer.step()
+                    scheduler.step()  # Update learning rate schedule
+                    model.zero_grad()
+                    global_step += 1
+
+                    if args.save_steps > 0 and global_step % args.save_steps == 0:
+                        # Save model checkpoint
+                        output_dir_current = os.path.join(
+                            output_dir, "checkpoint-{}".format(global_step)
+                        )
+
+                        self.save_model(
+                            output_dir_current, optimizer, scheduler, model=model
+                        )
+
+                    if args.evaluate_during_training and (
+                            args.evaluate_during_training_steps > 0
+                            and global_step % args.evaluate_during_training_steps == 0
+                    ):
+                        # Only evaluate when single GPU otherwise metrics may not average well
+                        results = self.eval_model(
+                            eval_data,
+                            verbose=verbose and args.evaluate_during_training_verbose,
+                            silent=args.evaluate_during_training_silent,
+                            **kwargs,
+                        )
+
+                        output_dir_current = os.path.join(
+                            output_dir, "checkpoint-{}".format(global_step)
+                        )
+
+                        if args.save_eval_checkpoints:
+                            self.save_model(
+                                output_dir_current,
+                                optimizer,
+                                scheduler,
+                                model=model,
+                                results=results,
+                            )
+
+                        training_progress_scores["global_step"].append(global_step)
+                        training_progress_scores["train_loss"].append(current_loss)
+                        for key in results:
+                            training_progress_scores[key].append(results[key])
+                        report = pd.DataFrame(training_progress_scores)
+                        report.to_csv(
+                            os.path.join(
+                                args.output_dir, "training_progress_scores.csv"
+                            ),
+                            index=False,
+                        )
+
+                        if not best_eval_metric:
+                            best_eval_metric = results[args.early_stopping_metric]
+                            self.save_model(
+                                args.best_model_dir,
+                                optimizer,
+                                scheduler,
+                                model=model,
+                                results=results,
+                            )
+                        if best_eval_metric and args.early_stopping_metric_minimize:
+                            if (
+                                    results[args.early_stopping_metric] - best_eval_metric
+                                    < args.early_stopping_delta
+                            ):
+                                best_eval_metric = results[args.early_stopping_metric]
+                                self.save_model(
+                                    args.best_model_dir,
+                                    optimizer,
+                                    scheduler,
+                                    model=model,
+                                    results=results,
+                                )
+                                early_stopping_counter = 0
+                            else:
+                                if args.use_early_stopping:
+                                    if (
+                                            early_stopping_counter
+                                            < args.early_stopping_patience
+                                    ):
+                                        early_stopping_counter += 1
+                                        if verbose:
+                                            logger.info(
+                                                f" No improvement in {args.early_stopping_metric}"
+                                            )
+                                            logger.info(
+                                                f" Current step: {early_stopping_counter}"
+                                            )
+                                            logger.info(
+                                                f" Early stopping patience: {args.early_stopping_patience}"
+                                            )
+                                    else:
+                                        if verbose:
+                                            logger.info(
+                                                f" Patience of {args.early_stopping_patience} steps reached"
+                                            )
+                                            logger.info(" Training terminated.")
+                                            train_iterator.close()
+                                        return (
+                                            global_step,
+                                            tr_loss / global_step
+                                            if not self.args.evaluate_during_training
+                                            else training_progress_scores,
+                                        )
+                        else:
+                            if (
+                                    results[args.early_stopping_metric] - best_eval_metric
+                                    > args.early_stopping_delta
+                            ):
+                                best_eval_metric = results[args.early_stopping_metric]
+                                self.save_model(
+                                    args.best_model_dir,
+                                    optimizer,
+                                    scheduler,
+                                    model=model,
+                                    results=results,
+                                )
+                                early_stopping_counter = 0
+                            else:
+                                if args.use_early_stopping:
+                                    if (
+                                            early_stopping_counter
+                                            < args.early_stopping_patience
+                                    ):
+                                        early_stopping_counter += 1
+                                        if verbose:
+                                            logger.info(
+                                                f" No improvement in {args.early_stopping_metric}"
+                                            )
+                                            logger.info(
+                                                f" Current step: {early_stopping_counter}"
+                                            )
+                                            logger.info(
+                                                f" Early stopping patience: {args.early_stopping_patience}"
+                                            )
+                                    else:
+                                        if verbose:
+                                            logger.info(
+                                                f" Patience of {args.early_stopping_patience} steps reached"
+                                            )
+                                            logger.info(" Training terminated.")
+                                            train_iterator.close()
+                                        return (
+                                            global_step,
+                                            tr_loss / global_step
+                                            if not self.args.evaluate_during_training
+                                            else training_progress_scores,
+                                        )
+                        model.train()
+
+            epoch_number += 1
+            output_dir_current = os.path.join(
+                output_dir, "checkpoint-{}-epoch-{}".format(global_step, epoch_number)
+            )
+
+            if args.save_model_every_epoch or args.evaluate_during_training:
+                os.makedirs(output_dir_current, exist_ok=True)
+
+            if args.save_model_every_epoch:
+                self.save_model(output_dir_current, optimizer, scheduler, model=model)
+
+            if args.evaluate_during_training and args.evaluate_each_epoch:
+                results = self.eval_model(
+                    eval_data,
+                    verbose=verbose and args.evaluate_during_training_verbose,
+                    silent=args.evaluate_during_training_silent,
+                    **kwargs,
+                )
+
+                if args.save_eval_checkpoints:
+                    self.save_model(
+                        output_dir_current, optimizer, scheduler, results=results
+                    )
+
+                training_progress_scores["global_step"].append(global_step)
+                training_progress_scores["train_loss"].append(current_loss)
+                for key in results:
+                    training_progress_scores[key].append(results[key])
+                report = pd.DataFrame(training_progress_scores)
+                report.to_csv(
+                    os.path.join(args.output_dir, "training_progress_scores.csv"),
+                    index=False,
+                )
+
+                if not best_eval_metric:
+                    best_eval_metric = results[args.early_stopping_metric]
+                    self.save_model(
+                        args.best_model_dir,
+                        optimizer,
+                        scheduler,
+                        model=model,
+                        results=results,
+                    )
+                if best_eval_metric and args.early_stopping_metric_minimize:
+                    if (
+                            results[args.early_stopping_metric] - best_eval_metric
+                            < args.early_stopping_delta
+                    ):
+                        best_eval_metric = results[args.early_stopping_metric]
+                        self.save_model(
+                            args.best_model_dir,
+                            optimizer,
+                            scheduler,
+                            model=model,
+                            results=results,
+                        )
+                        early_stopping_counter = 0
+                    else:
+                        if (
+                                args.use_early_stopping
+                                and args.early_stopping_consider_epochs
+                        ):
+                            if early_stopping_counter < args.early_stopping_patience:
+                                early_stopping_counter += 1
+                                if verbose:
+                                    logger.info(
+                                        f" No improvement in {args.early_stopping_metric}"
+                                    )
+                                    logger.info(
+                                        f" Current step: {early_stopping_counter}"
+                                    )
+                                    logger.info(
+                                        f" Early stopping patience: {args.early_stopping_patience}"
+                                    )
+                            else:
+                                if verbose:
+                                    logger.info(
+                                        f" Patience of {args.early_stopping_patience} steps reached"
+                                    )
+                                    logger.info(" Training terminated.")
+                                    train_iterator.close()
+                                return (
+                                    global_step,
+                                    tr_loss / global_step
+                                    if not self.args.evaluate_during_training
+                                    else training_progress_scores,
+                                )
+                else:
+                    if (
+                            results[args.early_stopping_metric] - best_eval_metric
+                            > args.early_stopping_delta
+                    ):
+                        best_eval_metric = results[args.early_stopping_metric]
+                        self.save_model(
+                            args.best_model_dir,
+                            optimizer,
+                            scheduler,
+                            model=model,
+                            results=results,
+                        )
+                        early_stopping_counter = 0
+                    else:
+                        if (
+                                args.use_early_stopping
+                                and args.early_stopping_consider_epochs
+                        ):
+                            if early_stopping_counter < args.early_stopping_patience:
+                                early_stopping_counter += 1
+                                if verbose:
+                                    logger.info(
+                                        f" No improvement in {args.early_stopping_metric}"
+                                    )
+                                    logger.info(
+                                        f" Current step: {early_stopping_counter}"
+                                    )
+                                    logger.info(
+                                        f" Early stopping patience: {args.early_stopping_patience}"
+                                    )
+                            else:
+                                if verbose:
+                                    logger.info(
+                                        f" Patience of {args.early_stopping_patience} steps reached"
+                                    )
+                                    logger.info(" Training terminated.")
+                                    train_iterator.close()
+                                return (
+                                    global_step,
+                                    tr_loss / global_step
+                                    if not self.args.evaluate_during_training
+                                    else training_progress_scores,
+                                )
+
+        return (
+            global_step,
+            tr_loss / global_step
+            if not self.args.evaluate_during_training
+            else training_progress_scores,
+        )
+
+    def eval_model(
+            self, eval_data, output_dir=None, verbose=True, silent=False, **kwargs
+    ):
+        """
+        Evaluates the model on eval_data. Saves results to output_dir.
+
+        Args:
+            eval_data: Pandas DataFrame containing the 3 columns - `prefix`, `input_text`, `target_text`.
+                        - `prefix`: A string indicating the task to perform. (E.g. `"question"`, `"stsb"`)
+                        - `input_text`: The input text sequence. `prefix` is automatically prepended to form the full input. (<prefix>: <input_text>)
+                        - `target_text`: The target sequence
+            output_dir: The directory where model files will be saved. If not given, self.args.output_dir will be used.
+            verbose: If verbose, results will be printed to the console on completion of evaluation.
+            silent: If silent, tqdm progress bars will be hidden.
+            **kwargs: Additional metrics that should be used. Pass in the metrics as keyword arguments (name of metric: function to use).
+                        A metric function should take in two parameters. The first parameter will be the true labels, and the second parameter will be the predictions. Both inputs
+                        will be lists of strings. Note that this will slow down evaluation significantly as the predicted sequences need to be generated.
+        Returns:
+            results: Dictionary containing evaluation results.
+        """  # noqa: ignore flake8"
+
+        if not output_dir:
+            output_dir = self.args.output_dir
+
+        self._move_model_to_device()
+
+        eval_dataset = self.load_and_cache_examples(
+            eval_data, evaluate=True, verbose=verbose, silent=silent
+        )
+        os.makedirs(output_dir, exist_ok=True)
+
+        result = self.evaluate(
+            eval_dataset, output_dir, verbose=verbose, silent=silent, **kwargs
+        )
+        self.results.update(result)
+
+        if self.args.evaluate_generated_text:
+            if self.args.preprocess_inputs:
+                to_predict = [
+                    prefix + ": " + input_text
+                    for prefix, input_text in zip(
+                        eval_data["prefix"], eval_data["input_text"]
+                    )
+                ]
+            else:
+                to_predict = [
+                    prefix + input_text
+                    for prefix, input_text in zip(
+                        eval_data["prefix"], eval_data["input_text"]
+                    )
+                ]
+            preds = self.predict(to_predict)
+
+            result = self.compute_metrics(
+                eval_data["target_text"].tolist(), preds, **kwargs
+            )
+            self.results.update(result)
+
+        if verbose:
+            logger.info(self.results)
+
+        return self.results
+
+    def evaluate(self, eval_dataset, output_dir, verbose=True, silent=False, **kwargs):
+        """
+        Evaluates the model on eval_dataset.
+
+        Utility function to be used by the eval_model() method. Not intended to be used directly.
+        """
+
+        model = self.model
+        args = self.args
+        eval_output_dir = output_dir
+        device = self.device
+
+        results = {}
+
+        eval_sampler = SequentialSampler(eval_dataset)
+        eval_dataloader = DataLoader(
+            eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size
+        )
+
+        if args.n_gpu > 1:
+            model = torch.nn.DataParallel(model)
+
+        nb_eval_steps = 0
+        model.eval()
+
+        if args.n_gpu > 1:
+            model = torch.nn.DataParallel(model)
+
+        avg_ppl = 0.0
+        count = 0
+        for batch in tqdm(
+                eval_dataloader, disable=args.silent or silent, desc="Running Evaluation"
+        ):
+            inputs = self._get_inputs_dict(batch)
+            with torch.no_grad():
+                nll, ppl, bsz = model.ppl(**inputs)
+                avg_ppl += ppl
+                count += bsz
+            nb_eval_steps += 1
+        avg_ppl = avg_ppl / count
+        results["avg_ppl"] = avg_ppl
+        output_eval_file = os.path.join(eval_output_dir, "eval_results.txt")
+        with open(output_eval_file, "w") as writer:
+            for key in sorted(results.keys()):
+                writer.write("{} = {}\n".format(key, str(results[key])))
+
+        return results
 
     def _top_k(self, enc, src_padding_mask, inp_ys_tpl, inp_ys_seg, inp_ys_pos, s):
         inp_y, m = s2t(s, self.tokenizer)
@@ -693,7 +1446,7 @@ class SongNetModel:
                     s_.append(sent + [t])
             if not s_:
                 break
-            s = s_ # set back to s
+            s = s_  # set back to s
             inp_y, m = s2t(s, self.tokenizer)
             inp_y = inp_y.to(self.device)
         res += s_
@@ -740,7 +1493,7 @@ class SongNetModel:
                     s_.append(sent + [t])
             if not s_:
                 break
-            s = s_ # set back to s
+            s = s_  # set back to s
             inp_y, m = s2t(s, self.tokenizer)
             inp_y = inp_y.to(self.device)
             bidx = torch.BoolTensor(bidx).to(self.device)
@@ -748,12 +1501,13 @@ class SongNetModel:
         res += s_
         return res[-1]
 
-    def predict(self, sentences):
+    def predict(self, sentences, split_on_space=False):
         """
         Performs predictions on a list of text.
 
         Args:
-            sentences: A python list of text (str) to be sent to the model for prediction. 
+            sentences: A python list of text (str) to be sent to the model for prediction. Note that the prefix should be prepended to the text.
+            split_on_space (optional): If True, input is english string, if False, input is chinese string.
 
         Returns:
             preds: A python list of the generated sequences.
@@ -761,32 +1515,44 @@ class SongNetModel:
 
         self._move_model_to_device()
         self.model.eval()
+
         all_outputs = []
         # Batching
-        for sent in sentences:
+        for sent in tqdm(
+                sentences,
+                desc="Generating outputs",
+                disable=self.args.silent,
+        ):
             batch = [sent]
             xs_tpl, xs_seg, xs_pos, ys_truth, ys_inp, ys_tpl, ys_seg, ys_pos, msk = \
-                s2xy(batch, self.tokenizer, self.model_args.max_len, min_len=2)
+                s2xy(batch, self.tokenizer, self.args.max_length, min_len=2)
             xs_tpl = xs_tpl.to(self.device)
             xs_seg = xs_seg.to(self.device)
             xs_pos = xs_pos.to(self.device)
             ys_tpl = ys_tpl.to(self.device)
             ys_seg = ys_seg.to(self.device)
             ys_pos = ys_pos.to(self.device)
-            enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
+            with torch.no_grad():
+                enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
             s = [['<bos>']]
-            res = self._top_k(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
+            outputs = self._top_k(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
             if self.args.skip_special_tokens:
-                res = [s for s in res if s not in self.tokenizer.special_tokens]
-            all_outputs.append(''.join(res))
+                outputs = [s for s in outputs if s not in self.tokenizer.special_tokens]
+            if split_on_space:
+                outputs = ' '.join(outputs)
+            else:
+                outputs = ''.join(outputs)
+            all_outputs.append(outputs)
+
         return all_outputs
 
-    def predict_mask(self, sentences):
+    def predict_mask(self, sentences, split_on_space=False):
         """
         Performs mask predictions on a list of text.
 
         Args:
             sentences: A python list of text (str) to be sent to the model for prediction. 
+            split_on_space (optional): If True, input is english string, if False, input is chinese string.
 
         Returns:
             preds: A python list of the generated sequences.
@@ -796,26 +1562,122 @@ class SongNetModel:
         self.model.eval()
         all_outputs = []
         # Batching
-        for sent in sentences:
+        for sent in tqdm(
+                sentences,
+                desc="Generating outputs",
+                disable=self.args.silent,
+        ):
             batch = [sent]
             xs_tpl, xs_seg, xs_pos, ys_truth, ys_inp, ys_tpl, ys_seg, ys_pos, msk = \
-                s2xy_polish(batch, self.tokenizer, self.model_args.max_len, min_len=2)
+                s2xy_polish(batch, self.tokenizer, self.args.max_length)
             xs_tpl = xs_tpl.to(self.device)
             xs_seg = xs_seg.to(self.device)
             xs_pos = xs_pos.to(self.device)
             ys_tpl = ys_tpl.to(self.device)
             ys_seg = ys_seg.to(self.device)
             ys_pos = ys_pos.to(self.device)
-            enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
+            with torch.no_grad():
+                enc, src_padding_mask = self.model.encode(xs_tpl, xs_seg, xs_pos)
             s = [['<bos>']]
-            res = self._top_k(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
+            outputs = self._top_k(enc, src_padding_mask, ys_tpl, ys_seg, ys_pos, s)
             if self.args.skip_special_tokens:
-                res = [s for s in res if s not in self.tokenizer.special_tokens]
-            all_outputs.append(''.join(res))
+                outputs = [s for s in outputs if s not in self.tokenizer.special_tokens]
+            if split_on_space:
+                outputs = ' '.join(outputs)
+            else:
+                outputs = ''.join(outputs)
+            all_outputs.append(outputs)
         return all_outputs
+
+    def load_and_cache_examples(
+            self, data, evaluate=False, no_cache=False, verbose=True, silent=False
+    ):
+        """
+        Creates a Dataset from data.
+
+        Utility function for train() and eval() methods. Not intended to be used directly.
+        """
+
+        tokenizer = self.tokenizer
+        args = self.args
+
+        if not no_cache:
+            no_cache = args.no_cache
+
+        if not no_cache:
+            os.makedirs(self.args.cache_dir, exist_ok=True)
+
+        mode = "dev" if evaluate else "train"
+
+        if args.dataset_class:
+            CustomDataset = args.dataset_class
+            return CustomDataset(tokenizer, args, data, mode)
+        else:
+            return SongNetDataset(
+                tokenizer,
+                args,
+                data,
+                mode,
+            )
+
+    def compute_metrics(self, labels, preds, **kwargs):
+        """
+        Computes the evaluation metrics for the model predictions.
+
+        Args:
+            labels: List of target sequences
+            preds: List of model generated outputs
+            **kwargs: Custom metrics that should be used. Pass in the metrics as keyword arguments (name of metric: function to use).
+                        A metric function should take in two parameters. The first parameter will be the true labels, and the second parameter will be the predictions. Both inputs
+                        will be lists of strings. Note that this will slow down evaluation significantly as the predicted sequences need to be generated.
+
+        Returns:
+            result: Dictionary containing evaluation results.
+        """  # noqa: ignore flake8"
+        assert len(labels) == len(preds)
+
+        results = {}
+        for metric, func in kwargs.items():
+            results[metric] = func(labels, preds)
+
+        return results
 
     def _move_model_to_device(self):
         self.model.to(self.device)
+
+    def _get_inputs_dict(self, batch):
+        """
+        Get input dict, to device
+        format: input_ids, attention_mask, labels, decoder_attention_mask, decoder_input_ids
+        """
+        batch = tuple(t.to(self.device) for t in batch)
+        # xs_tpl, xs_seg, xs_pos, ys_truth, ys_inp, ys_tpl, ys_seg, ys_pos, msk
+        inputs = {
+            "xs_tpl": batch[0],
+            "xs_seg": batch[1],
+            "xs_pos": batch[2],
+            "ys_truth": batch[3],
+            "ys_inp": batch[4],
+            "ys_tpl": batch[5],
+            "ys_seg": batch[6],
+            "ys_pos": batch[7],
+            "msk": batch[8],
+        }
+        return inputs
+
+    def _create_training_progress_scores(self, **kwargs):
+        extra_metrics = {key: [] for key in kwargs}
+        training_progress_scores = {
+            "global_step": [],
+            "eval_loss": [],
+            "train_loss": [],
+            **extra_metrics,
+        }
+
+        return training_progress_scores
+
+    def _get_last_metrics(self, metric_values):
+        return {metric: values[-1] for metric, values in metric_values.items()}
 
     def save_model(
             self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
@@ -826,9 +1688,8 @@ class SongNetModel:
 
         if model and not self.args.no_save:
             # Take care of distributed/parallel training
-            model_to_save = model.module if hasattr(model, "module") else model
-            model_to_save.save_pretrained(output_dir)
-            self.tokenizer.save_pretrained(output_dir)
+            self.tokenizer.save_pretrained(os.path.join(output_dir, 'vocab.txt'))
+            torch.save(model.state_dict(), os.path.join(output_dir, 'pytorch_model.bin'))
             torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
             if optimizer and scheduler and self.args.save_optimizer_and_scheduler:
                 torch.save(

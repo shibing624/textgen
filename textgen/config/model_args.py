@@ -355,11 +355,12 @@ class SongNetArgs(ModelArgs):
     """
 
     model_class: str = "SongNetModel"
+    dataset_class: Dataset = None
     do_sample: bool = False
     early_stopping: bool = True
     evaluate_generated_text: bool = False
     length_penalty: float = 2.0
-    max_length: int = 20
+    max_length: int = 128
     max_steps: int = -1
     num_beams: int = 3
     num_return_sequences: int = 1
@@ -369,11 +370,19 @@ class SongNetArgs(ModelArgs):
     adafactor_relative_step: bool = False
     adafactor_scale_parameter: bool = False
     adafactor_warmup_init: bool = False
-    learning_rate: float = 1e-3
+    learning_rate: float = 5e-2
     optimizer: str = "AdamW"
     special_tokens_list: list = field(default_factory=list)
     skip_special_tokens: bool = False
     k: int = 50
-    top_k: float = None
-    top_p: float = None
     use_multiprocessed_decoding: bool = False
+    embed_dim: int = 768
+    ff_embed_dim: int = 3072
+    num_heads: int = 12
+    num_layers: int = 12
+    dropout: float = 0.2
+    warmup_steps: int = 1000
+    weight_decay: float = 0.0
+    smoothing_factor: float = 0.1
+    min_length: int = 10
+
