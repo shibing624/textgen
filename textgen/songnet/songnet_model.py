@@ -649,9 +649,8 @@ class SongNetModel:
 
         if model_name:
             # ckpt = torch.load(model_path, map_location='cpu')
-            self.tokenizer = ZHCharTokenizer.from_pretrained(
-                os.path.join(model_name, 'vocab.txt'), **kwargs)
-            model = SongNet(
+            self.tokenizer = ZHCharTokenizer.from_pretrained(model_name, **kwargs)
+            self.model = SongNet(
                 self.tokenizer,
                 device=0,
                 embed_dim=self.args.embed_dim,
@@ -661,8 +660,7 @@ class SongNetModel:
                 num_layers=self.args.num_layers,
                 smoothing_factor=self.args.smoothing_factor,
             )
-            model.load_state_dict(torch.load(os.path.join(model_name, 'pytorch_model.bin')))
-            self.model = model
+            self.model.load_state_dict(torch.load(os.path.join(model_name, 'pytorch_model.bin')))
 
         self.args.model_type = model_type
         if model_name is None:
@@ -1693,7 +1691,7 @@ class SongNetModel:
 
         if model and not self.args.no_save:
             # Take care of distributed/parallel training
-            self.tokenizer.save_pretrained(os.path.join(output_dir, 'vocab.txt'))
+            self.tokenizer.save_pretrained(output_dir)
             torch.save(model.state_dict(), os.path.join(output_dir, 'pytorch_model.bin'))
             torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
             if optimizer and scheduler and self.args.save_optimizer_and_scheduler:

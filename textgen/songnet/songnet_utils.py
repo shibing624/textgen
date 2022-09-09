@@ -76,10 +76,11 @@ class ZHCharTokenizer(object):
         return self._token2idx.get(x, self.unk_idx)
 
     @classmethod
-    def from_pretrained(cls, vocab_file, min_occur_cnt=1, *init_inputs, **kwargs):
+    def from_pretrained(cls, model_dir, min_occur_cnt=1, *init_inputs, **kwargs):
         r"""
         Instantiate a predefined tokenizer.
         """
+        vocab_file = os.path.join(model_dir, 'vocab.txt')
         try:
             tokenizer = cls(vocab_file, min_occur_cnt=min_occur_cnt, *init_inputs, **kwargs)
         except OSError:
@@ -89,10 +90,11 @@ class ZHCharTokenizer(object):
             )
         return tokenizer
 
-    def save_pretrained(self, vocab_file):
+    def save_pretrained(self, output_dir):
         r"""
         Save vocab.
         """
+        vocab_file = os.path.join(output_dir, 'vocab.txt')
         with open(vocab_file, 'w', encoding='utf8') as f:
             for token, idx in self._token2idx.items():
                 f.write(token + '\n')
