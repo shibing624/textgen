@@ -970,9 +970,6 @@ class BartSeq2SeqModel:
                 output_dir, "checkpoint-{}-epoch-{}".format(global_step, epoch_number)
             )
 
-            if args.save_model_every_epoch or args.evaluate_during_training:
-                os.makedirs(output_dir_current, exist_ok=True)
-
             if args.save_model_every_epoch:
                 self.save_model(output_dir_current, optimizer, scheduler, model=model)
 
