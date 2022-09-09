@@ -93,7 +93,6 @@ class ZHCharTokenizer(object):
         with open(vocab_file, 'w', encoding='utf8') as f:
             for token, idx in self._token2idx.items():
                 f.write(token + '\n')
-            logger.info("Vocab saved in {}".format(vocab_file))
 
 
 def lists2tensor(xs, tokenizer=None):
