@@ -77,7 +77,7 @@ def main():
                         help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--output_dir', default='./outputs/couplet-fine-tuned/', type=str,
+    parser.add_argument('--output_dir', default='./outputs/couplet_gpt2_finetuned/', type=str,
                         help='Model output directory')
     parser.add_argument('--max_seq_length', default=50, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=50, type=int, help='Output max sequence length')

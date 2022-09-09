@@ -34,7 +34,7 @@ def finetune(prompts, train_path, test_path):
         "gradient_accumulation_steps": 8,
         "num_train_epochs": 1,
         "mlm": False,
-        "output_dir": f"outputs/fine-tuned/",
+        "output_dir": f"outputs/en_finetuned/",
     }
 
     model = LanguageModelingModel("gpt2", "gpt2", args=train_args)
@@ -42,7 +42,7 @@ def finetune(prompts, train_path, test_path):
     print(model.eval_model(test_path))
 
     # Use finetuned model
-    model = LanguageGenerationModel("gpt2", "outputs/en-fine-tuned", args={"max_length": 200})
+    model = LanguageGenerationModel("gpt2", "outputs/en_finetuned/", args={"max_length": 200})
     for prompt in prompts:
         # Generate text using the model. Verbose set to False to prevent logging generated sequences.
         generated = model.generate(prompt, verbose=False)

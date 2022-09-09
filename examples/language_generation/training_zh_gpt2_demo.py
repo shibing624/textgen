@@ -22,7 +22,7 @@ def main():
                         help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--output_dir', default='./outputs/zh-article-fine-tuned/', type=str,
+    parser.add_argument('--output_dir', default='./outputs/article_gpt2_zh_finetuned/', type=str,
                         help='Model output directory')
     parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
     parser.add_argument('--num_epochs', default=10, type=int, help='Number of training epochs')
