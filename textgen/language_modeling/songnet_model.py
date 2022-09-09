@@ -20,7 +20,6 @@ from tqdm.auto import tqdm, trange
 import torch
 from torch import nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from transformers.optimization import AdamW, Adafactor
 from transformers.optimization import (
     get_constant_schedule,
@@ -31,10 +30,9 @@ from transformers.optimization import (
 )
 
 from textgen.config.model_args import SongNetArgs
-from textgen.songnet.songnet_utils import (
+from textgen.language_modeling.songnet_utils import (
     ZHCharTokenizer, s2t, s2xy, s2xy_polish,
-    DataLoader,
-    SongNetDataset,
+    SongNetDataLoader,
     BOS, EOS,
 )
 
@@ -648,7 +646,6 @@ class SongNetModel:
         self.results = {}
 
         if model_name:
-            # ckpt = torch.load(model_path, map_location='cpu')
             self.tokenizer = ZHCharTokenizer.from_pretrained(model_name, **kwargs)
             self.model = SongNet(
                 self.tokenizer,
@@ -670,22 +667,19 @@ class SongNetModel:
 
     def train_model(
             self,
-            train_data,
+            train_file,
             output_dir=None,
             show_running_loss=True,
             args=None,
-            eval_data=None,
+            eval_file=None,
             verbose=True,
             **kwargs,
     ):
         """
-        Trains the model using 'train_data'
+        Trains the model using 'train_file'
 
         Args:
-            train_data: Pandas DataFrame containing the 3 columns - `prefix`, `input_text`, `target_text`.
-                        - `prefix`: A string indicating the task to perform. (E.g. `"question"`, `"stsb"`)
-                        - `input_text`: The input text sequence. `prefix` is automatically prepended to form the full input. (<prefix>: <input_text>)
-                        - `target_text`: The target sequence
+            train_file: Path to text file containing the text to train the language model on.
             output_dir: The directory where model files will be saved. If not given, self.args.output_dir will be used.
             show_running_loss (optional): Set to False to prevent running loss from being printed to console. Defaults to True.
             args (optional): Optional changes to the args dict of the model. Any changes made will persist for the model.
@@ -701,7 +695,7 @@ class SongNetModel:
 
         if args:
             self.args.update_from_dict(args)
-        if self.args.evaluate_during_training and eval_data is None:
+        if self.args.evaluate_during_training and eval_file is None:
             raise ValueError(
                 "evaluate_during_training is enabled but eval_data is not specified."
                 " Pass eval_data to model.train_model() if using evaluate_during_training."
@@ -721,13 +715,13 @@ class SongNetModel:
             )
 
         self._move_model_to_device()
-        train_dataset = self.load_and_cache_examples(train_data, verbose=verbose)
+        train_dataloader = self.load_and_cache_examples(train_file, verbose=verbose)
         os.makedirs(output_dir, exist_ok=True)
         global_step, training_details = self.train(
-            train_dataset,
+            train_dataloader,
             output_dir,
             show_running_loss=show_running_loss,
-            eval_data=eval_data,
+            eval_file=eval_file,
             verbose=verbose,
             **kwargs,
         )
@@ -744,15 +738,15 @@ class SongNetModel:
 
     def train(
             self,
-            train_dataset,
+            train_dataloader,
             output_dir,
             show_running_loss=True,
-            eval_data=None,
+            eval_file=None,
             verbose=True,
             **kwargs,
     ):
         """
-        Trains the model on train_dataset.
+        Trains the model on train_dataloader.
 
         Utility function to be used by the train_model() method. Not intended to be used directly.
         """
@@ -760,14 +754,6 @@ class SongNetModel:
         model = self.model
         args = self.args
         device = self.device
-
-        train_sampler = RandomSampler(train_dataset)
-        train_dataloader = DataLoader(
-            train_dataset,
-            sampler=train_sampler,
-            batch_size=args.train_batch_size,
-            num_workers=self.args.dataloader_num_workers,
-        )
 
         if args.max_steps > 0:
             t_total = args.max_steps
@@ -966,7 +952,6 @@ class SongNetModel:
                 )
             except ValueError:
                 logger.info("   Starting fine-tuning.")
-
         if args.evaluate_during_training:
             training_progress_scores = self._create_training_progress_scores(**kwargs)
 
@@ -988,7 +973,7 @@ class SongNetModel:
                 if steps_trained_in_current_epoch > 0:
                     steps_trained_in_current_epoch -= 1
                     continue
-
+                
                 inputs = self._get_inputs_dict(batch)
                 res, loss, acc, nll, ppl, n_tokens, bsz = model(**inputs)
 
@@ -1035,7 +1020,7 @@ class SongNetModel:
                     ):
                         # Only evaluate when single GPU otherwise metrics may not average well
                         results = self.eval_model(
-                            eval_data,
+                            eval_file,
                             verbose=verbose and args.evaluate_during_training_verbose,
                             silent=args.evaluate_during_training_silent,
                             **kwargs,
@@ -1056,6 +1041,7 @@ class SongNetModel:
 
                         training_progress_scores["global_step"].append(global_step)
                         training_progress_scores["train_loss"].append(current_loss)
+                        training_progress_scores["train_ppl"].append(current_ppl)
                         for key in results:
                             training_progress_scores[key].append(results[key])
                         report = pd.DataFrame(training_progress_scores)
@@ -1170,15 +1156,12 @@ class SongNetModel:
                 output_dir, "checkpoint-{}-epoch-{}".format(global_step, epoch_number)
             )
 
-            if args.save_model_every_epoch or args.evaluate_during_training:
-                os.makedirs(output_dir_current, exist_ok=True)
-
             if args.save_model_every_epoch:
                 self.save_model(output_dir_current, optimizer, scheduler, model=model)
 
             if args.evaluate_during_training and args.evaluate_each_epoch:
                 results = self.eval_model(
-                    eval_data,
+                    eval_file,
                     verbose=verbose and args.evaluate_during_training_verbose,
                     silent=args.evaluate_during_training_silent,
                     **kwargs,
@@ -1191,6 +1174,7 @@ class SongNetModel:
 
                 training_progress_scores["global_step"].append(global_step)
                 training_progress_scores["train_loss"].append(current_loss)
+                training_progress_scores["train_ppl"].append(current_ppl)
                 for key in results:
                     training_progress_scores[key].append(results[key])
                 report = pd.DataFrame(training_progress_scores)
@@ -1305,16 +1289,13 @@ class SongNetModel:
         )
 
     def eval_model(
-            self, eval_data, output_dir=None, verbose=True, silent=False, **kwargs
+            self, eval_file, output_dir=None, verbose=True, silent=False, **kwargs
     ):
         """
         Evaluates the model on eval_data. Saves results to output_dir.
 
         Args:
-            eval_data: Pandas DataFrame containing the 3 columns - `prefix`, `input_text`, `target_text`.
-                        - `prefix`: A string indicating the task to perform. (E.g. `"question"`, `"stsb"`)
-                        - `input_text`: The input text sequence. `prefix` is automatically prepended to form the full input. (<prefix>: <input_text>)
-                        - `target_text`: The target sequence
+            eval_file: evaluate file
             output_dir: The directory where model files will be saved. If not given, self.args.output_dir will be used.
             verbose: If verbose, results will be printed to the console on completion of evaluation.
             silent: If silent, tqdm progress bars will be hidden.
@@ -1330,46 +1311,23 @@ class SongNetModel:
 
         self._move_model_to_device()
 
-        eval_dataset = self.load_and_cache_examples(
-            eval_data, evaluate=True, verbose=verbose, silent=silent
+        eval_dataloader = self.load_and_cache_examples(
+            eval_file, evaluate=True, verbose=verbose, silent=silent
         )
         os.makedirs(output_dir, exist_ok=True)
 
         result = self.evaluate(
-            eval_dataset, output_dir, verbose=verbose, silent=silent, **kwargs
+            eval_dataloader, output_dir, verbose=verbose, silent=silent, **kwargs
         )
         self.results.update(result)
-
-        if self.args.evaluate_generated_text:
-            if self.args.preprocess_inputs:
-                to_predict = [
-                    prefix + ": " + input_text
-                    for prefix, input_text in zip(
-                        eval_data["prefix"], eval_data["input_text"]
-                    )
-                ]
-            else:
-                to_predict = [
-                    prefix + input_text
-                    for prefix, input_text in zip(
-                        eval_data["prefix"], eval_data["input_text"]
-                    )
-                ]
-            preds = self.predict(to_predict)
-
-            result = self.compute_metrics(
-                eval_data["target_text"].tolist(), preds, **kwargs
-            )
-            self.results.update(result)
-
         if verbose:
             logger.info(self.results)
 
         return self.results
 
-    def evaluate(self, eval_dataset, output_dir, verbose=True, silent=False, **kwargs):
+    def evaluate(self, eval_dataloader, output_dir, verbose=True, silent=False, **kwargs):
         """
-        Evaluates the model on eval_dataset.
+        Evaluates the model on eval_dataloader.
 
         Utility function to be used by the eval_model() method. Not intended to be used directly.
         """
@@ -1380,11 +1338,6 @@ class SongNetModel:
         device = self.device
 
         results = {}
-
-        eval_sampler = SequentialSampler(eval_dataset)
-        eval_dataloader = DataLoader(
-            eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size
-        )
 
         if args.n_gpu > 1:
             model = torch.nn.DataParallel(model)
@@ -1407,7 +1360,7 @@ class SongNetModel:
                 count += bsz
             nb_eval_steps += 1
         avg_ppl = avg_ppl / count
-        results["avg_ppl"] = avg_ppl
+        results["eval_ppl"] = avg_ppl
         output_eval_file = os.path.join(eval_output_dir, "eval_results.txt")
         with open(output_eval_file, "w") as writer:
             for key in sorted(results.keys()):
@@ -1504,7 +1457,7 @@ class SongNetModel:
         res += s_
         return res[-1]
 
-    def predict(self, sentences, split_on_space=False):
+    def generate(self, sentences, split_on_space=False):
         """
         Performs predictions on a list of text.
 
@@ -1549,7 +1502,7 @@ class SongNetModel:
 
         return all_outputs
 
-    def predict_mask(self, sentences, split_on_space=False):
+    def fill_mask(self, sentences, split_on_space=False):
         """
         Performs mask predictions on a list of text.
 
@@ -1593,33 +1546,25 @@ class SongNetModel:
         return all_outputs
 
     def load_and_cache_examples(
-            self, data, evaluate=False, no_cache=False, verbose=True, silent=False
+            self, file_path, evaluate=False, no_cache=False, verbose=True, silent=False
     ):
         """
-        Creates a Dataset from data.
+        Creates a DataLoader from file_path.
 
         Utility function for train() and eval() methods. Not intended to be used directly.
         """
 
         tokenizer = self.tokenizer
         args = self.args
-
         if not no_cache:
             no_cache = args.no_cache
-
         if not no_cache:
             os.makedirs(self.args.cache_dir, exist_ok=True)
-
         mode = "dev" if evaluate else "train"
-
-        if args.dataset_class:
-            CustomDataset = args.dataset_class
-            return CustomDataset(tokenizer, args, data, mode)
-        else:
-            return SongNetDataset(
+        return SongNetDataLoader(
                 tokenizer,
                 args,
-                data,
+                file_path,
                 mode,
             )
 
@@ -1672,8 +1617,9 @@ class SongNetModel:
         extra_metrics = {key: [] for key in kwargs}
         training_progress_scores = {
             "global_step": [],
-            "eval_loss": [],
             "train_loss": [],
+            "train_ppl": [],
+            "eval_ppl": [],
             **extra_metrics,
         }
 

@@ -349,7 +349,7 @@ class LanguageGenerationArgs(ModelArgs):
 
 
 @dataclass
-class SongNetArgs(ModelArgs):
+class SongNetArgs(LanguageModelingArgs):
     """
     Model args for a SongNetModel
     """
@@ -372,6 +372,7 @@ class SongNetArgs(ModelArgs):
     adafactor_warmup_init: bool = False
     learning_rate: float = 5e-2
     optimizer: str = "AdamW"
+    early_stopping_metric: str = "eval_ppl"
     special_tokens_list: list = field(default_factory=list)
     skip_special_tokens: bool = False
     k: int = 50
