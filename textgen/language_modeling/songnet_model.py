@@ -6,20 +6,18 @@
 refer: ACL2020 paper: Rigid Formats Controlled Text Generation, Piji Li
 url: https://www.aclweb.org/anthology/2020.acl-main.68
 """
-import os
-import sys
 import math
+import os
 import random
-import time
 from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-from loguru import logger
-from tqdm.auto import tqdm, trange
 import torch
-from torch import nn
 import torch.nn.functional as F
+from loguru import logger
+from torch import nn
+from tqdm.auto import tqdm, trange
 from transformers.optimization import AdamW, Adafactor
 from transformers.optimization import (
     get_constant_schedule,
@@ -973,7 +971,7 @@ class SongNetModel:
                 if steps_trained_in_current_epoch > 0:
                     steps_trained_in_current_epoch -= 1
                     continue
-                
+
                 inputs = self._get_inputs_dict(batch)
                 res, loss, acc, nll, ppl, n_tokens, bsz = model(**inputs)
 
@@ -1562,11 +1560,11 @@ class SongNetModel:
             os.makedirs(self.args.cache_dir, exist_ok=True)
         mode = "dev" if evaluate else "train"
         return SongNetDataLoader(
-                tokenizer,
-                args,
-                file_path,
-                mode,
-            )
+            tokenizer,
+            args,
+            file_path,
+            mode,
+        )
 
     def compute_metrics(self, labels, preds, **kwargs):
         """

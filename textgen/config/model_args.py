@@ -361,6 +361,7 @@ class SongNetArgs(LanguageModelingArgs):
     evaluate_generated_text: bool = False
     length_penalty: float = 2.0
     max_length: int = 128
+    min_length: int = 10
     max_steps: int = -1
     num_beams: int = 3
     num_return_sequences: int = 1
@@ -370,7 +371,7 @@ class SongNetArgs(LanguageModelingArgs):
     adafactor_relative_step: bool = False
     adafactor_scale_parameter: bool = False
     adafactor_warmup_init: bool = False
-    learning_rate: float = 5e-2
+    learning_rate: float = 5e-4
     optimizer: str = "AdamW"
     early_stopping_metric: str = "eval_ppl"
     special_tokens_list: list = field(default_factory=list)
@@ -385,5 +386,3 @@ class SongNetArgs(LanguageModelingArgs):
     warmup_steps: int = 1000
     weight_decay: float = 0.0
     smoothing_factor: float = 0.1
-    min_length: int = 10
-

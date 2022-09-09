@@ -3,15 +3,12 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-import random
-import torch
-import numpy as np
 import os
-import pickle
+import random
+
+import numpy as np
+import torch
 from loguru import logger
-from torch.utils.data import Dataset
-from filelock import FileLock
-from tqdm.auto import tqdm
 
 PAD, UNK, BOS, EOS = '<pad>', '<unk>', '<bos>', '<eos>'
 BOC, EOC = '<boc>', '<eoc>'
@@ -26,7 +23,7 @@ PUNCS = {",", ".", "?", "!", ":", "，", "。", "？", "！", "："}
 class ZHCharTokenizer(object):
     def __init__(self, vocab_file, specials=None):
         special_tokens = [PAD, UNK, BOS, EOS, BOC, EOC, LS, RS, SP] + CS + SS + PS + TS \
-                    + (specials if specials is not None else [])
+                         + (specials if specials is not None else [])
         vocabs = self.load_vocab(vocab_file)
         idx2token = special_tokens + [v for v in vocabs if v not in special_tokens]
         self._token2idx = dict(zip(idx2token, range(len(idx2token))))
@@ -293,16 +290,17 @@ def parse_line_polish(line, max_len, min_len):
 class SongNetDataLoader(object):
     def __init__(self, tokenizer, args, file_path, mode):
         self.tokenizer = tokenizer
-        self.args = args
         self.mode = mode
-        self.examples = self.convert_text_to_ids(file_path, tokenizer, args)
-        
-    def convert_text_to_ids(self, file_path, tokenizer, args):
+        self.batch_size = args.train_batch_size if mode == "train" else args.eval_batch_size
+        self.examples = self.read_file(file_path, args.max_length, args.min_length)
+
+    @staticmethod
+    def read_file(file_path, max_length, min_length):
         with open(file_path, encoding="utf-8") as f:
             lines = [line for line in f.read().splitlines() if (len(line) > 0 and not line.isspace())]
         data = []
         for line in lines:
-            res = preprocess_data(line, args)
+            res = preprocess_data(line, max_length, min_length)
             if not res:
                 continue
             data.append(res)
@@ -313,20 +311,24 @@ class SongNetDataLoader(object):
             random.shuffle(self.examples)
         idx = 0
         while idx < len(self.examples):
-            yield batchify(self.examples[idx:idx + self.args.train_batch_size], self.tokenizer)
-            idx += self.args.train_batch_size
-    
-    def __len__(self):
-        return len(self.examples) // self.args.train_batch_size
+            yield batchify(self.examples[idx:idx + self.batch_size], self.tokenizer)
+            idx += self.batch_size
 
-def preprocess_data(line, args):
+    def __len__(self):
+        from math import ceil
+        length = len(self.examples)
+        length = ceil(length / self.batch_size)
+        return length
+
+
+def preprocess_data(line, max_length, min_length):
     """Convert line text to idx"""
     fs = line.split("<s2>", 1)
     author, cipai = fs[0].split("<s1>", 1)
     sents = fs[1].strip()
-    if len(sents) > args.max_length:
-        sents = sents[:args.max_length]
-    if len(sents) < args.min_length:
+    if len(sents) > max_length:
+        sents = sents[:max_length]
+    if len(sents) < min_length:
         return None
     sents = sents.split("</s>")
 
@@ -373,6 +375,6 @@ def preprocess_data(line, args):
     xs_seg += ys_seg
     xs_pos += ys_pos
 
-    if len(ys) < args.min_length:
+    if len(ys) < min_length:
         return None
     return xs_tpl, xs_seg, xs_pos, ys, ys_tpl, ys_seg, ys_pos
