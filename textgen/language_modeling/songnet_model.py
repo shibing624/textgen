@@ -656,7 +656,7 @@ class SongNetModel:
                     if not os.path.exists(bin_path):
                         logger.warning(f'Model {model_name} not exists, download model to {local_model_dir}')
                         url = PRETRAINED_MODELS[model_name]
-                        http_get(url, local_model_dir + '.tar.gz', extract=True)
+                        http_get(url, local_model_dir + '.zip', extract=True)
                     else:
                         logger.warning(f'Model {model_name} not exists, use local model {local_model_dir}')
                     model_name = local_model_dir
@@ -671,7 +671,7 @@ class SongNetModel:
                 num_layers=self.args.num_layers,
                 smoothing_factor=self.args.smoothing_factor,
             )
-            self.model.load_state_dict(torch.load(bin_path))
+            self.model.load_state_dict(torch.load(bin_path, map_location=self.device))
 
         self.args.model_type = model_type
         if model_name is None:
@@ -783,64 +783,6 @@ class SongNetModel:
                     * args.num_train_epochs
             )
 
-        no_decay = ["bias", "LayerNorm.weight"]
-
-        optimizer_grouped_parameters = []
-        custom_parameter_names = set()
-        for group in self.args.custom_parameter_groups:
-            params = group.pop("params")
-            custom_parameter_names.update(params)
-            param_group = {**group}
-            param_group["params"] = [
-                p for n, p in model.named_parameters() if n in params
-            ]
-            optimizer_grouped_parameters.append(param_group)
-
-        for group in self.args.custom_layer_parameters:
-            layer_number = group.pop("layer")
-            layer = f"layer.{layer_number}."
-            group_d = {**group}
-            group_nd = {**group}
-            group_nd["weight_decay"] = 0.0
-            params_d = []
-            params_nd = []
-            for n, p in model.named_parameters():
-                if n not in custom_parameter_names and layer in n:
-                    if any(nd in n for nd in no_decay):
-                        params_nd.append(p)
-                    else:
-                        params_d.append(p)
-                    custom_parameter_names.add(n)
-            group_d["params"] = params_d
-            group_nd["params"] = params_nd
-
-            optimizer_grouped_parameters.append(group_d)
-            optimizer_grouped_parameters.append(group_nd)
-
-        if not self.args.train_custom_parameters_only:
-            optimizer_grouped_parameters.extend(
-                [
-                    {
-                        "params": [
-                            p
-                            for n, p in model.named_parameters()
-                            if n not in custom_parameter_names
-                               and not any(nd in n for nd in no_decay)
-                        ],
-                        "weight_decay": args.weight_decay,
-                    },
-                    {
-                        "params": [
-                            p
-                            for n, p in model.named_parameters()
-                            if n not in custom_parameter_names
-                               and any(nd in n for nd in no_decay)
-                        ],
-                        "weight_decay": 0.0,
-                    },
-                ]
-            )
-
         warmup_steps = math.ceil(t_total * args.warmup_ratio)
         args.warmup_steps = (
             warmup_steps if args.warmup_steps == 0 else args.warmup_steps
@@ -848,13 +790,13 @@ class SongNetModel:
 
         if args.optimizer == "AdamW":
             optimizer = AdamW(
-                optimizer_grouped_parameters,
+                model.parameters(),
                 lr=args.learning_rate,
                 eps=args.adam_epsilon,
             )
         elif args.optimizer == "Adafactor":
             optimizer = Adafactor(
-                optimizer_grouped_parameters,
+                model.parameters(),
                 lr=args.learning_rate,
                 eps=args.adafactor_eps,
                 clip_threshold=args.adafactor_clip_threshold,

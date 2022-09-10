@@ -17,7 +17,8 @@ def main():
     parser.add_argument('--train_file', default='../data/zh_songci.txt', type=str, help='Training data file')
     parser.add_argument('--test_file', default='../data/zh_songci.txt', type=str, help='Test data file')
     parser.add_argument('--model_type', default='songnet', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='songnet-base-chinese', type=str, help='Transformers model or path')
+    parser.add_argument('--model_name', default='songnet-base-chinese-songci', type=str,
+                        help='SongNet model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/songci_zh_songnet_finetuned/', type=str,
@@ -38,10 +39,11 @@ def main():
             "num_train_epochs": args.num_epochs,
             "save_eval_checkpoints": False,
             "save_model_every_epoch": False,
+            "save_optimizer_and_scheduler": False,
             "evaluate_generated_text": True,
             "evaluate_during_training": True,
             "evaluate_during_training_verbose": True,
-            "use_multiprocessing": True,
+            "use_multiprocessing": False,
             "save_best_model": True,
             "output_dir": args.output_dir,
             "best_model_dir": os.path.join(args.output_dir, "best_model"),

@@ -27,10 +27,13 @@ TS = ['<t-1>'] + ['<t' + str(i) + '>' for i in range(32)]  # other types
 PUNCS = {",", ".", "?", "!", ":", "，", "。", "？", "！", "："}
 PRETRAINED_MODELS = {
     'songnet-base-chinese':
-        'https://github.com/shibing624/pycorrector/releases/download/0.4.5/convseq2seq_correction.tar.gz',
-    'songnet-base-chinese-couplet': '',
-    'songnet-base-chinese-poem': '',
-    'songnet-base-chinese-songci': '',
+        'https://github.com/shibing624/textgen/releases/download/0.1.5/songnet-base-chinese.zip',
+    'songnet-base-chinese-songci':
+        'https://github.com/shibing624/textgen/releases/download/0.1.5/songnet-base-chinese-songci.zip',
+    'songnet-base-chinese-couplet':
+        'https://github.com/shibing624/textgen/releases/download/0.1.5/songnet-base-chinese-couplet.zip',
+    'songnet-base-chinese-poem':
+        'https://github.com/shibing624/textgen/releases/download/0.1.5/songnet-base-chinese-poem.zip',
 }
 LOCAL_DIR = os.path.expanduser('~/.cache/torch/shibing624/')
 

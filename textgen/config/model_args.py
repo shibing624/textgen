@@ -365,7 +365,6 @@ class SongNetArgs(LanguageModelingArgs):
     max_steps: int = -1
     num_beams: int = 3
     num_return_sequences: int = 1
-    preprocess_inputs: bool = True
     repetition_penalty: float = 1.0
     scheduler: str = "linear_schedule_with_warmup"
     adafactor_relative_step: bool = False
