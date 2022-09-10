@@ -26,7 +26,6 @@ def main():
     parser.add_argument('--max_length', default=128, type=int, help='Max sequence length')
     parser.add_argument('--num_epochs', default=3, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=16, type=int, help='Batch size')
-    parser.add_argument('--learning_rate', default=0.0001, type=float, help='LR')
     args = parser.parse_args()
     print(args)
 
@@ -38,7 +37,6 @@ def main():
             "max_length": args.max_length,
             "train_batch_size": args.batch_size,
             "num_train_epochs": args.num_epochs,
-            "learning_rate": args.learning_rate,
             "save_eval_checkpoints": False,
             "save_model_every_epoch": False,
             "save_optimizer_and_scheduler": False,

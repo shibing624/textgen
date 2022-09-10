@@ -787,10 +787,10 @@ class SongNetModel:
         args.warmup_steps = (
             warmup_steps if args.warmup_steps == 0 else args.warmup_steps
         )
-        logger.info(f"warmup_steps:{warmup_steps}, t_total:{t_total}, args.warmup_steps:{args.warmup_steps}")
+        logger.debug(f"t_total:{t_total}, warmup_steps:{args.warmup_steps}")
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate,
-                eps=args.adam_epsilon)
+                                     eps=args.adam_epsilon)
 
         def get_lr(optimizer):
             for param_group in optimizer.param_groups:
@@ -935,8 +935,8 @@ class SongNetModel:
 
                 if (step + 1) % args.gradient_accumulation_steps == 0:
                     torch.nn.utils.clip_grad_norm_(
-                            model.parameters(), args.max_grad_norm
-                        )
+                        model.parameters(), args.max_grad_norm
+                    )
 
                     optimizer.step()
                     scheduler.step()  # Update learning rate schedule
