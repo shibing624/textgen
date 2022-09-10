@@ -34,7 +34,8 @@ PRETRAINED_MODELS = {
 }
 LOCAL_DIR = os.path.expanduser('~/.cache/torch/shibing624/')
 
-class ZHCharTokenizer(object):
+
+class SongNetTokenizer(object):
     def __init__(self, vocab_file, specials=None):
         special_tokens = [PAD, UNK, BOS, EOS, BOC, EOC, LS, RS, SP] + CS + SS + PS + TS \
                          + (specials if specials is not None else [])
@@ -82,7 +83,7 @@ class ZHCharTokenizer(object):
         return self._token2idx.get(x, self.unk_idx)
 
     def __repr__(self):
-        return f"ZHCharTokenizer<vocab size:{len(self._token2idx)}>"
+        return f"SongNetTokenizer<vocab size:{len(self._token2idx)}>"
 
     @classmethod
     def from_pretrained(cls, model_dir, *init_inputs, **kwargs):

@@ -29,7 +29,7 @@ from transformers.optimization import (
 
 from textgen.config.model_args import SongNetArgs
 from textgen.language_modeling.songnet_utils import (
-    ZHCharTokenizer, s2t, s2xy, s2xy_polish,
+    SongNetTokenizer, s2t, s2xy, s2xy_polish,
     SongNetDataLoader,
     BOS,
     EOS,
@@ -383,7 +383,7 @@ def Embedding(num_embeddings, embedding_dim, padding_idx):
 
 
 class SelfAttentionMask(nn.Module):
-    def __init__(self, init_size=100, device=0):
+    def __init__(self, init_size=100, device='cpu'):
         super(SelfAttentionMask, self).__init__()
         self.weights = SelfAttentionMask.get_mask(init_size)
         self.device = device
@@ -396,7 +396,7 @@ class SelfAttentionMask(nn.Module):
     def forward(self, size):
         if self.weights is None or size > self.weights.size(0):
             self.weights = SelfAttentionMask.get_mask(size)
-        res = self.weights[:size, :size].cuda(self.device).detach()
+        res = self.weights[:size, :size].to(self.device).detach()
         return res
 
 
@@ -404,7 +404,7 @@ class LearnedPositionalEmbedding(nn.Module):
     """This module produces LearnedPositionalEmbedding.
     """
 
-    def __init__(self, embedding_dim, init_size=1024, device=0):
+    def __init__(self, embedding_dim, init_size=1024, device='cpu'):
         super(LearnedPositionalEmbedding, self).__init__()
         self.weights = nn.Embedding(init_size, embedding_dim)
         self.device = device
@@ -416,7 +416,7 @@ class LearnedPositionalEmbedding(nn.Module):
     def forward(self, input, offset=0):
         """Input is expected to be of size [seq_len x bsz]."""
         seq_len, bsz = input.size()
-        positions = (offset + torch.arange(seq_len)).cuda(self.device)
+        positions = (offset + torch.arange(seq_len)).to(self.device)
         res = self.weights(positions).unsqueeze(1).expand(-1, bsz, -1)
         return res
 
@@ -424,7 +424,7 @@ class LearnedPositionalEmbedding(nn.Module):
 class SongNet(nn.Module):
     """SongNet model network"""
 
-    def __init__(self, tokenizer, device=0, embed_dim=768, ff_embed_dim=768 * 4, num_heads=12, dropout=0.2,
+    def __init__(self, tokenizer, device='cpu', embed_dim=768, ff_embed_dim=768 * 4, num_heads=12, dropout=0.2,
                  num_layers=12, smoothing_factor=0.1):
         """
         Init model network
@@ -652,17 +652,18 @@ class SongNetModel:
             if not os.path.exists(bin_path):
                 if model_name in PRETRAINED_MODELS:
                     local_model_dir = os.path.join(LOCAL_DIR, model_name)
-                    local_bin_path = os.path.join(local_model_dir, 'pytorch_model.bin')
+                    bin_path = os.path.join(local_model_dir, 'pytorch_model.bin')
                     if not os.path.exists(bin_path):
+                        logger.warning(f'Model {model_name} not exists, download model to {local_model_dir}')
                         url = PRETRAINED_MODELS[model_name]
-                        http_get(url, local_model_dir)
+                        http_get(url, local_model_dir + '.tar.gz', extract=True)
                     else:
-                        logger.warning(f'Model {bin_path} not exists, use local model {local_bin_path}')
+                        logger.warning(f'Model {model_name} not exists, use local model {local_model_dir}')
                     model_name = local_model_dir
-            self.tokenizer = ZHCharTokenizer.from_pretrained(model_name, **kwargs)
+            self.tokenizer = SongNetTokenizer.from_pretrained(model_name, **kwargs)
             self.model = SongNet(
                 self.tokenizer,
-                device=0,
+                device=self.device,
                 embed_dim=self.args.embed_dim,
                 ff_embed_dim=self.args.ff_embed_dim,
                 num_heads=self.args.num_heads,

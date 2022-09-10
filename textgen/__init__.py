@@ -13,6 +13,9 @@ from textgen.language_generation.language_generation_model import LanguageGenera
 
 from textgen.config.model_args import LanguageModelingArgs
 from textgen.language_modeling.language_modeling_model import LanguageModelingModel
+from textgen.config.model_args import SongNetArgs
+from textgen.language_modeling.songnet_model import SongNetModel
+from textgen.language_modeling.songnet_utils import SongNetTokenizer
 
 from textgen.config.model_args import QuestionAnsweringArgs
 from textgen.question_answering.question_answering_model import QuestionAnsweringModel
