@@ -370,8 +370,7 @@ class SongNetArgs(LanguageModelingArgs):
     adafactor_relative_step: bool = False
     adafactor_scale_parameter: bool = False
     adafactor_warmup_init: bool = False
-    learning_rate: float = 5e-4
-    optimizer: str = "AdamW"
+    learning_rate: float = 1e-3
     early_stopping_metric: str = "eval_ppl"
     special_tokens_list: list = field(default_factory=list)
     skip_special_tokens: bool = False
@@ -382,6 +381,6 @@ class SongNetArgs(LanguageModelingArgs):
     num_heads: int = 12
     num_layers: int = 12
     dropout: float = 0.2
-    warmup_steps: int = 1000
+    warmup_ratio: float = 0.05
     weight_decay: float = 0.0
     smoothing_factor: float = 0.1

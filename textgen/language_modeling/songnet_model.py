@@ -787,33 +787,14 @@ class SongNetModel:
         args.warmup_steps = (
             warmup_steps if args.warmup_steps == 0 else args.warmup_steps
         )
+        logger.info(f"warmup_steps:{warmup_steps}, t_total:{t_total}, args.warmup_steps:{args.warmup_steps}")
 
-        if args.optimizer == "AdamW":
-            optimizer = AdamW(
-                model.parameters(),
-                lr=args.learning_rate,
-                eps=args.adam_epsilon,
-            )
-        elif args.optimizer == "Adafactor":
-            optimizer = Adafactor(
-                model.parameters(),
-                lr=args.learning_rate,
-                eps=args.adafactor_eps,
-                clip_threshold=args.adafactor_clip_threshold,
-                decay_rate=args.adafactor_decay_rate,
-                beta1=args.adafactor_beta1,
-                weight_decay=args.weight_decay,
-                scale_parameter=args.adafactor_scale_parameter,
-                relative_step=args.adafactor_relative_step,
-                warmup_init=args.adafactor_warmup_init,
-            )
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate,
+                eps=args.adam_epsilon)
 
-        else:
-            raise ValueError(
-                "{} is not a valid optimizer class. Please use one of ('AdamW', 'Adafactor') instead.".format(
-                    args.optimizer
-                )
-            )
+        def get_lr(optimizer):
+            for param_group in optimizer.param_groups:
+                return param_group['lr']
 
         if args.scheduler == "constant_schedule":
             scheduler = get_constant_schedule(optimizer)
@@ -938,10 +919,13 @@ class SongNetModel:
                 current_loss = loss.item()
                 current_ppl = ppl / bsz
 
+                lr = get_lr(optimizer)
+
                 if show_running_loss:
                     batch_iterator.set_description(
                         f"Epochs {epoch_number}/{args.num_train_epochs}. "
-                        f"Running Loss: {current_loss:9.4f} PPL: {current_ppl:9.4f}"
+                        f"Running Loss: {current_loss:9.4f} PPL: {current_ppl:9.4f} "
+                        f"LR: {lr:9.8f}"
                     )
 
                 if args.gradient_accumulation_steps > 1:
@@ -950,8 +934,7 @@ class SongNetModel:
                 loss.backward()
 
                 if (step + 1) % args.gradient_accumulation_steps == 0:
-                    if args.optimizer == "AdamW":
-                        torch.nn.utils.clip_grad_norm_(
+                    torch.nn.utils.clip_grad_norm_(
                             model.parameters(), args.max_grad_norm
                         )
 
