@@ -397,6 +397,38 @@ def preprocess_data(line, max_length, min_length):
     return xs_tpl, xs_seg, xs_pos, ys, ys_tpl, ys_seg, ys_pos
 
 
+class Optim:
+    "Optim wrapper that implements rate."
+    def __init__(self, emb_dim, factor, warmup, optimizer):
+        self.optimizer = optimizer
+        self._step = 0
+        self.warmup = warmup
+        self.factor = factor
+        self.emb_dim = emb_dim
+        self.lr = 0
+
+    def step(self):
+        "Update parameters and rate"
+        self._step += 1
+        rate = self.rate()
+        for p in self.optimizer.param_groups:
+            p['lr'] = rate
+        self.lr = rate
+        self.optimizer.step()
+
+    def rate(self, step = None):
+        "Implement `lrate` above"
+        if step is None:
+            step = self._step
+        return self.factor * (self.emb_dim ** (-0.5) * min(step ** (-0.5), step * self.warmup ** (-1.5)))
+
+    def state_dict(self):
+        return self.optimizer.state_dict()
+
+    def load_state_dict(self, m):
+        self.optimizer.load_state_dict(m)
+
+
 def http_get(url, path, extract: bool = True):
     """
     Downloads a URL to a given path on disc

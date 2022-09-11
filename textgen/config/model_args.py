@@ -366,13 +366,14 @@ class SongNetArgs(LanguageModelingArgs):
     num_beams: int = 3
     num_return_sequences: int = 1
     repetition_penalty: float = 1.0
-    scheduler: str = "linear_schedule_with_warmup"
+    scheduler: str = None
     adafactor_relative_step: bool = False
     adafactor_scale_parameter: bool = False
     adafactor_warmup_init: bool = False
     learning_rate: float = 1e-3
     early_stopping_metric: str = "eval_ppl"
     special_tokens_list: list = field(default_factory=list)
+    save_eval_checkpoints: bool = False
     skip_special_tokens: bool = False
     k: int = 50
     use_multiprocessed_decoding: bool = False

@@ -18,14 +18,6 @@ import torch.nn.functional as F
 from loguru import logger
 from torch import nn
 from tqdm.auto import tqdm, trange
-from transformers.optimization import AdamW, Adafactor
-from transformers.optimization import (
-    get_constant_schedule,
-    get_constant_schedule_with_warmup,
-    get_linear_schedule_with_warmup,
-    get_cosine_schedule_with_warmup,
-    get_polynomial_decay_schedule_with_warmup,
-)
 
 from textgen.config.model_args import SongNetArgs
 from textgen.language_modeling.songnet_utils import (
@@ -36,6 +28,7 @@ from textgen.language_modeling.songnet_utils import (
     PRETRAINED_MODELS,
     LOCAL_DIR,
     http_get,
+    Optim,
 )
 
 has_cuda = torch.cuda.is_available()
@@ -789,47 +782,12 @@ class SongNetModel:
         )
         logger.debug(f"t_total:{t_total}, warmup_steps:{args.warmup_steps}")
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate,
-                                     eps=args.adam_epsilon)
-
+        optimizer = Optim(args.embed_dim, args.learning_rate, args.warmup_steps,
+                      torch.optim.Adam(model.parameters(), eps=args.adam_epsilon))
+        scheduler = None
         def get_lr(optimizer):
             for param_group in optimizer.param_groups:
                 return param_group['lr']
-
-        if args.scheduler == "constant_schedule":
-            scheduler = get_constant_schedule(optimizer)
-
-        elif args.scheduler == "constant_schedule_with_warmup":
-            scheduler = get_constant_schedule_with_warmup(
-                optimizer, num_warmup_steps=args.warmup_steps
-            )
-
-        elif args.scheduler == "linear_schedule_with_warmup":
-            scheduler = get_linear_schedule_with_warmup(
-                optimizer,
-                num_warmup_steps=args.warmup_steps,
-                num_training_steps=t_total,
-            )
-
-        elif args.scheduler == "cosine_schedule_with_warmup":
-            scheduler = get_cosine_schedule_with_warmup(
-                optimizer,
-                num_warmup_steps=args.warmup_steps,
-                num_training_steps=t_total,
-                num_cycles=args.cosine_schedule_num_cycles,
-            )
-
-        elif args.scheduler == "polynomial_decay_schedule_with_warmup":
-            scheduler = get_polynomial_decay_schedule_with_warmup(
-                optimizer,
-                num_warmup_steps=args.warmup_steps,
-                num_training_steps=t_total,
-                lr_end=args.polynomial_decay_schedule_lr_end,
-                power=args.polynomial_decay_schedule_power,
-            )
-
-        else:
-            raise ValueError("{} is not a valid scheduler.".format(args.scheduler))
 
         if (
                 args.model_name
@@ -918,9 +876,8 @@ class SongNetModel:
                     loss = (loss.mean())
                 current_loss = loss.item()
                 current_ppl = ppl / bsz
-
-                lr = get_lr(optimizer)
-
+                lr = get_lr(optimizer.optimizer)
+                
                 if show_running_loss:
                     batch_iterator.set_description(
                         f"Epochs {epoch_number}/{args.num_train_epochs}. "
@@ -939,7 +896,6 @@ class SongNetModel:
                     )
 
                     optimizer.step()
-                    scheduler.step()  # Update learning rate schedule
                     model.zero_grad()
                     global_step += 1
 
