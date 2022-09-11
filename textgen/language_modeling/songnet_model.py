@@ -783,8 +783,9 @@ class SongNetModel:
         logger.debug(f"t_total:{t_total}, warmup_steps:{args.warmup_steps}")
 
         optimizer = Optim(args.embed_dim, args.learning_rate, args.warmup_steps,
-                      torch.optim.Adam(model.parameters(), eps=args.adam_epsilon))
+                          torch.optim.Adam(model.parameters(), eps=args.adam_epsilon))
         scheduler = None
+
         def get_lr(optimizer):
             for param_group in optimizer.param_groups:
                 return param_group['lr']
@@ -797,9 +798,6 @@ class SongNetModel:
             # Load in optimizer and scheduler states
             optimizer.load_state_dict(
                 torch.load(os.path.join(args.model_name, "optimizer.pt"))
-            )
-            scheduler.load_state_dict(
-                torch.load(os.path.join(args.model_name, "scheduler.pt"))
             )
 
         if args.n_gpu > 1:
@@ -877,12 +875,11 @@ class SongNetModel:
                 current_loss = loss.item()
                 current_ppl = ppl / bsz
                 lr = get_lr(optimizer.optimizer)
-                
+
                 if show_running_loss:
                     batch_iterator.set_description(
                         f"Epochs {epoch_number}/{args.num_train_epochs}. "
-                        f"Running Loss: {current_loss:9.4f} PPL: {current_ppl:9.4f} "
-                        f"LR: {lr:9.8f}"
+                        f"Running Loss: {current_loss:9.4f} PPL: {current_ppl:9.4f} LR: {lr:9.8f} "
                     )
 
                 if args.gradient_accumulation_steps > 1:
