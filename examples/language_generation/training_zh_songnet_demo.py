@@ -54,7 +54,7 @@ def main():
             model_name=args.model_name,
             args=model_args
         )
-        logger.info(model.tokenizer)
+        logger.info(f"{model.tokenizer}, {model.args}")
         model.train_model(args.train_file, eval_file=args.test_file)
         print(model.eval_model(args.test_file))
 
