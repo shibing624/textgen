@@ -375,7 +375,7 @@ class SongNetArgs(LanguageModelingArgs):
     special_tokens_list: list = field(default_factory=list)
     save_eval_checkpoints: bool = False
     skip_special_tokens: bool = False
-    k: int = 50
+    k: int = 16
     use_multiprocessed_decoding: bool = False
     embed_dim: int = 768
     ff_embed_dim: int = 3072

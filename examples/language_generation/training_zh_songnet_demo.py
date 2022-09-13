@@ -39,7 +39,7 @@ def main():
             "num_train_epochs": args.num_epochs,
             "save_eval_checkpoints": False,
             "save_model_every_epoch": False,
-            "save_optimizer_and_scheduler": False,
+            "save_optimizer_and_scheduler": True,
             "evaluate_generated_text": True,
             "evaluate_during_training": True,
             "evaluate_during_training_verbose": True,
