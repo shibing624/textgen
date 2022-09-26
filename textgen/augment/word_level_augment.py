@@ -78,9 +78,10 @@ class RandomReplace(EfficientRandomGen):
         if len(tokens) >= min_token_num:
             for i in range(len(tokens)):
                 old_token = tokens[i]
-                if self.get_random_prob() < self.token_prob:
+                if old_token in self.vocab and self.get_random_prob() < self.token_prob:
                     tokens[i] = self.get_random_token()
-                    details.append((old_token, tokens[i], idx, idx + len(tokens[i])))
+                    if tokens[i] != old_token:
+                        details.append((old_token, tokens[i], idx, idx + len(tokens[i])))
                 idx += len(tokens[i])
         return tokens, details
 
@@ -117,7 +118,7 @@ class InsertReplace(EfficientRandomGen):
         if len(tokens) >= min_token_num:
             for i in range(len(tokens)):
                 old_token = tokens[i]
-                if self.get_random_prob() < self.token_prob:
+                if old_token in self.vocab and self.get_random_prob() < self.token_prob:
                     tokens[i] = self.get_insert_token(tokens[i])
                     details.append((old_token, tokens[i], idx, idx + len(tokens[i])))
                 idx += len(tokens[i])
@@ -156,7 +157,7 @@ class DeleteReplace(EfficientRandomGen):
         if len(tokens) >= min_token_num:
             for i in range(len(tokens)):
                 old_token = tokens[i]
-                if self.get_random_prob() < self.token_prob:
+                if old_token in self.vocab and self.get_random_prob() < self.token_prob:
                     tokens[i] = self.get_delete_token()
                     details.append((old_token, tokens[i], idx, idx + len(tokens[i])))
                 idx += len(tokens[i])
@@ -221,8 +222,8 @@ class MixEfficientRandomGen(EfficientRandomGen):
             target_candidate = self.word2vec_model.similar_by_word(word, topn=3)
             target_words = [w for w, p in target_candidate if w]
             if len(target_words) > 1:
-                word = np.random.choice(target_words, size=1).tolist()[0]
-                return word
+                new_word = np.random.choice(target_words, size=1).tolist()[0]
+                return new_word
         return word
 
     def get_replace_token(self, word):
@@ -280,7 +281,7 @@ class TfIdfWordReplace(MixEfficientRandomGen):
         """Compute the probability of replacing tokens in a sentence."""
         cur_tf_idf = collections.defaultdict(int)
         for word in all_words:
-            cur_tf_idf[word] += 1. / len(all_words) * self.idf[word]
+            cur_tf_idf[word] += 1. / len(all_words) * self.idf.get(word, 0)
         replace_prob = []
         for word in all_words:
             replace_prob += [cur_tf_idf[word]]
@@ -311,10 +312,11 @@ class TfIdfWordReplace(MixEfficientRandomGen):
         idx = 0
         for i in range(len(tokens)):
             old_token = tokens[i]
-            if self.get_random_prob() < replace_prob[i]:
+            if old_token in self.idf and self.get_random_prob() < replace_prob[i]:
                 # Use Tfidf find similar token
                 tokens[i] = self.get_similar_token(tokens[i])
-                details.append((old_token, tokens[i], idx, idx + len(tokens[i])))
+                if tokens[i] != old_token:
+                    details.append((old_token, tokens[i], idx, idx + len(tokens[i])))
             idx += len(tokens[i])
         return tokens, details
 
@@ -326,7 +328,6 @@ class TfIdfWordReplace(MixEfficientRandomGen):
         for idx in token_list_idx:
             self.token_list += [self.tf_idf_keys[idx]]
         self.token_ptr = len(self.token_list) - 1
-        logger.debug("sampled token list: {}".format(self.token_list))
 
 
 class MixWordReplace(TfIdfWordReplace):
@@ -348,14 +349,15 @@ class MixWordReplace(TfIdfWordReplace):
                                              delete_prob=delete_prob,
                                              insert_prob=insert_prob)
 
-    def replace_tokens(self, word_list, replace_prob):
+    def replace_tokens(self, tokens, replace_prob):
         """Replace tokens with mix method."""
         details = []
         idx = 0
-        for i in range(len(word_list)):
-            old_token = word_list[i]
-            if self.get_random_prob() < replace_prob[i]:
-                word_list[i] = self.get_replace_token(word_list[i])
-                details.append((old_token, word_list[i], idx, idx + len(word_list[i])))
-            idx += len(word_list[i])
-        return word_list, details
+        for i in range(len(tokens)):
+            old_token = tokens[i]
+            if old_token in self.idf and self.get_random_prob() < replace_prob[i]:
+                tokens[i] = self.get_replace_token(tokens[i])
+                if tokens[i] != old_token:
+                    details.append((old_token, tokens[i], idx, idx + len(tokens[i])))
+            idx += len(tokens[i])
+        return tokens, details

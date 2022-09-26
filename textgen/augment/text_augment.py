@@ -4,6 +4,8 @@
 @description: 
 """
 from loguru import logger
+from jieba import analyse
+import jieba
 from text2vec import Word2Vec
 
 from textgen.augment.sentence_level_augment import back_translation
@@ -24,20 +26,38 @@ class TextAugment:
     Text Data Augmentation
     """
 
-    def __init__(self, sentence_list, tokenizer=None):
+    def __init__(self, sentence_list=None, tokenizer=None):
         """
         Init
         :param sentence_list: list, docs
         """
-        self.tokenizer = tokenizer if tokenizer else Tokenizer()
+        self.tokenizer = tokenizer if tokenizer is not None else Tokenizer()
         vec = Word2Vec()
         self.w2v = vec.w2v
-        tokenized_sentence_list = [self.tokenizer.tokenize(i) for i in sentence_list]
-        self.data_idf = get_data_idf(tokenized_sentence_list)
-        word_list = []
-        for i in tokenized_sentence_list:
-            word_list.extend(i)
-        self.vocab = build_vocab(word_list)
+        if sentence_list is None:
+            # Use jieba IDF and TF dict
+            idf = analyse.TFIDF()
+            word_idf = idf.idf_freq
+            dt = jieba.Tokenizer()
+            dt.initialize()
+            word_tf = dt.FREQ
+
+            tf_idf = {}
+            for w, v in word_idf.items():
+                tf_idf[w] = word_tf.get(w, 0) * v
+            self.data_idf = {
+                "idf": word_idf,
+                "tf_idf": tf_idf,
+            }
+            word_list = list(word_idf.keys())
+            self.vocab = build_vocab(word_list)
+        else:
+            tokenized_sentence_list = [self.tokenizer.tokenize(i) for i in sentence_list]
+            self.data_idf = get_data_idf(tokenized_sentence_list)
+            word_list = []
+            for i in tokenized_sentence_list:
+                word_list.extend(i)
+            self.vocab = build_vocab(word_list)
 
     def augment(self, query, aug_ops='tfidf-0.2', **kwargs):
         """

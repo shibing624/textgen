@@ -4,6 +4,7 @@
 @description: 生成仿真评论
 """
 import os
+from jieba import analyse
 from loguru import logger
 from textgen.unsup_generation.tgls_util import (
     load_list,
@@ -27,20 +28,24 @@ default_pos_adj_word_path = os.path.join(pwd_path, '../data/HowNetPOSWord.txt')
 
 
 class TglsModel:
-    def __init__(self, docs, stopwords_path=default_stopwords_path, pos_adj_word_path=default_pos_adj_word_path):
+    def __init__(self, docs=None, stopwords_path=default_stopwords_path, pos_adj_word_path=default_pos_adj_word_path):
         """
         Initialize the model with the given docs
         """
-        logger.debug(f'Docs size: {len(docs)}')
-        # 加载停用词
+        # Load stop words
         self.stopwords = set(load_list(stopwords_path))
-        # 计算除去停用词的每个词的idf值
-        self.word_idf, self.seg_pos_text = caculate_word_idf(docs, self.stopwords)
-
-        review_list, all_word = text2review(self.seg_pos_text)
-        phrase_list = find_word_phrase(all_word, review_list)
-        logger.debug(f'Find {len(phrase_list)} new words, top10: {phrase_list[:10]}')
-
+        if docs is None:
+            # Use jieba IDF
+            tfidf = analyse.TFIDF()
+            self.word_idf = tfidf.idf_freq
+        else:
+            logger.debug(f'Docs size: {len(docs)}')
+            # 计算除去停用词的每个词的idf值
+            self.word_idf, self.seg_pos_text = caculate_word_idf(docs, self.stopwords)
+            review_list, all_word = text2review(self.seg_pos_text)
+            phrase_list = find_word_phrase(all_word, review_list)
+            logger.debug(f'Find {len(phrase_list)} new words, top10: {phrase_list[:10]}')
+        logger.debug(f'Load {len(self.word_idf)} words idf, top10: {list(self.word_idf.items())[:10]}')
         # 加载正向情感词典
         self.pos_adj_word = load_list(pos_adj_word_path)
 
