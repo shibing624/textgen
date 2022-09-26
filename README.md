@@ -28,19 +28,32 @@
 文本生成，文本数据增强怎么做？
 
 # Solution
+## 文本生成模型
 
+1. Seq2Seq、ConvSeq2Seq、BART
+2. GPT2、SongNet
+3. T5、CopyT5
+
+## 文本扩增
+### 词粒度扩增
 1. UDA，非核心词替换
 2. EDA，简单数据增强技术：相似词、同义词替换，随机词插入、删除、替换
-3. 回译（BT, Back Translate）：中文-英文-中文
-4. 生成模型：Seq2Seq，GPT2，T5，BART等
+
+### 句粒度扩增
+1. 回译（BT, Back Translate）：中文-英文-中文
+2. GPT2模型续写：短文本->长文本
+3. BART摘要模型：长文本->短文本
+4. TGLS：无监督相似文本生成模型
+
 
 # Feature
 
-- [UDA(非核心词替换)](textgen/augment/word_level_augment.py)：本项目参考Google的UDA(非核心词替换)算法，基于TF-IDF将句子中部分不重要词替换为同义词，产生新的文本，实现了文本扩增
+- [UDA(非核心词替换)/EDA](textgen/augment/word_level_augment.py)：本项目参考Google的UDA(非核心词替换)算法和EDA算法，基于TF-IDF将句子中部分不重要词替换为同义词，随机词插入、删除、替换等方法，产生新的文本，实现了文本扩增
 - [BT(回译)](textgen/augment/sentence_level_augment.py)：本项目基于百度翻译API实现了回译功能，先把中文句子翻译为英文，再把英文翻译为新的中文
 - [Seq2Seq](textgen/seq2seq)：本项目基于PyTorch实现了Seq2Seq、ConvSeq2Seq、BART模型的训练和预测，可以用于文本翻译、对话生成、摘要生成等文本生成任务
 - [T5](textgen/t5)：本项目基于PyTorch实现了T5和CopyT5模型训练和预测，可以用于文本翻译、对话生成、对联生成、文案撰写等文本生成任务
 - [GPT2](textgen/language_modeling)：本项目基于PyTorch实现了GTP2模型训练和预测，可以用于文章生成、对联生成等文本生成任务
+- [SongNet](textgen/language_modeling/songnet_model.py)：本项目基于PyTorch实现了SongNet模型训练和预测，可以用于规范格式的诗词、歌词等文本生成任务
 - [TGLS](textgen/unsup_generation)：本项目实现了[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)无监督相似文本生成模型，是一种“先搜索后学习”的文本生成方法，通过反复迭代学习候选集，最终模型能生成类似候选集的高质量相似文本
 
 
@@ -73,55 +86,6 @@ python3 setup.py install
 ```
 
 # Usage
-
-## Text Augmentation(EDA、UDA文本数据增强)
-
-example: [examples/text_augmentation_demo.py](examples/text_augmentation_demo.py)
-
-```python
-import sys
-
-sys.path.append('..')
-from textgen.augment import TextAugment
-
-if __name__ == '__main__':
-    docs = ['主要研究机器学习、深度学习、计算机视觉、智能对话系统相关内容',
-            '晚上肚子好难受',
-            '你会武功吗，我不会',
-            '组装标题质量受限于广告主自提物料的片段质量，且表达丰富度有限',
-            ]
-    m = TextAugment(sentence_list=docs)
-    a = docs[0]
-    print(a)
-
-    b = m.augment(a, aug_ops='random-0.1')
-    print('random-0.1:', b)
-
-    b = m.augment(a, aug_ops='insert-0.1')
-    print('insert-0.1:', b)
-
-    # tfidf
-    b = m.augment(a, aug_ops='tfidf-0.2')
-    print('tfidf-0.2:', b)
-
-    b = m.augment(a, aug_ops='mix-0.1', similar_prob=0.1,
-                  random_prob=0.4, delete_prob=0.3, insert_prob=0.2)
-    print('mix-0.1:', b)
-
-    b = m.augment(a, aug_ops='bt')
-    print('bt:', b)
-```
-
-output:
-
-```bash
-主要研究机器学习、深度学习、计算机视觉、智能对话系统相关内容
-random-0.1: ('主要的机器学习、深度学习吗计算机视觉、好孤单对话系统相关内容', [('研究', '的', 2, 3), ('、', '吗', 12, 13), ('智能', '好孤单', 19, 22)])
-insert-0.1: ('主要研究机器机器学习、深度学习、计算机视觉、智能对话对话系统系统相关内容', [('机器', '机器机器', 4, 8), ('对话', '对话对话', 24, 28), ('系统', '系统系统', 28, 32)])
-tfidf-0.2: ('主要原因研究机器学习、深度学习、计算机硬件视觉、智能化对话系统相关内容', [('主要', '主要原因', 0, 4), ('计算机', '计算机硬件', 16, 21), ('智能', '智能化', 24, 27)])
-mix-0.1: ('主要受限于机器学习、深度学习、计算机视觉、智能对话系统相关内容', [('研究', '受限于', 2, 5)])
-bt: ('主要研究机器学习、深度学习、计算机视觉和智能对话系统', [])
-```
 
 ## Seq2Seq 模型
 
@@ -314,6 +278,54 @@ example: [examples/language_generation/training_couplet_gpt2_demo.py](https://gi
 - [对联生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%AF%B9%E8%81%94%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)
 - [古诗生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%8F%A4%E8%AF%97%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)
 
+
+## Keyword Text Augmentation(EDA/UDA)
+
+example: [examples/text_augmentation_demo.py](examples/text_augmentation_demo.py)
+
+```python
+import sys
+
+sys.path.append('..')
+from textgen.augment import TextAugment
+
+if __name__ == '__main__':
+    docs = ['主要研究机器学习、深度学习、计算机视觉、智能对话系统相关内容',
+            '晚上肚子好难受',
+            '你会武功吗，我不会',
+            '组装标题质量受限于广告主自提物料的片段质量，且表达丰富度有限',
+            ]
+    m = TextAugment(sentence_list=docs)
+    a = docs[0]
+    print(a)
+
+    b = m.augment(a, aug_ops='random-0.2')
+    print('random-0.2:', b)
+
+    b = m.augment(a, aug_ops='insert-0.2')
+    print('insert-0.2:', b)
+
+    b = m.augment(a, aug_ops='delete-0.2')
+    print('delete-0.2:', b)
+
+    b = m.augment(a, aug_ops='tfidf-0.2')
+    print('tfidf-0.2:', b)
+
+    b = m.augment(a, aug_ops='mix-0.2')
+    print('mix-0.2:', b)
+```
+
+output:
+
+```bash
+主要研究机器学习、深度学习、计算机视觉、智能对话系统相关内容
+random-0.2: ('主要陪陪机器学习、深度学习主要计算机视觉、智能对话系统受限于内容', [('研究', '陪陪', 2, 4), ('、', '主要', 13, 15), ('相关', '受限于', 27, 30)])
+insert-0.2: ('主要研究机器机器学习学习、深度深度学习、计算机视觉、智能对话系统相关内容', [('机器', '机器机器', 4, 8), ('学习', '学习学习', 8, 12), ('深度', '深度深度', 13, 17)])
+delete-0.2: ('主要研究机器学习、深度学习、计算机视觉、对话系统相关内容', [('智能', '', 20, 20)])
+tfidf-0.2: ('一是研究机器学习、深度学习、计算机听觉、智能交谈系统密切相关内容', [('主要', '一是', 0, 2), ('视觉', '听觉', 17, 19), ('对话', '交谈', 22, 24), ('相关', '密切相关', 26, 30)])
+mix-0.2: ('主要研究机器学习、深度学、计算机听觉、智能对话软件系统相关内容', [('学习', '学', 11, 12), ('视觉', '听觉', 16, 18), ('系统', '软件系统', 23, 27)])
+```
+
 ## TGLS 模型（无监督相似文本生成模型）
 
 无监督的中文电商评论生成：从**电商评论**中提取用户表达观点的短句并进行组合来生成仿真评论。
@@ -325,8 +337,7 @@ import os
 import sys
 
 sys.path.append('..')
-from textgen.unsup_generation import TglsModel
-from textgen.unsup_generation.phrase import load_list
+from textgen.unsup_generation import TglsModel, load_list
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
 
