@@ -20,7 +20,8 @@ def main():
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/toy/', type=str, help='Model output directory')
-    parser.add_argument('--max_seq_length', default=50, type=int, help='Max sequence length')
+    parser.add_argument('--max_seq_length', default=50, type=int, help='Input max sequence length')
+    parser.add_argument('--max_length', default=50, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=30, type=int, help='Number of training epochs')
     parser.add_argument('--batch_size', default=4, type=int, help='Batch size')
     args = parser.parse_args()
@@ -51,6 +52,7 @@ def main():
             "reprocess_input_data": True,
             "overwrite_output_dir": True,
             "max_seq_length": args.max_seq_length,
+            "max_length": args.max_length,
             "train_batch_size": args.batch_size,
             "num_train_epochs": args.num_epochs,
             "save_eval_checkpoints": False,
