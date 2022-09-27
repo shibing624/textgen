@@ -3,6 +3,7 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
+import os
 from loguru import logger
 import argparse
 from transformers import BertTokenizerFast
@@ -42,7 +43,9 @@ def main():
             "gradient_accumulation_steps": 8,
             "num_train_epochs": args.num_epochs,
             "mlm": False,
+            "save_best_model": True,
             "output_dir": args.output_dir,
+            "best_model_dir": os.path.join(args.output_dir, "best_model"),
         }
         tokenizer = BertTokenizerFast.from_pretrained(args.model_name)
         model = LanguageModelingModel(args.model_type, args.model_name, args=train_args, tokenizer=tokenizer)

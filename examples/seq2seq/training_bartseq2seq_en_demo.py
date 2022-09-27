@@ -3,6 +3,7 @@
 @author:XuMing(xuming624@qq.com)
 @description:
 """
+import os
 import argparse
 import pandas as pd
 from loguru import logger
@@ -70,6 +71,7 @@ def main():
             "use_multiprocessing": True,
             "save_best_model": True,
             "output_dir": args.output_dir,
+            "best_model_dir": os.path.join(args.output_dir, "best_model"),
             "use_early_stopping": True,
         }
         model = BartSeq2SeqModel(

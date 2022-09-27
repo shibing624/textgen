@@ -102,6 +102,7 @@ def main():
             "mlm": False,
             "output_dir": args.output_dir,
             "save_best_model": True,
+            "best_model_dir": os.path.join(args.output_dir, "best_model"),
             "evaluate_during_training": True,
             "num_return_sequences": args.num_return_sequences,
         }

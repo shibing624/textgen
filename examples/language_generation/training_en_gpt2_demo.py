@@ -34,7 +34,9 @@ def finetune(prompts, train_path, test_path):
         "gradient_accumulation_steps": 8,
         "num_train_epochs": 1,
         "mlm": False,
-        "output_dir": f"outputs/en_finetuned/",
+        "output_dir": "outputs/en_finetuned/",
+        "save_best_model": True,
+        "best_model_dir": "outputs/en_finetuned/best_model",
     }
 
     model = LanguageModelingModel("gpt2", "gpt2", args=train_args)
