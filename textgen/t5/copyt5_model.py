@@ -118,6 +118,7 @@ class CopyT5Model:
                 self.args.tokenizer_name = self.args.model_name
         else:
             self.tokenizer = tokenizer
+            self.model.resize_token_embeddings(len(self.tokenizer))
 
         if self.args.dynamic_quantize:
             self.model = torch.quantization.quantize_dynamic(
