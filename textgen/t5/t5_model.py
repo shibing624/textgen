@@ -961,9 +961,6 @@ class T5Model:
         nb_eval_steps = 0
         model.eval()
 
-        if args.n_gpu > 1:
-            model = torch.nn.DataParallel(model)
-
         if self.args.fp16:
             from torch.cuda import amp
 
