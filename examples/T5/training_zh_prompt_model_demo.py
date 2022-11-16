@@ -49,8 +49,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', default='../data/pCLUE_train_1k.json', type=str, help='Training data file')
     parser.add_argument('--model_type', default='t5', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='Langboat/mengzi-t5-base', type=str,
-                        help='Transformers model or path')  # ClueAI/PromptCLUE-base
+    parser.add_argument('--model_name', default='ClueAI/PromptCLUE-base', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--prefix', default='prompt', type=str, help='Prefix str')
@@ -79,7 +78,7 @@ def main():
             "train_batch_size": args.batch_size,
             "num_train_epochs": args.num_epochs,
             "save_eval_checkpoints": False,
-            "save_model_every_epoch": False,
+            "save_model_every_epoch": True,
             "evaluate_generated_text": True,
             "evaluate_during_training": True,
             "evaluate_during_training_verbose": True,
