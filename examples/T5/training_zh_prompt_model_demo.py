@@ -27,7 +27,7 @@ sys.path.append('../..')
 from textgen import T5Model
 
 
-def load_json_data(file_path):
+def load_json_data(prefix, file_path):
     data = []
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
@@ -39,7 +39,7 @@ def load_json_data(file_path):
                 target_text = json_string["target"]
                 answer_choices = json_string.get("answer_choices", [])
                 type = json_string["type"]
-                data.append([input_text, target_text])
+                data.append([prefix, input_text, target_text])
             else:
                 logger.warning(f'line error: {line}')
     return data
@@ -53,6 +53,7 @@ def main():
                         help='Transformers model or path')  # ClueAI/PromptCLUE-base
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
+    parser.add_argument('--prefix', default='prompt', type=str, help='Prefix str')
     parser.add_argument('--output_dir', default='./outputs/prompt_zh/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=512, type=int, help='Output max sequence length')
@@ -63,12 +64,12 @@ def main():
 
     if args.do_train:
         logger.info('Loading data...')
-        train_data = load_json_data(args.train_file)
+        train_data = load_json_data(args.prefix, args.train_file)
         logger.debug('train_data: {}'.format(train_data[:10]))
-        train_df = pd.DataFrame(train_data, columns=["input_text", "target_text"])
+        train_df = pd.DataFrame(train_data, columns=["prefix", "input_text", "target_text"])
 
-        eval_data = load_json_data(args.train_file)[:10]
-        eval_df = pd.DataFrame(eval_data, columns=["input_text", "target_text"])
+        eval_data = load_json_data(args.prefix, args.train_file)[:10]
+        eval_df = pd.DataFrame(eval_data, columns=["prefix", "input_text", "target_text"])
 
         model_args = {
             "reprocess_input_data": True,
@@ -114,14 +115,15 @@ def main():
             "阅读下列对话。_女：小李，听说你的毕业设计主题是环保？男：对，我的作品所用的材料大都是一些废弃的日用品。女：都用了什么东西？_听者会怎么说？",
             "这篇新闻会出现在哪个栏目？吴绮莉独自返家神情落寞 再被问小龙女只说了7个字_选项：故事，文化，娱乐，体育，财经，房产，汽车，教育，科技，军事，旅游，国际，股票，农业，游戏_答案：",
             "我想知道下面两句话的意思是否相同。“怎么把借呗的钱转到余额宝”，“借呗刚刚才转钱到余额宝，可以重新扣一次款吗”是相同的吗？。选项：是的，不是。答案："]
+        sentences_add_prefix = [args.prefix + ": " + i for i in sentences]
         print("inputs:", sentences)
-        print("outputs:", model.predict(sentences))
+        print("outputs:", model.predict(sentences_add_prefix))
 
+        sentences_add_prefix = sentences_add_prefix * 50
         t1 = time.time()
-        sentences = sentences * 50
-        res = model.predict(sentences)
+        res = model.predict(sentences_add_prefix)
         print(type(res), len(res))
-        logger.info(f'spend time: {time.time() - t1}, size: {len(sentences)}')
+        logger.info(f'spend time: {time.time() - t1}, size: {len(sentences_add_prefix)}')
 
 
 if __name__ == '__main__':
