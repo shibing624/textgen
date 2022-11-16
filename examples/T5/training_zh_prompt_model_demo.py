@@ -47,7 +47,7 @@ def load_json_data(file_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', default='../data/pCLUE_train.json', type=str, help='Training data file')
+    parser.add_argument('--train_file', default='../data/pCLUE_train_1k.json', type=str, help='Training data file')
     parser.add_argument('--model_type', default='t5', type=str, help='Transformers model type')
     parser.add_argument('--model_name', default='Langboat/mengzi-t5-base', type=str,
                         help='Transformers model or path')  # ClueAI/PromptCLUE-base
