@@ -59,23 +59,23 @@ def evaluate_pclue_fn(test_file, model, select_top=200):
     :param target_file:  正确的文件
     :return: 一个dict，包括总分score，以及各个部分的分数（mrc, generate, classify, nli）
     """
-    predict_lines = open(test_file, 'r', encoding='utf8').readlines()
-    predict_lines = predict_lines[:select_top]
+    test_lines = open(test_file, 'r', encoding='utf8').readlines()
+    test_lines = test_lines[:select_top]
+    predict_lines = model.predict([json.loads(i)['input'] for i in test_lines])
     # 1.记录
     classify_list = []
     mrc_list = []
     generate_list = []
     nli_list = []
-    for i, predict_line in enumerate(predict_lines):
-        json_dict = json.loads(predict_line.strip())
+    for i, test_line in enumerate(test_lines):
+        json_dict = json.loads(test_line.strip())
         type = json_dict["type"]
-        input_text = json_dict['input']
         target_line = json_dict["target"]
         target_answer = target_line.replace("，", ",")  # 正确的标签
         if isinstance(target_answer, list):  # 将列表转换为字符串，如关键词生成
             target_answer = "，".join(target_answer)
         target_answer = normalize(target_answer)
-        predict_answer = model.predict(input_text)[0]  # 预测的标签
+        predict_answer = predict_lines[i]  # 预测的标签
         predict_answer = normalize(predict_answer)
         if len(predict_answer) == 0:
             predict_answer = "无答案"
