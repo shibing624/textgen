@@ -14,6 +14,10 @@ wget https://raw.githubusercontent.com/CLUEbenchmark/pCLUE/main/datasets/pCLUE_t
 wget https://raw.githubusercontent.com/CLUEbenchmark/pCLUE/main/datasets/pCLUE_train_8.json
 wget https://raw.githubusercontent.com/CLUEbenchmark/pCLUE/main/datasets/pCLUE_train_9.json
 cat pCLUE_train_*.json > pCLUE_train.json
+
+wget https://raw.githubusercontent.com/CLUEbenchmark/pCLUE/main/datasets/pCLUE_test_public_1.json
+wget https://raw.githubusercontent.com/CLUEbenchmark/pCLUE/main/datasets/pCLUE_test_public_2.json
+cat pCLUE_test_public*.json > pCLUE_test.json
 """
 import argparse
 import json
