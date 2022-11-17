@@ -19,12 +19,14 @@ import argparse
 import json
 from loguru import logger
 import pandas as pd
+import numpy as np
 import time
 import os
 import sys
 
 sys.path.append('../..')
 from textgen import T5Model
+from textgen.t5.t5_utils import f1_sim, rouge_l_zh
 
 
 def load_json_data(prefix, file_path):
@@ -45,9 +47,79 @@ def load_json_data(prefix, file_path):
     return data
 
 
+def normalize(text):
+    """简单的文本标准化"""
+    return ' '.join(text.lower().split())
+
+
+def evaluate_pclue_fn(test_file, model, select_top=200):
+    """
+    计算pclue的成绩
+    :param test_file: 预测文件
+    :param target_file:  正确的文件
+    :return: 一个dict，包括总分score，以及各个部分的分数（mrc, generate, classify, nli）
+    """
+    predict_lines = open(test_file, 'r', encoding='utf8').readlines()
+    predict_lines = predict_lines[:select_top]
+    # 1.记录
+    classify_list = []
+    mrc_list = []
+    generate_list = []
+    nli_list = []
+    for i, predict_line in enumerate(predict_lines):
+        json_dict = json.loads(predict_line.strip())
+        type = json_dict["type"]
+        input_text = json_dict['input']
+        target_line = json_dict["target"]
+        target_answer = target_line.replace("，", ",")  # 正确的标签
+        if isinstance(target_answer, list):  # 将列表转换为字符串，如关键词生成
+            target_answer = "，".join(target_answer)
+        target_answer = normalize(target_answer)
+        predict_answer = model.predict(input_text)  # 预测的标签
+        predict_answer = normalize(predict_answer)
+        if len(predict_answer) == 0:
+            predict_answer = "无答案"
+        if i % 100 == 0:
+            print(i, "target_answer:", target_answer, ";predict_answer:",
+                  predict_answer, "length of predict_answer:", len(predict_answer))
+        if type == 'classify' or type == 'anaphora_resolution':  # 分类
+            label_temp = True if target_answer == predict_answer else False
+            classify_list.append(label_temp)
+        elif type == 'mrc':  # 阅读理解
+            em = 1 if target_answer == predict_answer else 0
+            f1 = f1_sim(predict_answer, target_answer)
+            mrc_list.append((em, f1))
+        elif type == 'generate':  # 生成
+            rouge_l = rouge_l_zh(target_answer, predict_answer)
+            generate_list.append(rouge_l)
+        elif type == 'nli':  # 推理
+            label_temp = True if target_answer == predict_answer else False
+            nli_list.append(label_temp)
+        else:
+            print("error, predict_line:", predict_line, ";target_line:", target_line)
+            break
+        if i < 10:
+            print(i, 'target_answer:', target_answer, ";predict_answer:", predict_answer)  # 显示部分内容
+
+    # 2.计算最后的得分
+    classify_score = np.average(classify_list)
+    nli_score = np.average(nli_list)
+    generate_score = np.average(generate_list)
+    mrc_em_score = np.average([x[0] for x in mrc_list])
+    mrc_f1_score = np.average([x[1] for x in mrc_list])
+    mrc_score = np.average([mrc_em_score, mrc_f1_score])
+    # 计算总分
+    score = np.average([classify_score, nli_score, generate_score, mrc_score])
+    # 保存分数
+    result_dict = {"score": score, "classify_score": classify_score, "nli_score": nli_score,
+                   "generate_score": generate_score, "mrc_em_score": mrc_em_score, "mrc_f1_score": mrc_f1_score}
+    return result_dict
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', default='../data/pCLUE_train_1k.json', type=str, help='Training data file')
+    parser.add_argument('--test_file', default='../data/pCLUE_test_500.json', type=str, help='Test data file')
     parser.add_argument('--model_type', default='t5', type=str, help='Transformers model type')
     parser.add_argument('--model_name', default='ClueAI/PromptCLUE-base', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
@@ -113,16 +185,17 @@ def main():
         sentences = [
             "阅读下列对话。_女：小李，听说你的毕业设计主题是环保？男：对，我的作品所用的材料大都是一些废弃的日用品。女：都用了什么东西？_听者会怎么说？",
             "这篇新闻会出现在哪个栏目？吴绮莉独自返家神情落寞 再被问小龙女只说了7个字_选项：故事，文化，娱乐，体育，财经，房产，汽车，教育，科技，军事，旅游，国际，股票，农业，游戏_答案：",
-            "我想知道下面两句话的意思是否相同。“怎么把借呗的钱转到余额宝”，“借呗刚刚才转钱到余额宝，可以重新扣一次款吗”是相同的吗？。选项：是的，不是。答案："]
+            "我想知道下面两句话的意思是否相同。“怎么把借呗的钱转到余额宝”，“借呗刚刚才转钱到余额宝，可以重新扣一次款吗”是相同的吗？。选项：是的，不是。答案："
+        ]
         sentences_add_prefix = [args.prefix + ": " + i for i in sentences]
         print("inputs:", sentences)
         print("outputs:", model.predict(sentences_add_prefix))
 
-        sentences_add_prefix = sentences_add_prefix * 50
+        select_top = 200
         t1 = time.time()
-        res = model.predict(sentences_add_prefix)
-        print(type(res), len(res))
-        logger.info(f'spend time: {time.time() - t1}, size: {len(sentences_add_prefix)}')
+        # evaluate the model for multi task
+        evaluate_pclue_fn(args.test_file, model, select_top=select_top)
+        logger.info(f'spend time: {time.time() - t1}, size: {select_top}')
 
 
 if __name__ == '__main__':

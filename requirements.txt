@@ -12,3 +12,4 @@ wandb>=0.10.32
 sacremoses
 sacrebleu
 rouge-score
+Rouge

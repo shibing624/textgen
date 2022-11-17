@@ -11,6 +11,7 @@ from datasets import Dataset as HFDataset
 from datasets import load_dataset
 from torch.utils.data import Dataset
 from tqdm.auto import tqdm
+from rouge import Rouge
 from loguru import logger
 
 
@@ -153,3 +154,61 @@ class T5Dataset(Dataset):
 
     def __getitem__(self, index):
         return self.examples[index]
+
+
+def dynamic_lcs(X, Y):
+    # find the length of the strings
+    m = len(X)
+    n = len(Y)
+
+    # declaring the array for storing the dp values
+    L = [[None] * (n + 1) for i in range(m + 1)]
+
+    """Following steps build L[m + 1][n + 1] in bottom up fashion
+    Note: L[i][j] contains length of LCS of X[0..i-1]
+    and Y[0..j-1]"""
+    for i in range(m + 1):
+        for j in range(n + 1):
+            if i == 0 or j == 0:
+                L[i][j] = 0
+            elif X[i - 1] == Y[j - 1]:
+                L[i][j] = L[i - 1][j - 1] + 1
+            else:
+                L[i][j] = max(L[i - 1][j], L[i][j - 1])
+
+    # L[m][n] contains the length of LCS of X[0..n-1] & Y[0..m-1]
+    return L[m][n]
+
+
+def f1_sim(text_a, text_b):
+    """F1相似度
+    说明：算出两个文本的最长公共子序列长度，然后乘2并处以两者
+    长度之和。
+    脚本见：https://github.com/CLUEbenchmark/pCLUE/blob/main/evaluate_pclue.py
+    计算pCLUE任务总分，及子分数
+    """
+    if not text_a and not text_b:
+        return 0.
+    lcs_len = dynamic_lcs(text_a, text_b)
+    return 2. * lcs_len / (len(text_a) + len(text_b))
+
+
+def rouge_l_zh(target, pred):
+    """计算Rouge-l得分，Rouge-l指标常用于评估自动文本摘要及翻译任务
+    target: 真实标签
+    pred: 预测标签"""
+
+    if not (isinstance(target, str) or isinstance(pred, str)):
+        logger.error("target或pred为非字符串！请检查!")
+        return 0
+    rouge = Rouge()
+    scores = rouge.get_scores(" ".join(list(pred)), " ".join(list(target)))
+    score = scores[0]["rouge-l"]
+    return score["f"]
+
+
+if __name__ == '__main__':
+    a = '123444'
+    b = '23411'
+    print(f1_sim(a, b))
+    print(dynamic_lcs(a, b))
