@@ -190,7 +190,8 @@ def main():
         select_top = 200
         t1 = time.time()
         # evaluate the model for multi task
-        evaluate_pclue_fn(args.test_file, model, select_top=select_top)
+        score = evaluate_pclue_fn(args.test_file, model, select_top=select_top)
+        print(score)
         logger.info(f'spend time: {time.time() - t1}, size: {select_top}')
 
 
