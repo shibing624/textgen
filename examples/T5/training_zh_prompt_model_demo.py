@@ -75,13 +75,10 @@ def evaluate_pclue_fn(test_file, model, select_top=200):
         if isinstance(target_answer, list):  # 将列表转换为字符串，如关键词生成
             target_answer = "，".join(target_answer)
         target_answer = normalize(target_answer)
-        predict_answer = model.predict(input_text)  # 预测的标签
+        predict_answer = model.predict(input_text)[0]  # 预测的标签
         predict_answer = normalize(predict_answer)
         if len(predict_answer) == 0:
             predict_answer = "无答案"
-        if i % 100 == 0:
-            print(i, "target_answer:", target_answer, ";predict_answer:",
-                  predict_answer, "length of predict_answer:", len(predict_answer))
         if type == 'classify' or type == 'anaphora_resolution':  # 分类
             label_temp = True if target_answer == predict_answer else False
             classify_list.append(label_temp)
@@ -96,11 +93,10 @@ def evaluate_pclue_fn(test_file, model, select_top=200):
             label_temp = True if target_answer == predict_answer else False
             nli_list.append(label_temp)
         else:
-            print("error, predict_line:", predict_line, ";target_line:", target_line)
+            logger.error("predict_line: {predict_line}")
             break
         if i < 10:
-            print(i, 'target_answer:', target_answer, ";predict_answer:", predict_answer)  # 显示部分内容
-
+            logger.debug(f"num: {i}, target_answer: {target_answer}; predict_answer: {predict_answer}")
     # 2.计算最后的得分
     classify_score = np.average(classify_list)
     nli_score = np.average(nli_list)
