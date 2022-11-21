@@ -1,7 +1,6 @@
 loguru
 jieba>=0.39
 transformers
-sentencepiece
 datasets
 gensim>=4.0.0
 text2vec
@@ -10,6 +9,4 @@ tqdm>=4.47.0
 pandas
 wandb>=0.10.32
 sacremoses
-sacrebleu
-rouge-score
 Rouge

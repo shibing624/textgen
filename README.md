@@ -87,9 +87,7 @@ python3 setup.py install
 
 # Usage
 
-## Seq2Seq 模型
-
-### ConvSeq2Seq
+## ConvSeq2Seq 模型
 训练并预测ConvSeq2Seq模型：
 
 example: [examples/seq2sesq/training_convseq2seq_model_demo.py](examples/seq2seq/training_convseq2seq_model_demo.py)
@@ -141,7 +139,7 @@ inputs: ["什么是ai", "你是什么类型的计算机", "你知道热力学吗
 outputs: ['人工智能是工程和科学的分支,致力于构建思维的机器。', '我的程序运行在python,所以我在任何运脑上工作！', '我不能错热是一个疯狂的人工智能"200年。']
 ```
 
-### BART
+## BART 模型
 训练并预测BART模型：
 
 example: [examples/seq2sesq/training_bartseq2seq_zh_demo.py](examples/seq2seq/training_bartseq2seq_zh_demo.py)
@@ -255,6 +253,46 @@ inputs: ['什么是ai', '你是什么类型的计算机', '你知道热力学吗
 outputs: ['人工智能有两个广义的定义,任何拟人的机械,如在卡雷尔capeks', '我的程序运行在Python,所以我在任何电脑上工作!', '什么是热力学']
 ```
 
+
+### T5 模型应用
+
+#### Chinese NLP Prompt(prompt-t5-base-chinese) Model
+中文NLP的Prompt模型[shibing624/prompt-t5-base-chinese](https://huggingface.co/shibing624/prompt-t5-base-chinese)，One model For All nlp task(OFA)
+
+
+1. 在[ClueAI/PromptCLUE-base](https://huggingface.co/ClueAI/PromptCLUE-base)预训练模型上fine-tuned
+了[pCLUE中文prompt数据集](https://github.com/CLUEbenchmark/pCLUE)和[SIGHAN+Wang271K中文纠错数据集](https://github.com/shibing624/pycorrector#Dataset)
+2. 模型用[textgen](https://github.com/shibing624/textgen)的`T5Model`训练，复现脚本参考[training_zh_prompt_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/T5/training_zh_prompt_model_demo.py)
+
+
+`prompt-t5-base-chinese` evaluate public test data：
+
+The overall performance of T5 on `pCLUE_test_public.json` **test**:
+
+|model|classify_score|nli_score|generate_score|mrc_f1_score|avg_score|
+|:-- |:--- |:--- |:--- |:--- |:--- |
+|shibing624/prompt-t5-base-chinese|0.5494|0.525|0.2751|0.2259|0.3893|
+
+PromptCLUE：大规模多任务Prompt预训练中文开源模型。
+
+千亿中文token上大规模预训练，累计学习1.5万亿中文token，支持几十个不同类型的NLP任务，具有较好的零样本学习能力和少样本学习能力。针对理解类任务，如分类、情感分析、抽取等，可以自定义标签体系；针对生成任务，可以进行多样性的文本生成。
+
+中文上的三大统一：统一模型框架，统一任务形式，统一应用方式：
+- 统一模型框架：采用Text-to-Text的生成式预训练模型进行统一建模。
+- 统一任务形式：Prompt统一不同的NLP任务间的差异，转化为统一的text-to-text数据形式。
+- 统一应用方式：对目标任务形成拿来即用的模型，下游应用时都可转化为统一的prompt自适应方式，进行zero-shot/few-shot测试。
+
+
+![arch](docs/promptclue.png)
+
+
+```python
+from textgen import T5Model
+model = T5Model("t5", "shibing624/prompt-t5-base-chinese")
+r = model.predict(["中文改错：为了让人们遵守交通规律，警查叔叔不分昼夜在忙碌。"])
+print(r) # ['为了让人们遵守交通规律,警察叔叔不分昼夜在忙碌。']
+```
+
 ## GPT2 模型
 
 ### 中文GPT2 - 文章生成
@@ -277,6 +315,8 @@ example: [examples/language_generation/training_couplet_gpt2_demo.py](https://gi
 
 - [对联生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%AF%B9%E8%81%94%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)
 - [古诗生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%8F%A4%E8%AF%97%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)
+
+## SongNet 模型
 
 
 ## Keyword Text Augmentation(EDA/UDA)
