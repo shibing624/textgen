@@ -73,15 +73,15 @@ model trained by [examples/T5/T5_Finetune_Chinese_Couplet.ipynb](https://github.
 
 # Install
 
-```
-pip3 install torch # conda install pytorch
-pip3 install -U textgen
+```shell
+pip install torch # conda install pytorch
+pip install -U textgen
 ```
 
 or
 
-```
-pip3 install torch # conda install pytorch
+```shell
+pip install torch # conda install pytorch
 git clone https://github.com/shibing624/textgen.git
 cd textgen
 python3 setup.py install
