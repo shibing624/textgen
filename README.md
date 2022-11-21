@@ -256,42 +256,11 @@ outputs: ['人工智能有两个广义的定义,任何拟人的机械,如在卡�
 
 ### T5 模型应用
 
-#### Chinese NLP Prompt(prompt-t5-base-chinese) Model
-中文NLP的Prompt模型[shibing624/prompt-t5-base-chinese](https://huggingface.co/shibing624/prompt-t5-base-chinese)，One model For All nlp task(OFA)
+release基于T5的fine-tuned后的中文模型，可以直接使用。
 
-
-1. 在[ClueAI/PromptCLUE-base](https://huggingface.co/ClueAI/PromptCLUE-base)预训练模型上fine-tuned
-了[pCLUE中文prompt数据集](https://github.com/CLUEbenchmark/pCLUE)和[SIGHAN+Wang271K中文纠错数据集](https://github.com/shibing624/pycorrector#Dataset)
-2. 模型用[textgen](https://github.com/shibing624/textgen)的`T5Model`训练，复现脚本参考[training_zh_prompt_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/T5/training_zh_prompt_model_demo.py)
-
-
-`prompt-t5-base-chinese` evaluate public test data：
-
-The overall performance of T5 on `pCLUE_test_public.json` **test**:
-
-|model|classify_score|nli_score|generate_score|mrc_f1_score|avg_score|
-|:-- |:--- |:--- |:--- |:--- |:--- |
-|shibing624/prompt-t5-base-chinese|0.5494|0.525|0.2751|0.2259|0.3893|
-
-PromptCLUE：大规模多任务Prompt预训练中文开源模型。
-
-千亿中文token上大规模预训练，累计学习1.5万亿中文token，支持几十个不同类型的NLP任务，具有较好的零样本学习能力和少样本学习能力。针对理解类任务，如分类、情感分析、抽取等，可以自定义标签体系；针对生成任务，可以进行多样性的文本生成。
-
-中文上的三大统一：统一模型框架，统一任务形式，统一应用方式：
-- 统一模型框架：采用Text-to-Text的生成式预训练模型进行统一建模。
-- 统一任务形式：Prompt统一不同的NLP任务间的差异，转化为统一的text-to-text数据形式。
-- 统一应用方式：对目标任务形成拿来即用的模型，下游应用时都可转化为统一的prompt自适应方式，进行zero-shot/few-shot测试。
-
-
-![arch](docs/promptclue.png)
-
-
-```python
-from textgen import T5Model
-model = T5Model("t5", "shibing624/prompt-t5-base-chinese")
-r = model.predict(["中文改错：为了让人们遵守交通规律，警查叔叔不分昼夜在忙碌。"])
-print(r) # ['为了让人们遵守交通规律,警察叔叔不分昼夜在忙碌。']
-```
+|Model|Arch|Intro|
+|:-- |:--- |:--- |
+|[shibing624/prompt-t5-base-chinese](https://huggingface.co/shibing624/prompt-t5-base-chinese)|T5|[prompt-t5-base-chinese.md](https://github.com/shibing624/textgen/blob/main/docs/prompt-t5-base-chinese.md)|
 
 ## GPT2 模型
 
@@ -317,6 +286,22 @@ example: [examples/language_generation/training_couplet_gpt2_demo.py](https://gi
 - [古诗生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%8F%A4%E8%AF%97%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)
 
 ## SongNet 模型
+
+格式控制的文本生成模型，paper见[SongNet: Rigid Formats Controlled Text Generation](https://arxiv.org/abs/2004.08022)，
+适用于强韵律格式要求的诗歌、对联、歌词生成等任务。
+
+example: [examples/language_generation/training_zh_songnet_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_songnet_demo.py)
+
+### SongNet 模型应用
+
+release基于SongNet的中文模型，方便大家使用。
+
+|Model|Arch|Intro|
+|:-- |:--- |:--- |
+|[songnet-base-chinese](https://github.com/shibing624/textgen/releases/download/0.1.5/songnet-base-chinese.zip)|SongNet|SongNet预训练模型|
+|[songnet-base-chinese-songci](https://github.com/shibing624/textgen/releases/download/0.1.5/songnet-base-chinese-songci.zip)|SongNet|fine-tuned宋词后的模型|
+|[songnet-base-chinese-couplet](https://github.com/shibing624/textgen/releases/download/0.1.5/songnet-base-chinese-couplet.zip)|SongNet|fine-tuned对联后的模型|
+|[songnet-base-chinese-poem](https://github.com/shibing624/textgen/releases/download/0.1.5/songnet-base-chinese-poem.zip)|SongNet|fine-tuned古诗后的模型|
 
 
 ## Keyword Text Augmentation(EDA/UDA)
