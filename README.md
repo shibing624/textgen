@@ -69,6 +69,8 @@ run example: [examples/gradio_demo.py](examples/gradio_demo.py) to see the demo:
 python examples/gradio_demo.py
 ```
 
+model trained by [examples/T5/T5_Finetune_Chinese_Couplet.ipynb](https://github.com/shibing624/textgen/blob/main/examples/T5/T5_Finetune_Chinese_Couplet.ipynb)
+
 # Install
 
 ```
