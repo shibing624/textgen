@@ -11,7 +11,7 @@
 
 🌈 Implementation of Text Generation models.
 
-**textgen**实现了多种文本生成模型，包括：UDA、GPT2、Seq2Seq、BART、T5等模型，开箱即用。
+**textgen**实现了多种文本生成模型，包括：UDA、GPT2、Seq2Seq、BART、T5、SongNet等模型，开箱即用。
 
 **Guide**
 
@@ -260,7 +260,9 @@ release基于T5的fine-tuned后的中文模型，可以直接使用。
 
 |Model|Arch|Intro|
 |:-- |:--- |:--- |
-|[shibing624/prompt-t5-base-chinese](https://huggingface.co/shibing624/prompt-t5-base-chinese)|T5|[prompt-t5-base-chinese.md](https://github.com/shibing624/textgen/blob/main/docs/prompt-t5-base-chinese.md)|
+|[shibing624/prompt-t5-base-chinese](https://huggingface.co/shibing624/prompt-t5-base-chinese)|T5|中文NLP多任务Prompt模型[prompt-t5-base-chinese.md](https://github.com/shibing624/textgen/blob/main/docs/prompt-t5-base-chinese.md)|
+|[shibing624/t5-chinese-couplet](https://huggingface.co/shibing624/t5-chinese-couplet)|T5|[对联生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%AF%B9%E8%81%94%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)|
+
 
 ## GPT2 模型
 
