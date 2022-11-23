@@ -14,12 +14,12 @@ widget:
 ---
 
 # Chinese Prompt(prompt-t5-base-chinese) Model
-中文NLP的Prompt模型[shibing624/prompt-t5-base-chinese](https://huggingface.co/shibing624/prompt-t5-base-chinese)，One model For All nlp task(OFA)
+中文NLP的Prompt模型[shibing624/prompt-t5-base-chinese](https://huggingface.co/shibing624/prompt-t5-base-chinese)，One model For All nlp task.
 
 
 1. 在[ClueAI/PromptCLUE-base](https://huggingface.co/ClueAI/PromptCLUE-base)预训练模型上fine-tuned
 了[pCLUE中文prompt数据集](https://github.com/CLUEbenchmark/pCLUE)和[SIGHAN+Wang271K中文纠错数据集](https://github.com/shibing624/pycorrector#Dataset)
-2. 模型用[textgen](https://github.com/shibing624/textgen)的`T5Model`训练，复现脚本参考[training_zh_prompt_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/T5/training_zh_prompt_model_demo.py)
+2. 模型用[textgen](https://github.com/shibing624/textgen)的`T5Model`训练，复现脚本: [training_zh_prompt_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/T5/training_zh_prompt_model_demo.py)
 
 
 `prompt-t5-base-chinese` evaluate public test data：
