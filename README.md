@@ -262,8 +262,8 @@ release基于T5的fine-tuned后的中文模型，模型全部release到HuggingFa
 
 |Model|Arch|Intro|Training|Inference|
 |:-- |:--- |:--- |:--- |:--- |
-|[shibing624/prompt-t5-base-chinese](https://huggingface.co/shibing624/prompt-t5-base-chinese)|T5|中文NLP多任务Prompt模型[prompt-t5-base-chinese.md](https://github.com/shibing624/textgen/blob/main/docs/prompt-t5-base-chinese.md)|
-|[shibing624/t5-chinese-couplet](https://huggingface.co/shibing624/t5-chinese-couplet)|T5|[对联生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%AF%B9%E8%81%94%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)|
+|[shibing624/prompt-t5-base-chinese](https://huggingface.co/shibing624/prompt-t5-base-chinese)|T5|中文NLP多任务Prompt模型| 训练wiki[prompt-t5-base-chinese.md](https://github.com/shibing624/textgen/blob/main/docs/prompt-t5-base-chinese.md)|https://github.com/shibing624/textgen/blob/main/examples/t5_prompt_demo.py|
+|[shibing624/t5-chinese-couplet](https://huggingface.co/shibing624/t5-chinese-couplet)|T5|fine-tuned中文对联后的模型|[对联生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%AF%B9%E8%81%94%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)|https://github.com/shibing624/textgen/blob/main/examples/t5_couplet_demo.py|
 
 
 ## GPT2 模型
@@ -302,9 +302,9 @@ release基于SongNet的中文模型，模型全部release到HuggingFace models�
 
 |Model|Arch|Intro|Training|Inference|
 |:-- |:--- |:--- |:--- |:--- |
-|[shibing624/songnet-base-chinese](https://huggingface.co/shibing624/songnet-base-chinese)|SongNet|SongNet预训练模型|
-|[shibing624/songnet-base-chinese-songci](https://huggingface.co/shibing624/songnet-base-chinese-songci)|SongNet|fine-tuned宋词后的模型|
-|[shibing624/songnet-base-chinese-couplet](https://huggingface.co/shibing624/songnet-base-chinese-couplet)|SongNet|fine-tuned对联后的模型|
+|[shibing624/songnet-base-chinese](https://huggingface.co/shibing624/songnet-base-chinese)|SongNet|SongNet预训练模型|-|-|
+|[shibing624/songnet-base-chinese-songci](https://huggingface.co/shibing624/songnet-base-chinese-songci)|SongNet|fine-tuned宋词后的模型|https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_songnet_demo.py|https://github.com/shibing624/textgen/blob/main/examples/songnet_songci_demo.py|
+|[shibing624/songnet-base-chinese-couplet](https://huggingface.co/shibing624/songnet-base-chinese-couplet)|SongNet|fine-tuned对联后的模型|https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_songnet_demo.py|https://github.com/shibing624/textgen/blob/main/examples/songnet_couplet_demo.py|
 
 
 ## Keyword Text Augmentation(EDA/UDA)
