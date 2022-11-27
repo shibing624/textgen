@@ -9,6 +9,7 @@ url: https://www.aclweb.org/anthology/2020.acl-main.68
 import math
 import os
 import random
+from typing import List, Dict, Tuple, Iterable, Type, Union, Callable, Optional
 from collections import defaultdict
 
 import numpy as np
@@ -25,10 +26,8 @@ from textgen.language_modeling.songnet_utils import (
     SongNetDataLoader,
     BOS,
     EOS,
-    PRETRAINED_MODELS,
-    LOCAL_DIR,
-    http_get,
     Optim,
+    snapshot_download,
 )
 
 has_cuda = torch.cuda.is_available()
@@ -591,10 +590,12 @@ class SongNetModel:
     def __init__(
             self,
             model_type='songnet',
-            model_name='songnet-base-chinese',
+            model_name='shibing624/songnet-base-chinese',
             args=None,
             use_cuda=has_cuda,
             cuda_device=-1,
+            cache_folder: Optional[str] = None,
+            use_auth_token: Union[bool, str, None] = None,
             **kwargs,
     ):
         """
@@ -640,20 +641,35 @@ class SongNetModel:
 
         self.results = {}
 
-        if model_name:
-            bin_path = os.path.join(model_name, 'pytorch_model.bin')
-            if not os.path.exists(bin_path):
-                if model_name in PRETRAINED_MODELS:
-                    local_model_dir = os.path.join(LOCAL_DIR, model_name)
-                    bin_path = os.path.join(local_model_dir, 'pytorch_model.bin')
-                    if not os.path.exists(bin_path):
-                        logger.warning(f'Model {model_name} not exists, download model to {local_model_dir}')
-                        url = PRETRAINED_MODELS[model_name]
-                        http_get(url, local_model_dir + '.zip', extract=True)
-                    else:
-                        logger.warning(f'Model {model_name} not exists, use local model {local_model_dir}')
-                    model_name = local_model_dir
-            self.tokenizer = SongNetTokenizer.from_pretrained(model_name, **kwargs)
+        if cache_folder is None:
+            cache_folder = os.getenv('TEXTGEN_HOME')
+            if cache_folder is None:
+                try:
+                    from torch.hub import _get_torch_home
+
+                    torch_cache_home = _get_torch_home()
+                except ImportError:
+                    torch_cache_home = os.path.expanduser(
+                        os.getenv('TORCH_HOME', os.path.join(os.getenv('XDG_CACHE_HOME', '~/.cache'), 'torch')))
+                cache_folder = os.path.join(torch_cache_home, 'textgen')
+        if model_name is not None and model_name != "":
+            if os.path.exists(model_name):
+                # Load from path
+                model_path = model_name
+            else:
+                # Not a path, load from hub
+                if '\\' in model_name or model_name.count('/') > 1:
+                    raise ValueError("Path {} not found".format(model_name))
+
+                model_path = os.path.join(cache_folder, model_name.replace("/", "_"))
+                # Download from hub with caching
+                snapshot_download(model_name,
+                                  cache_dir=cache_folder,
+                                  library_name='textgen',
+                                  ignore_files=['flax_model.msgpack', 'rust_model.ot', 'tf_model.h5'],
+                                  use_auth_token=use_auth_token)
+            logger.info(f'Load pretrained SongNet model: {model_name}, local model path: {model_path}')
+            self.tokenizer = SongNetTokenizer.from_pretrained(model_path, **kwargs)
             self.model = SongNet(
                 self.tokenizer,
                 device=self.device,
@@ -664,6 +680,7 @@ class SongNetModel:
                 num_layers=self.args.num_layers,
                 smoothing_factor=self.args.smoothing_factor,
             )
+            bin_path = os.path.join(model_path, 'pytorch_model.bin')
             self.model.load_state_dict(torch.load(bin_path, map_location=self.device))
 
         self.args.model_type = model_type

@@ -17,8 +17,8 @@ def main():
     parser.add_argument('--train_file', default='../data/zh_songci.txt', type=str, help='Training data file')
     parser.add_argument('--test_file', default='../data/zh_songci.txt', type=str, help='Test data file')
     parser.add_argument('--model_type', default='songnet', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='songnet-base-chinese-songci', type=str,
-                        help='SongNet model or path')
+    parser.add_argument('--model_name', default='shibing624/songnet-base-chinese', type=str,
+                        help='SongNet model or path')  # SongNet pretrained model
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/songci_zh_songnet_finetuned/', type=str,
