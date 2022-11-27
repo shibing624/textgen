@@ -258,10 +258,10 @@ outputs: ['人工智能有两个广义的定义,任何拟人的机械,如在卡�
 
 ### T5 模型应用
 
-release基于T5的fine-tuned后的中文模型，可以直接使用。
+release基于T5的fine-tuned后的中文模型，模型全部release到HuggingFace models，`textgen`可自动下载，可直接使用。
 
-|Model|Arch|Intro|
-|:-- |:--- |:--- |
+|Model|Arch|Intro|Training|Inference|
+|:-- |:--- |:--- |:--- |:--- |
 |[shibing624/prompt-t5-base-chinese](https://huggingface.co/shibing624/prompt-t5-base-chinese)|T5|中文NLP多任务Prompt模型[prompt-t5-base-chinese.md](https://github.com/shibing624/textgen/blob/main/docs/prompt-t5-base-chinese.md)|
 |[shibing624/t5-chinese-couplet](https://huggingface.co/shibing624/t5-chinese-couplet)|T5|[对联生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%AF%B9%E8%81%94%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)|
 
@@ -298,14 +298,13 @@ example: [examples/language_generation/training_zh_songnet_demo.py](https://gith
 
 ### SongNet 模型应用
 
-release基于SongNet的中文模型，方便大家使用。
+release基于SongNet的中文模型，模型全部release到HuggingFace models，`textgen`可自动下载，可直接使用。
 
-|Model|Arch|Intro|
-|:-- |:--- |:--- |
-|[songnet-base-chinese](https://github.com/shibing624/textgen/releases/download/0.1.5/songnet-base-chinese.zip)|SongNet|SongNet预训练模型|
-|[songnet-base-chinese-songci](https://github.com/shibing624/textgen/releases/download/0.1.5/songnet-base-chinese-songci.zip)|SongNet|fine-tuned宋词后的模型|
-|[songnet-base-chinese-couplet](https://github.com/shibing624/textgen/releases/download/0.1.5/songnet-base-chinese-couplet.zip)|SongNet|fine-tuned对联后的模型|
-|[songnet-base-chinese-poem](https://github.com/shibing624/textgen/releases/download/0.1.5/songnet-base-chinese-poem.zip)|SongNet|fine-tuned古诗后的模型|
+|Model|Arch|Intro|Training|Inference|
+|:-- |:--- |:--- |:--- |:--- |
+|[shibing624/songnet-base-chinese](https://huggingface.co/shibing624/songnet-base-chinese)|SongNet|SongNet预训练模型|
+|[shibing624/songnet-base-chinese-songci](https://huggingface.co/shibing624/songnet-base-chinese-songci)|SongNet|fine-tuned宋词后的模型|
+|[shibing624/songnet-base-chinese-couplet](https://huggingface.co/shibing624/songnet-base-chinese-couplet)|SongNet|fine-tuned对联后的模型|
 
 
 ## Keyword Text Augmentation(EDA/UDA)
