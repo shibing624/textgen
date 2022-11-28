@@ -4,7 +4,7 @@
 @description: 
 """
 
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 
 from textgen.augment.text_augment import TextAugment
 
@@ -15,7 +15,7 @@ from textgen.config.model_args import LanguageModelingArgs
 from textgen.language_modeling.language_modeling_model import LanguageModelingModel
 from textgen.config.model_args import SongNetArgs
 from textgen.language_modeling.songnet_model import SongNetModel
-from textgen.language_modeling.songnet_utils import SongNetTokenizer
+from textgen.language_modeling.songnet_utils import SongNetTokenizer, snapshot_download
 
 from textgen.config.model_args import QuestionAnsweringArgs
 from textgen.question_answering.question_answering_model import QuestionAnsweringModel

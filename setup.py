@@ -7,7 +7,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='textgen',
-    version='0.1.6',
+    version='0.1.7',
     description='Text Generation Model',
     long_description=readme,
     long_description_content_type='text/markdown',

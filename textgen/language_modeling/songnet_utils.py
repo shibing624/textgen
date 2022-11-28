@@ -504,15 +504,16 @@ from huggingface_hub.constants import HUGGINGFACE_HUB_CACHE
 from huggingface_hub import HfApi, hf_hub_url, cached_download
 import fnmatch
 
+
 def snapshot_download(
-    repo_id: str,
-    revision: Optional[str] = None,
-    cache_dir: Union[str, Path, None] = None,
-    library_name: Optional[str] = None,
-    library_version: Optional[str] = None,
-    user_agent: Union[Dict, str, None] = None,
-    ignore_files: Optional[List[str]] = None,
-    use_auth_token: Union[bool, str, None] = None
+        repo_id: str,
+        revision: Optional[str] = None,
+        cache_dir: Union[str, Path, None] = None,
+        library_name: Optional[str] = None,
+        library_version: Optional[str] = None,
+        user_agent: Union[Dict, str, None] = None,
+        ignore_files: Optional[List[str]] = None,
+        use_auth_token: Union[bool, str, None] = None
 ) -> str:
     """
     Method derived from huggingface_hub.
@@ -532,7 +533,7 @@ def snapshot_download(
 
     for model_file in model_info.siblings:
         if ignore_files is not None:
-            skip_download  = False
+            skip_download = False
             for pattern in ignore_files:
                 if fnmatch.fnmatch(model_file.rfilename, pattern):
                     skip_download = True
