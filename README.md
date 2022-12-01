@@ -58,7 +58,7 @@
 
 
 ## Release Models
-release基于`textgen`训练的中文模型，模型已经release到HuggingFace models，`textgen`会自动下载模型，可直接使用。
+release基于`textgen`训练的中文模型，模型已经release到HuggingFace models，指定模型名称`textgen`会自动下载模型，可直接使用。
 
 |Model|Arch|Intro|Training|Inference|
 |:-- |:--- |:--- |:--- |:--- |
