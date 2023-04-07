@@ -43,12 +43,15 @@ def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):
 
 def load_hf_dataset(data, tokenizer, args, mode):
     if isinstance(data, str):
-        dataset = load_dataset(
-            data,
-            download_mode="force_redownload"
-            if args.reprocess_input_data
-            else "reuse_dataset_if_exists",
-        )
+        if data.endswith('.json') or data.endswith('.jsonl'):
+            dataset = load_dataset("json", data_files=data)
+        else:
+            dataset = load_dataset(
+                data,
+                download_mode="force_redownload"
+                if args.reprocess_input_data
+                else "reuse_dataset_if_exists",
+            )
         # This is not necessarily a train dataset. The datasets library insists on calling it train.
         split = 'validation' if mode == 'dev' else mode
         dataset = dataset[split]

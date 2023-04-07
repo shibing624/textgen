@@ -30,6 +30,13 @@ def ai_text(text):
 
 if __name__ == '__main__':
     examples = [
+        ['介绍下北京：\n答：'],
+        ['你能干嘛：\n答：'],
+        ['帮我写个青岛旅游的路线规划：\n答：'],
+        ['写10个网易云热评文案：\n歌曲是关于失恋的\n答：'],
+        ['写10个网易云热评文案：\n歌曲是关于快乐的\n答：'],
+        ['帮我写个请假条：\n说明我今天要带家里小猫去做结扎，休一天事假\n答：'],
+        ['提取下面的人名、时间和职位：\n常建良，男，1963年出生，工科学士，高级工程师，北京物资学院客座副教授\n答：'],
         ['对下面中文拼写纠错：\n真麻烦你了。希望你们好好的跳无\n答：'],
         ['对下面中文拼写纠错：\n机七学习是人工智能领遇最能体现智能的一个分知\n答：'],
         ['对下面中文拼写纠错：\n今天心情很好\n答：'],
@@ -48,6 +55,6 @@ if __name__ == '__main__':
         theme="grass",
         title="Chinese Spelling Correction LoRA Model chatglm-6b-csc-zh-lora",
         description="Copy or input error Chinese text. Submit and the machine will correct text.",
-        article="Link to <a href='https://github.com/shibing624/lmft' style='color:blue;' target='_blank\'>Github REPO</a>",
+        article="Link to <a href='https://github.com/shibing624/textgen' style='color:blue;' target='_blank\'>Github REPO</a>",
         examples=examples
     ).launch()

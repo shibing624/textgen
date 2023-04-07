@@ -4,6 +4,7 @@
 @description:
 """
 import os
+import sys
 import re
 import random
 from typing import Tuple, List
@@ -12,7 +13,15 @@ import numpy as np
 import torch
 import torch.nn as nn
 from loguru import logger
-from peft import get_peft_model, LoraConfig, TaskType, PeftModel
+from peft import (
+    get_peft_model,
+    LoraConfig,
+    TaskType,
+    PeftModel,
+    get_peft_model_state_dict,
+    prepare_model_for_int8_training,
+    set_peft_model_state_dict,
+)
 from tqdm.auto import tqdm
 from transformers import Trainer, TrainingArguments, AutoTokenizer, AutoModel, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
@@ -91,6 +100,7 @@ class ChatGlmModel:
         logger.debug(f"Device: {self.device}")
         if not use_cuda:
             self.args.fp16 = False
+            self.args.int8 = False
 
         self.results = {}
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
@@ -98,14 +108,16 @@ class ChatGlmModel:
             model_name = "THUDM/chatglm-6b"
         config = AutoConfig.from_pretrained(model_name, trust_remote_code=True, **kwargs)
         if use_cuda and torch.cuda.is_available():
-            self.model = model_class.from_pretrained(model_name, config=config, trust_remote_code=True)
-            if self.args.quantization_bit is not None:
+            self.model = model_class.from_pretrained(
+                model_name, config=config, trust_remote_code=True, load_in_8bit=self.args.int8)
+            if self.args.quantization_bit:
                 logger.debug(f"Quantized to {self.args.quantization_bit} bit")
                 self.model = self.model.quantize(self.args.quantization_bit)
             if self.args.fp16:
                 self.model = self.model.half().cuda()
         else:
-            self.model = model_class.from_pretrained(model_name, config=config, trust_remote_code=True).float()
+            self.model = model_class.from_pretrained(
+                model_name, config=config, trust_remote_code=True).float()
 
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
@@ -128,8 +140,8 @@ class ChatGlmModel:
         longest = max(len_ids)
         input_ids = []
         labels_list = []
-        for ids_l, feature in sorted(zip(len_ids, batch), key=lambda x: -x[0]):
-            ids = list(feature)
+        for ids_l, example in sorted(zip(len_ids, batch), key=lambda x: -x[0]):
+            ids = list(example)
             seq_len = ids.index(self.tokenizer.bos_token_id) + 1  # is equal to `seq_len = seq.index(150004) + 1`
             label_pad_token_id = -100
             labels = (
@@ -202,6 +214,7 @@ class ChatGlmModel:
         self.model.model_parallel = True
         self.model.lm_head = CastOutputToFloat(self.model.lm_head)
         self.model.config.use_cache = False
+        resume_from_checkpoint = self.args.resume_from_checkpoint
 
         # setup peft, add lora config
         if self.args.use_lora:
@@ -211,10 +224,35 @@ class ChatGlmModel:
                 r=self.args.lora_rank,
                 lora_alpha=self.args.lora_alpha,
                 lora_dropout=self.args.lora_dropout,
+                target_modules=self.args.lora_target_modules,
+                bias=self.args.lora_bias,
             )
+            if self.args.int8:
+                self.model = prepare_model_for_int8_training(self.model)
             self.model = get_peft_model(self.model, peft_config)
+
+            if resume_from_checkpoint:
+                # Check the available weights and load them
+                checkpoint_name = os.path.join(resume_from_checkpoint, "pytorch_model.bin")  # Full checkpoint
+                if not os.path.exists(checkpoint_name):
+                    checkpoint_name = os.path.join(
+                        resume_from_checkpoint, "adapter_model.bin")  # only LoRA model - LoRA config above has to fit
+                    resume_from_checkpoint = (
+                        False  # So the trainer won't try loading its state
+                    )
+                # The two files above have a different name depending on how they were saved, but are actually the same.
+                if os.path.exists(checkpoint_name):
+                    logger.info(f"Restarting from {checkpoint_name}")
+                    adapters_weights = torch.load(checkpoint_name)
+                    self.model = set_peft_model_state_dict(self.model, adapters_weights)
+                else:
+                    logger.info(f"Checkpoint {checkpoint_name} not found")
+
             print_trainable_parameters(self.model)
             self.lora_loaded = True
+        else:
+            logger.error("only impl lora finetune, set `use_lora=True` for train.")
+            raise ValueError("set `use_lora=True` for train.")
         self._move_model_to_device()
         # load dataset
         train_dataset = self.load_and_cache_examples(train_data, verbose=verbose)
@@ -250,7 +288,16 @@ class ChatGlmModel:
             tokenizer=self.tokenizer,
             data_collator=self.data_collator,
         )
-        (global_step, training_loss, metrics) = trainer.train()
+        if self.args.only_lora_state_dict:
+            old_state_dict = self.model.state_dict
+            self.model.state_dict = (
+                lambda self, *_, **__: get_peft_model_state_dict(
+                    self, old_state_dict()
+                )
+            ).__get__(self.model, type(self.model))
+        if torch.__version__ >= "2" and sys.platform != "win32":
+            self.model = torch.compile(self.model)
+        (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
         self.handle_metrics("train", metrics, self.args.output_dir)
         self.results.update(metrics)
         self.save_model(model=self.model)
@@ -367,6 +414,8 @@ class ChatGlmModel:
                     self.model = PeftModel.from_pretrained(self.model, self.args.output_dir)
                     logger.info(f"Loaded lora model from {lora_path}")
                     self.lora_loaded = True
+            if torch.__version__ >= "2" and sys.platform != "win32":
+                self.model = torch.compile(self.model)
 
     def process_response(self, response):
         response = response.strip().replace("[[训练时间]]", "2023年")
@@ -398,9 +447,9 @@ class ChatGlmModel:
 
         if not self.lora_loaded:
             self.load_lora()
-        self._move_model_to_device()
         if torch.cuda.is_available() and self.args.fp16:
             self.model = self.model.half().cuda()
+        self._move_model_to_device()
         self.model.eval()
 
         all_outputs = []

@@ -141,8 +141,6 @@ class ModelArgs:
                 self.update_from_dict(model_args)
 
 
-
-
 @dataclass
 class T5Args(ModelArgs):
     """
@@ -342,6 +340,8 @@ class ChatGlmArgs(ModelArgs):
     model_class: str = "ChatGlmArgs"
     dataset_class: Dataset = None
     fp16: bool = True
+    int8: bool = False
+    quantization_bit:int = None  # if use quantization bit, set 4, else None
     debug: bool = False
     max_seq_length: int = 256  # max length of input sequence
     max_length = 384  # max length of the sequence to be generated
@@ -363,6 +363,9 @@ class ChatGlmArgs(ModelArgs):
     lora_rank: int = field(default=8)
     lora_alpha = 32
     lora_dropout = 0.1
+    lora_target_modules = ["query_key_value"]
+    lora_bias = "none"
+    only_lora_state_dict: bool = False
     num_train_epochs = 1
     max_steps = -1
     per_device_train_batch_size = 2
@@ -370,4 +373,5 @@ class ChatGlmArgs(ModelArgs):
     save_total_limit = 2
     remove_unused_columns = False
     logging_steps = 50
-    quantization_bit = None  # if use quantization bit, set 8 or 4, else None
+    resume_from_checkpoint:str = None
+
