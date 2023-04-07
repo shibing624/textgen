@@ -5,7 +5,7 @@
 """
 import sys
 
-sys.path.append('..')
+sys.path.append('../..')
 from textgen import ChatGlmModel
 
 model = ChatGlmModel("chatglm", "THUDM/chatglm-6b", lora_name="shibing624/chatglm-6b-csc-zh-lora")

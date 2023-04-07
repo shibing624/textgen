@@ -8,7 +8,7 @@ import argparse
 from loguru import logger
 import pandas as pd
 
-sys.path.append('..')
+sys.path.append('../..')
 from textgen import ChatGlmModel
 
 
@@ -26,7 +26,7 @@ def load_data(file_path):
     return data
 
 
-def finetune_demo():
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', default='../data/zh_csc_train.tsv', type=str, help='Training data file')
     parser.add_argument('--test_file', default='../data/zh_csc_test.tsv', type=str, help='Test data file')
@@ -98,4 +98,4 @@ def finetune_demo():
 
 
 if __name__ == '__main__':
-    finetune_demo()
+    main()

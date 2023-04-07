@@ -9,7 +9,7 @@ from loguru import logger
 from datasets import load_dataset
 from torch.utils.data import Dataset
 
-sys.path.append('..')
+sys.path.append('../..')
 from textgen import ChatGlmModel
 
 
@@ -48,7 +48,7 @@ class CscDataset(Dataset):
         return self.examples[index]
 
 
-def finetune_demo():
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', default="shibing624/CSC", type=str,
                         help='Datasets name, eg:shibing624/CSC')
@@ -95,4 +95,4 @@ def finetune_demo():
 
 
 if __name__ == '__main__':
-    finetune_demo()
+    main()

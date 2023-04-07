@@ -7,11 +7,11 @@ import sys
 import argparse
 from loguru import logger
 
-sys.path.append('..')
+sys.path.append('../..')
 from textgen import ChatGlmModel
 
 
-def finetune_demo():
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', default='tatsu-lab/alpaca', type=str,
                         help='Dataset name (e.g. tatsu-lab/alpaca, shibing624/alpaca-zh, BelleGroup/train_1M_CN, '
@@ -77,4 +77,4 @@ def finetune_demo():
 
 
 if __name__ == '__main__':
-    finetune_demo()
+    main()
