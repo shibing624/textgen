@@ -6,10 +6,10 @@
 import json
 import os
 import sys
-import warnings
+from loguru import logger
 from dataclasses import asdict, dataclass, field
 from multiprocessing import cpu_count
-
+from typing import Optional
 from torch.utils.data import Dataset
 
 
@@ -118,8 +118,10 @@ class ModelArgs:
 
     def save(self, output_dir):
         os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, "model_args.json"), "w") as f:
+        with open(os.path.join(output_dir, "model_args.json"), "w", encoding='utf-8') as f:
             args_dict = self.get_args_for_saving()
+            if args_dict['dataset_class'] is not None and not isinstance(args_dict["dataset_class"], str):
+                args_dict['dataset_class'] = type(args_dict['dataset_class']).__name__
             if args_dict["tokenizer_type"] is not None and not isinstance(args_dict["tokenizer_type"], str):
                 args_dict["tokenizer_type"] = type(args_dict["tokenizer_type"]).__name__
             json.dump(args_dict, f)
@@ -128,28 +130,17 @@ class ModelArgs:
         if input_dir:
             model_args_file = os.path.join(input_dir, "model_args.json")
             if os.path.isfile(model_args_file):
-                with open(model_args_file, "r") as f:
+                with open(model_args_file, "r", encoding='utf-8') as f:
                     model_args = json.load(f)
-
+                if model_args["dataset_class"]:
+                    logger.warning(
+                        "This model was trained using a custom dataset_class."
+                        "This cannot be loaded automatically and must be specified in the model args"
+                        "when loading the model."
+                    )
                 self.update_from_dict(model_args)
 
 
-@dataclass
-class QuestionAnsweringArgs(ModelArgs):
-    """
-    Model args for a QuestionAnsweringModel
-    """
-
-    model_class: str = "QuestionAnsweringModel"
-    doc_stride: int = 384
-    early_stopping_metric: str = "correct"
-    early_stopping_metric_minimize: bool = False
-    lazy_loading: bool = False
-    max_answer_length: int = 100
-    max_query_length: int = 64
-    n_best_size: int = 20
-    null_score_diff_threshold: float = 0.0
-    special_tokens_list: list = field(default_factory=list)
 
 
 @dataclass
@@ -242,29 +233,6 @@ class LanguageModelingArgs(ModelArgs):
     strip_accents: bool = True
     local_rank: int = -1
 
-    def save(self, output_dir):
-        os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, "model_args.json"), "w") as f:
-            args_dict = self.get_args_for_saving()
-            if args_dict["dataset_class"] is not None:
-                args_dict["dataset_class"] = type(args_dict["dataset_class"]).__name__
-            # json.dump(self.get_args_for_saving(), f)
-            json.dump(args_dict, f)
-
-    def load(self, input_dir):
-        if input_dir:
-            model_args_file = os.path.join(input_dir, "model_args.json")
-            if os.path.isfile(model_args_file):
-                with open(model_args_file, "r") as f:
-                    model_args = json.load(f)
-                if model_args["dataset_class"]:
-                    warnings.warn(
-                        "This model was trained using a custom dataset_class."
-                        "This cannot be loaded automatically and must be specified in the model args"
-                        "when loading the model."
-                    )
-                self.update_from_dict(model_args)
-
 
 @dataclass
 class Seq2SeqArgs(ModelArgs):
@@ -296,28 +264,6 @@ class Seq2SeqArgs(ModelArgs):
     split_text_n: int = 100
     src_lang: str = "en_XX"
     tgt_lang: str = "ro_RO"
-
-    def save(self, output_dir):
-        os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, "model_args.json"), "w") as f:
-            args_dict = self.get_args_for_saving()
-            if args_dict["dataset_class"] is not None:
-                args_dict["dataset_class"] = type(args_dict["dataset_class"]).__name__
-            json.dump(args_dict, f)
-
-    def load(self, input_dir):
-        if input_dir:
-            model_args_file = os.path.join(input_dir, "model_args.json")
-            if os.path.isfile(model_args_file):
-                with open(model_args_file, "r") as f:
-                    model_args = json.load(f)
-                if model_args["dataset_class"]:
-                    warnings.warn(
-                        "This model was trained using a custom dataset_class."
-                        "This cannot be loaded automatically and must be specified in the model args"
-                        "when loading the model."
-                    )
-                self.update_from_dict(model_args)
 
 
 @dataclass
@@ -385,3 +331,43 @@ class SongNetArgs(LanguageModelingArgs):
     warmup_ratio: float = 0.05
     weight_decay: float = 0.0
     smoothing_factor: float = 0.1
+
+
+@dataclass
+class ChatGlmArgs(ModelArgs):
+    """
+    Model args for a ChatGLMModel
+    """
+
+    model_class: str = "ChatGlmArgs"
+    dataset_class: Dataset = None
+    fp16: bool = True
+    debug: bool = False
+    max_seq_length: int = 256  # max length of input sequence
+    max_length = 384  # max length of the sequence to be generated
+    do_sample: bool = True
+    early_stopping: bool = True
+    evaluate_generated_text: bool = False
+    length_penalty: float = 2.0
+    num_beams: int = 1
+    num_return_sequences: int = 1
+    repetition_penalty: float = 1.0
+    temperature: float = 0.95
+    special_tokens_list: list = field(default_factory=list)
+    top_k: float = None
+    top_p: float = 0.7
+    model_name_or_path: Optional[str] = field(default="THUDM/chatglm-6b")
+    dataset_name_or_path: Optional[str] = field(default="shibing624/alpaca-zh")
+    use_lora: bool = True
+    lora_name: str = field(default="adapter_model.bin")
+    lora_rank: int = field(default=8)
+    lora_alpha = 32
+    lora_dropout = 0.1
+    num_train_epochs = 1
+    max_steps = -1
+    per_device_train_batch_size = 2
+    gradient_accumulation_steps = 1
+    save_total_limit = 2
+    remove_unused_columns = False
+    logging_steps = 50
+    quantization_bit = None  # if use quantization bit, set 8 or 4, else None

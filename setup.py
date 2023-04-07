@@ -7,7 +7,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='textgen',
-    version='0.1.7',
+    version='0.1.8',
     description='Text Generation Model',
     long_description=readme,
     long_description_content_type='text/markdown',
@@ -38,6 +38,8 @@ setup(
         'wandb>=0.10.32',
         'sacremoses',
         'Rouge',
+        'cpm_kernels',
+        'peft',
     ],
     packages=find_packages(exclude=['tests']),
     package_dir={'textgen': 'textgen'},
