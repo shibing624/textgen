@@ -17,8 +17,8 @@ def preprocess_batch_for_hf_dataset(example, tokenizer, args):
     input_text, target_text = example["content"], example["summary"]
     instruction = '改写为电商广告文案：'
     prompt = f"问：{instruction}\n{input_text}\n答："
-    prompt_ids = tokenizer.encode(prompt, max_length=args.max_seq_length, truncation=True)
-    target_ids = tokenizer.encode(target_text, max_length=args.max_length, truncation=True,
+    prompt_ids = tokenizer.encode(prompt, max_length=args.max_seq_length)
+    target_ids = tokenizer.encode(target_text, max_length=args.max_length,
                                   add_special_tokens=False)
     input_ids = prompt_ids + target_ids
     input_ids = input_ids[:(args.max_seq_length + args.max_length)] + [tokenizer.eos_token_id]

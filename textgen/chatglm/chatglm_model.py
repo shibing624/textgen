@@ -251,7 +251,7 @@ class ChatGlmModel:
             print_trainable_parameters(self.model)
             self.lora_loaded = True
         else:
-            logger.error("only impl lora finetune, set `use_lora=True` for train.")
+            logger.error("only impl lora fine-tune, set `use_lora=True` for train.")
             raise ValueError("set `use_lora=True` for train.")
         self._move_model_to_device()
         # load dataset

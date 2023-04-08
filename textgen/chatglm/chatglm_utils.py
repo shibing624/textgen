@@ -26,8 +26,8 @@ def preprocess_data(data):
         prompt += f"{input_text}\n"
     prompt += "答："
 
-    prompt_ids = tokenizer.encode(prompt, max_length=args.max_seq_length, truncation=True)
-    target_ids = tokenizer.encode(target_text, max_length=args.max_length, truncation=True,
+    prompt_ids = tokenizer.encode(prompt, max_length=args.max_seq_length)
+    target_ids = tokenizer.encode(target_text, max_length=args.max_length,
                                   add_special_tokens=False)
     input_ids = prompt_ids + target_ids
     input_ids = input_ids[:(args.max_seq_length + args.max_length)] + [tokenizer.eos_token_id]

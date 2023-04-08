@@ -8,7 +8,7 @@ import torch
 from peft import PeftModel
 from transformers import AutoModel, AutoTokenizer
 
-model = AutoModel.from_pretrained("THUDM/chatglm-6b", trust_remote_code=True, device_map='auto')
+model = AutoModel.from_pretrained("THUDM/chatglm-6b", trust_remote_code=True)
 model = PeftModel.from_pretrained(model, "shibing624/chatglm-6b-csc-zh-lora")
 if torch.cuda.is_available():
     model = model.half().cuda()
