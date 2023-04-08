@@ -8,6 +8,7 @@ import os
 import pickle
 from multiprocessing import Pool
 
+import datasets
 from datasets import Dataset as HFDataset
 from datasets import load_dataset
 from loguru import logger
@@ -45,6 +46,8 @@ def load_hf_dataset(data, tokenizer, args, mode):
     if isinstance(data, str):
         if data.endswith('.json') or data.endswith('.jsonl'):
             dataset = load_dataset("json", data_files=data)
+        elif os.path.isdir(data):
+            dataset = datasets.load_from_disk(data)
         else:
             dataset = load_dataset(
                 data,
