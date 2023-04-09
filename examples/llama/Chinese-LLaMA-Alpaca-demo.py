@@ -51,7 +51,7 @@ else:
         BASE_MODEL,
         load_in_8bit=False,
         torch_dtype=torch.float16,
-        device_map={"": "cpu"},
+        device_map={"": "cuda"},
     )
 
 base_model.resize_token_embeddings(len(tokenizer))
@@ -62,10 +62,10 @@ print(f"Extended vocabulary size: {len(tokenizer)}")
 model = PeftModel.from_pretrained(
     base_model,
     LORA_MODEL,
-    device_map={"": "cpu"},
+    device_map={"": "cuda"},
     torch_dtype=torch.float16,
 )
-
+model.half().cuda()
 from demo import predict, Prompter
 
 sents = [
@@ -83,12 +83,12 @@ sents = [
     "Translate the sentence 'I have no mouth but I must scream' into Spanish.",
     "Count up from 1 to 500.",
 ]
-prompter = Prompter(template_name='alpaca.json')
+prompter = Prompter()
 for instruction in sents:
     print("Instruction:", instruction)
-    print("Response:", predict(instruction,
+    r = list(predict(instruction,
                                model,
                                tokenizer,
-                               prompter)
-          )
+                               prompter))
+    print("Response:", r)
     print()
