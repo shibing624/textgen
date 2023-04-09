@@ -646,7 +646,7 @@ class FinetuneTrainer(Trainer):
             labels (each being optional).
         """
 
-        if not prediction_loss_only:
+        if prediction_loss_only:
             return super().prediction_step(
                 model, inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys
             )
