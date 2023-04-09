@@ -254,17 +254,17 @@ class ChatGlmModel:
             logger.error("only impl lora fine-tune, set `use_lora=True` for train.")
             raise ValueError("set `use_lora=True` for train.")
         self._move_model_to_device()
+        os.makedirs(output_dir, exist_ok=True)
 
         # load dataset
         train_dataset = self.load_and_cache_examples(train_data)
-        os.makedirs(output_dir, exist_ok=True)
         if verbose:
-            self.print_dataset_example(train_dataset)
+            logger.debug(f"train_dataset len: {len(train_dataset)}, train_dataset[0]: {train_dataset[0]}")
         eval_dataset = None
         if eval_data:
             eval_dataset = self.load_and_cache_examples(eval_data, evaluate=True)
             if verbose:
-                self.print_dataset_example(eval_dataset)
+                logger.debug(f"eval_dataset len: {len(eval_dataset)}, eval_dataset[0]: {eval_dataset[0]}")
 
         # start train
         training_args = TrainingArguments(
@@ -381,15 +381,6 @@ class ChatGlmModel:
                 )
             )
         return global_step, training_loss
-
-    def print_dataset_example(self, dataset):
-        logger.debug(f"dataset: {dataset}")
-        logger.debug(f"dataset len: {len(dataset)}, dataset[0]: {dataset[0]}")
-        example = dataset[0]
-        logger.debug(f"input_ids: {example['input_ids']}")
-        logger.debug(f'inputs: {self.tokenizer.decode(example["input_ids"])}')
-        logger.debug(f"label_ids: {example['labels']}")
-        logger.debug(f'labels: {self.tokenizer.decode(example["labels"])}')
 
     @staticmethod
     def handle_metrics(split, metrics, output_dir):
