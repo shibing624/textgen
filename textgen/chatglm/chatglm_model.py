@@ -288,15 +288,6 @@ class ChatGlmModel:
             no_cuda=True if self.device == "cpu" else False,
             **kwargs
         )
-        if training_args.should_log:
-            # The default of training_args.log_level is passive, so we set log level at info here to have that default.
-            transformers.utils.logging.set_verbosity_info()
-
-        log_level = training_args.get_process_log_level()
-        transformers.utils.logging.set_verbosity(log_level)
-        transformers.utils.logging.enable_default_handler()
-        transformers.utils.logging.enable_explicit_format()
-
         # Log on each process the small summary:
         logger.warning(
             f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
@@ -304,13 +295,43 @@ class ChatGlmModel:
         )
         logger.info(f"Training/evaluation parameters {training_args}")
 
+        def compute_metrics(eval_preds):
+            preds, labels = eval_preds
+            if isinstance(preds, tuple):
+                preds = preds[0]
+            decoded_preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
+            decoded_labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+            score_dict = {
+                "rouge-1": [],
+                "rouge-2": [],
+                "rouge-l": [],
+                "bleu-4": [],
+            }
+            for pred, label in zip(decoded_preds, decoded_labels):
+                hypothesis = list(jieba.cut(pred))
+                reference = list(jieba.cut(label))
+                rouge = Rouge()
+                scores = rouge.get_scores(' '.join(hypothesis), ' '.join(reference))
+                result = scores[0]
+
+                for k, v in result.items():
+                    score_dict[k].append(round(v["f"] * 100, 4))
+                bleu_score = sentence_bleu([list(label)], list(pred), smoothing_function=SmoothingFunction().method3)
+                score_dict["bleu-4"].append(round(bleu_score * 100, 4))
+
+            for k, v in score_dict.items():
+                score_dict[k] = float(np.mean(v))
+            return score_dict
+
         trainer = FinetuneTrainer(
             model=self.model,
             train_dataset=train_dataset,
-            eval_dataset=eval_dataset,
+            eval_dataset=eval_dataset if eval_data is not None else None,
             args=training_args,
             tokenizer=self.tokenizer,
             data_collator=self.data_collator,
+            compute_metrics=compute_metrics if eval_data is not None else None,
         )
         if self.args.only_lora_state_dict:
             old_state_dict = self.model.state_dict
@@ -625,7 +646,7 @@ class FinetuneTrainer(Trainer):
             labels (each being optional).
         """
 
-        if prediction_loss_only:
+        if not prediction_loss_only:
             return super().prediction_step(
                 model, inputs, prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys
             )
@@ -707,44 +728,6 @@ class FinetuneTrainer(Trainer):
         )
         padded_tensor[:, : tensor.shape[-1]] = tensor
         return padded_tensor
-
-    def compute_metrics(self, eval_preds):
-        metrics = super().compute_metrics(eval_preds)
-        metrics['loss'] = eval_preds.loss.mean().item()
-        preds, labels = eval_preds
-        if isinstance(preds, tuple):
-            preds = preds[0]
-        decoded_preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
-        decoded_labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
-
-        try:
-            perplexity = math.exp(metrics["loss"])
-        except Exception:
-            perplexity = float("inf")
-        metrics["perplexity"] = perplexity
-
-        score_dict = {
-            "rouge-1": [],
-            "rouge-2": [],
-            "rouge-l": [],
-            "bleu-4": [],
-        }
-        for pred, label in zip(decoded_preds, decoded_labels):
-            hypothesis = list(jieba.cut(pred))
-            reference = list(jieba.cut(label))
-            rouge = Rouge()
-            scores = rouge.get_scores(' '.join(hypothesis), ' '.join(reference))
-            result = scores[0]
-
-            for k, v in result.items():
-                score_dict[k].append(round(v["f"] * 100, 4))
-            bleu_score = sentence_bleu([list(label)], list(pred), smoothing_function=SmoothingFunction().method3)
-            score_dict["bleu-4"].append(round(bleu_score * 100, 4))
-
-        for k, v in score_dict.items():
-            score_dict[k] = float(np.mean(v))
-        metrics.update(score_dict)
-        return metrics
 
     def save_model(self, output_dir=None, _internal_call=False, lora_name='adapter_model.bin'):
         os.makedirs(output_dir, exist_ok=True)
