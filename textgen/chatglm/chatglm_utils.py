@@ -56,8 +56,10 @@ def load_hf_dataset(data, tokenizer, args, mode):
                 else "reuse_dataset_if_exists",
             )
         # This is not necessarily a train dataset. The datasets library insists on calling it train.
-        split = 'validation' if mode == 'dev' else mode
-        dataset = dataset[split]
+        dataset = dataset['train']
+        if mode == 'dev' and args.max_eval_samples is not None:
+            max_eval_samples = min(len(dataset), args.max_eval_samples)
+            dataset = dataset.select(range(max_eval_samples))
     else:
         dataset = HFDataset.from_pandas(data)
 

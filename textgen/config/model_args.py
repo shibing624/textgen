@@ -347,7 +347,8 @@ class ChatGlmArgs(ModelArgs):
     max_length = 384  # max length of the sequence to be generated
     do_sample: bool = True
     early_stopping: bool = True
-    evaluate_generated_text: bool = False
+    evaluate_generated_text: bool = True
+    max_eval_samples: int = 20
     length_penalty: float = 2.0
     num_beams: int = 1
     num_return_sequences: int = 1

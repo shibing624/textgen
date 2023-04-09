@@ -7,9 +7,13 @@ import os
 import sys
 import re
 import random
+import math
 from typing import Tuple, List
 
 import numpy as np
+import jieba
+from rouge_chinese import Rouge
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 import torch
 import torch.nn as nn
 from loguru import logger
@@ -23,6 +27,7 @@ from peft import (
     set_peft_model_state_dict,
 )
 from tqdm.auto import tqdm
+import transformers
 from transformers import Trainer, TrainingArguments, AutoTokenizer, AutoModel, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
 from textgen.config.model_args import ChatGlmArgs
@@ -142,13 +147,9 @@ class ChatGlmModel:
         labels_list = []
         for ids_l, example in sorted(zip(len_ids, batch), key=lambda x: -x[0]):
             ids = list(example)
-            seq_len = ids.index(self.tokenizer.bos_token_id) + 1  # is equal to `seq_len = seq.index(150004) + 1`
-            label_pad_token_id = -100
-            labels = (
-                    [label_pad_token_id] * (seq_len - 1)
-                    + ids[(seq_len - 1):]
-                    + [label_pad_token_id] * (longest - ids_l)
-            )
+            seq_len = ids.index(self.tokenizer.bos_token_id) + 1  # is equal to prompt length
+            ignore_idx = -100
+            labels = ([ignore_idx] * (seq_len - 1) + ids[(seq_len - 1):] + [ignore_idx] * (longest - ids_l))
             ids = ids + [self.tokenizer.pad_token_id] * (longest - ids_l)
             _ids = torch.LongTensor(ids)
             labels_list.append(torch.LongTensor(labels))
@@ -197,7 +198,6 @@ class ChatGlmModel:
 
         if not output_dir:
             output_dir = self.args.output_dir
-        logger.info("*** Train ***")
         if (
                 os.path.exists(output_dir)
                 and os.listdir(output_dir)
@@ -254,10 +254,17 @@ class ChatGlmModel:
             logger.error("only impl lora fine-tune, set `use_lora=True` for train.")
             raise ValueError("set `use_lora=True` for train.")
         self._move_model_to_device()
+
         # load dataset
-        train_dataset = self.load_and_cache_examples(train_data, verbose=verbose)
+        train_dataset = self.load_and_cache_examples(train_data)
         os.makedirs(output_dir, exist_ok=True)
-        logger.debug(f"dataset: {train_dataset} first row: {next(iter(train_dataset))}")
+        if verbose:
+            self.print_dataset_example(train_dataset)
+        eval_dataset = None
+        if eval_data:
+            eval_dataset = self.load_and_cache_examples(eval_data, evaluate=True)
+            if verbose:
+                self.print_dataset_example(eval_dataset)
 
         # start train
         training_args = TrainingArguments(
@@ -280,13 +287,60 @@ class ChatGlmModel:
             no_cuda=True if self.device == "cpu" else False,
             **kwargs
         )
-        logger.debug(f"training_args: {training_args}")
+        if training_args.should_log:
+            # The default of training_args.log_level is passive, so we set log level at info here to have that default.
+            transformers.utils.logging.set_verbosity_info()
+
+        log_level = training_args.get_process_log_level()
+        logger.setLevel(log_level)
+        transformers.utils.logging.set_verbosity(log_level)
+        transformers.utils.logging.enable_default_handler()
+        transformers.utils.logging.enable_explicit_format()
+
+        # Log on each process the small summary:
+        logger.warning(
+            f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
+            + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
+        )
+        logger.info(f"Training/evaluation parameters {training_args}")
+
+        def compute_metrics(eval_preds):
+            preds, labels = eval_preds
+            if isinstance(preds, tuple):
+                preds = preds[0]
+            decoded_preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
+            decoded_labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+            score_dict = {
+                "rouge-1": [],
+                "rouge-2": [],
+                "rouge-l": [],
+                "bleu-4": []
+            }
+            for pred, label in zip(decoded_preds, decoded_labels):
+                hypothesis = list(jieba.cut(pred))
+                reference = list(jieba.cut(label))
+                rouge = Rouge()
+                scores = rouge.get_scores(' '.join(hypothesis), ' '.join(reference))
+                result = scores[0]
+
+                for k, v in result.items():
+                    score_dict[k].append(round(v["f"] * 100, 4))
+                bleu_score = sentence_bleu([list(label)], list(pred), smoothing_function=SmoothingFunction().method3)
+                score_dict["bleu-4"].append(round(bleu_score * 100, 4))
+
+            for k, v in score_dict.items():
+                score_dict[k] = float(np.mean(v))
+            return score_dict
+
         trainer = FinetuneTrainer(
             model=self.model,
             train_dataset=train_dataset,
+            eval_dataset=eval_dataset if eval_dataset else None,
             args=training_args,
             tokenizer=self.tokenizer,
             data_collator=self.data_collator,
+            compute_metrics=compute_metrics if self.args.evaluate_generated_text else None,
         )
         if self.args.only_lora_state_dict:
             old_state_dict = self.model.state_dict
@@ -297,12 +351,30 @@ class ChatGlmModel:
             ).__get__(self.model, type(self.model))
         if torch.__version__ >= "2" and sys.platform != "win32":
             self.model = torch.compile(self.model)
+
+        logger.info("*** Train ***")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
         self.handle_metrics("train", metrics, self.args.output_dir)
         self.results.update(metrics)
         self.save_model(model=self.model)
 
+        if eval_data:
+            logger.info("*** Evaluate ***")
+            metrics = trainer.evaluate(
+                metric_key_prefix="eval", do_sample=self.args.do_sample, top_p=self.args.top_p,
+                max_length=self.args.max_length, temperature=self.args.temperature
+            )
+            try:
+                perplexity = math.exp(metrics["eval_loss"])
+            except OverflowError:
+                perplexity = float("inf")
+            metrics["perplexity"] = perplexity
+            metrics["eval_loss"] = round(metrics["eval_loss"], 4)
+            self.handle_metrics("eval", metrics, self.args.output_dir)
+            self.results.update(metrics)
+
         if verbose:
+            logger.debug(f"metrics: {self.results}")
             logger.info(
                 " Training of {} model complete. Saved to {}.".format(
                     self.args.model_name, output_dir
@@ -310,77 +382,14 @@ class ChatGlmModel:
             )
         return global_step, training_loss
 
-    def eval_model(
-            self, eval_data, output_dir=None, verbose=True, silent=False, **kwargs
-    ):
-        """
-        Evaluates the model on eval_data. Saves results to output_dir.
-
-        Args:
-            eval_data: Pandas DataFrame containing the 2 columns - `input_text`, `target_text`.
-                        - `input_text`: The input text sequence.
-                        - `target_text`: The target text sequence.
-                        If `use_hf_datasets` is True, then this may also be the path to a TSV file with the same columns.
-            output_dir: The directory where model files will be saved. If not given, self.args.output_dir will be used.
-            verbose: If verbose, results will be printed to the console on completion of evaluation.
-            silent: If silent, tqdm progress bars will be hidden.
-            **kwargs: Additional metrics that should be used. Pass in the metrics as keyword arguments (name of metric: function to use).
-                        A metric function should take in two parameters. The first parameter will be the true labels, and the second parameter will be the predictions. Both inputs
-                        will be lists of strings. Note that this will slow down evaluation significantly as the predicted sequences need to be generated.
-        Returns:
-            results: Dictionary containing evaluation results.
-        """  # noqa: ignore flake8"
-
-        if not output_dir:
-            output_dir = self.args.output_dir
-        logger.info("*** Evaluate ***")
-        self._move_model_to_device()
-
-        eval_dataset = self.load_and_cache_examples(
-            eval_data, evaluate=True, verbose=verbose, silent=silent
-        )
-        os.makedirs(output_dir, exist_ok=True)
-
-        training_args = TrainingArguments(
-            output_dir=self.args.output_dir,
-            auto_find_batch_size=True,
-            learning_rate=self.args.learning_rate,
-            num_train_epochs=self.args.num_train_epochs,
-            logging_dir=f"{self.args.output_dir}/logs",
-            logging_steps=self.args.logging_steps,
-            max_steps=self.args.max_steps,
-            per_device_train_batch_size=self.args.per_device_train_batch_size,
-            per_device_eval_batch_size=self.args.per_device_train_batch_size,
-            gradient_accumulation_steps=self.args.gradient_accumulation_steps,
-            save_steps=self.args.save_steps,
-            save_total_limit=self.args.save_total_limit,
-            fp16=self.args.fp16,
-            remove_unused_columns=self.args.remove_unused_columns,
-            overwrite_output_dir=self.args.overwrite_output_dir,
-            do_train=False,
-            do_eval=True,
-            no_cuda=True if self.device == "cpu" else False,
-            **kwargs
-        )
-        logger.debug(f"training_args: {training_args}")
-        trainer = FinetuneTrainer(
-            model=self.model,
-            train_dataset=eval_dataset,
-            args=training_args,
-            tokenizer=self.tokenizer,
-            data_collator=self.data_collator,
-        )
-        metrics = trainer.evaluate(metric_key_prefix='val')
-        metrics["val_loss"] = round(metrics["val_loss"], 4)
-
-        if trainer.is_world_process_zero():
-            self.handle_metrics("val", metrics, self.args.output_dir)
-            self.results.update(metrics)
-
-        if verbose:
-            logger.info(self.results)
-
-        return self.results
+    def print_dataset_example(self, dataset):
+        logger.debug(f"dataset: {dataset}")
+        logger.debug(f"dataset len: {len(dataset)}, dataset[0]: {dataset[0]}")
+        example = dataset[0]
+        logger.debug(f"input_ids: {example['input_ids']}")
+        logger.debug(f'inputs: {self.tokenizer.decode(example["input_ids"])}')
+        logger.debug(f"label_ids: {example['labels']}")
+        logger.debug(f'labels: {self.tokenizer.decode(example["labels"])}')
 
     @staticmethod
     def handle_metrics(split, metrics, output_dir):
@@ -403,14 +412,13 @@ class ChatGlmModel:
 
     def load_lora(self):
         if self.args.use_lora:
-            if self.lora_name and self.lora_name.startswith('shibing624'):
+            if self.lora_name:
                 self.model = PeftModel.from_pretrained(self.model, self.lora_name)
                 logger.info(f"Loaded lora model from {self.lora_name}")
                 self.lora_loaded = True
             else:
                 lora_path = os.path.join(self.args.output_dir, self.args.lora_name)
                 if lora_path and os.path.exists(lora_path):
-                    # infer with trained lora model
                     self.model = PeftModel.from_pretrained(self.model, self.args.output_dir)
                     logger.info(f"Loaded lora model from {lora_path}")
                     self.lora_loaded = True
@@ -592,6 +600,44 @@ class FinetuneTrainer(Trainer):
             input_ids=inputs["input_ids"],
             labels=inputs["labels"],
         ).loss
+
+    def evaluate(
+            self,
+            eval_dataset=None,
+            ignore_keys=None,
+            metric_key_prefix: str = "eval",
+            **gen_kwargs
+    ):
+        """
+        Run evaluation and returns metrics.
+
+        The calling script will be responsible for providing a method to compute metrics, as they are task-dependent
+        (pass it to the init `compute_metrics` argument).
+
+        You can also subclass and override this method to inject custom behavior.
+
+        Args:
+            eval_dataset (`Dataset`, *optional*):
+                Pass a dataset if you wish to override `self.eval_dataset`. If it is an [`~datasets.Dataset`], columns
+                not accepted by the `model.forward()` method are automatically removed. It must implement the `__len__`
+                method.
+            ignore_keys (`List[str]`, *optional*):
+                A list of keys in the output of your model (if it is a dictionary) that should be ignored when
+                gathering predictions.
+            metric_key_prefix (`str`, *optional*, defaults to `"eval"`):
+                An optional prefix to be used as the metrics key prefix. For example the metrics "bleu" will be named
+                "eval_bleu" if the prefix is `"eval"` (default)
+            gen_kwargs:
+                Additional `generate` specific kwargs.
+
+        Returns:
+            A dictionary containing the evaluation loss and the potential metrics computed from the predictions. The
+            dictionary also contains the epoch number which comes from the training state.
+        """
+
+        gen_kwargs = gen_kwargs.copy()
+        self._gen_kwargs = gen_kwargs
+        return super().evaluate(eval_dataset, ignore_keys=ignore_keys, metric_key_prefix=metric_key_prefix)
 
     def save_model(self, output_dir=None, _internal_call=False, lora_name='adapter_model.bin'):
         os.makedirs(output_dir, exist_ok=True)
