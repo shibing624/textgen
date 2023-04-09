@@ -20,7 +20,7 @@ def main():
     parser.add_argument('--model_name', default='THUDM/chatglm-6b', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--output_dir', default='./outputs/alpaca/', type=str, help='Model output directory')
+    parser.add_argument('--output_dir', default='./outputs-alpaca/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=256, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=256, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=1.0, type=float, help='Number of training epochs')

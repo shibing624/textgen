@@ -304,35 +304,6 @@ class ChatGlmModel:
         )
         logger.info(f"Training/evaluation parameters {training_args}")
 
-        def compute_metrics(eval_preds):
-            preds, labels = eval_preds
-            if isinstance(preds, tuple):
-                preds = preds[0]
-            decoded_preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
-            decoded_labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
-
-            score_dict = {
-                "rouge-1": [],
-                "rouge-2": [],
-                "rouge-l": [],
-                "bleu-4": []
-            }
-            for pred, label in zip(decoded_preds, decoded_labels):
-                hypothesis = list(jieba.cut(pred))
-                reference = list(jieba.cut(label))
-                rouge = Rouge()
-                scores = rouge.get_scores(' '.join(hypothesis), ' '.join(reference))
-                result = scores[0]
-
-                for k, v in result.items():
-                    score_dict[k].append(round(v["f"] * 100, 4))
-                bleu_score = sentence_bleu([list(label)], list(pred), smoothing_function=SmoothingFunction().method3)
-                score_dict["bleu-4"].append(round(bleu_score * 100, 4))
-
-            for k, v in score_dict.items():
-                score_dict[k] = float(np.mean(v))
-            return score_dict
-
         trainer = FinetuneTrainer(
             model=self.model,
             train_dataset=train_dataset,
@@ -340,7 +311,6 @@ class ChatGlmModel:
             args=training_args,
             tokenizer=self.tokenizer,
             data_collator=self.data_collator,
-            compute_metrics=compute_metrics if self.args.evaluate_generated_text else None,
         )
         if self.args.only_lora_state_dict:
             old_state_dict = self.model.state_dict
@@ -360,16 +330,13 @@ class ChatGlmModel:
 
         if eval_data is not None:
             logger.info("*** Evaluate ***")
+            if torch.cuda.is_available() and self.args.fp16:
+                self.model = self.model.half().cuda()
             metrics = trainer.evaluate(
                 metric_key_prefix="eval", do_sample=self.args.do_sample, top_p=self.args.top_p,
                 max_length=self.args.max_length, temperature=self.args.temperature
             )
-            try:
-                perplexity = math.exp(metrics["eval_loss"])
-            except OverflowError:
-                perplexity = float("inf")
-            metrics["perplexity"] = perplexity
-            metrics["eval_loss"] = round(metrics["eval_loss"], 4)
+            logger.debug(f"eval metrics: {metrics}")
             self.handle_metrics("eval", metrics, self.args.output_dir)
             self.results.update(metrics)
 
@@ -708,7 +675,7 @@ class FinetuneTrainer(Trainer):
         loss = None
 
         if self.args.prediction_loss_only:
-            return (loss, None, None)
+            return loss, None, None
 
         if has_labels:
             labels = inputs["labels"]
@@ -721,7 +688,7 @@ class FinetuneTrainer(Trainer):
         else:
             labels = None
 
-        return (loss, generated_tokens, labels)
+        return loss, generated_tokens, labels
 
     def _pad_tensors_to_max_len(self, tensor, max_length):
         if self.tokenizer is not None and hasattr(self.tokenizer, "pad_token_id"):
@@ -740,6 +707,44 @@ class FinetuneTrainer(Trainer):
         )
         padded_tensor[:, : tensor.shape[-1]] = tensor
         return padded_tensor
+
+    def compute_metrics(self, eval_preds):
+        metrics = super().compute_metrics(eval_preds)
+        metrics['loss'] = eval_preds.loss.mean().item()
+        preds, labels = eval_preds
+        if isinstance(preds, tuple):
+            preds = preds[0]
+        decoded_preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
+        decoded_labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+        try:
+            perplexity = math.exp(metrics["loss"])
+        except Exception:
+            perplexity = float("inf")
+        metrics["perplexity"] = perplexity
+
+        score_dict = {
+            "rouge-1": [],
+            "rouge-2": [],
+            "rouge-l": [],
+            "bleu-4": [],
+        }
+        for pred, label in zip(decoded_preds, decoded_labels):
+            hypothesis = list(jieba.cut(pred))
+            reference = list(jieba.cut(label))
+            rouge = Rouge()
+            scores = rouge.get_scores(' '.join(hypothesis), ' '.join(reference))
+            result = scores[0]
+
+            for k, v in result.items():
+                score_dict[k].append(round(v["f"] * 100, 4))
+            bleu_score = sentence_bleu([list(label)], list(pred), smoothing_function=SmoothingFunction().method3)
+            score_dict["bleu-4"].append(round(bleu_score * 100, 4))
+
+        for k, v in score_dict.items():
+            score_dict[k] = float(np.mean(v))
+        metrics.update(score_dict)
+        return metrics
 
     def save_model(self, output_dir=None, _internal_call=False, lora_name='adapter_model.bin'):
         os.makedirs(output_dir, exist_ok=True)
