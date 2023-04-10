@@ -34,3 +34,6 @@ from textgen.unsup_generation.tgls_model import TglsModel
 
 from textgen.chatglm.chatglm_model import ChatGlmModel
 from textgen.config.model_args import ChatGlmArgs
+
+from textgen.llama.llama_model import LlamaModel
+from textgen.config.model_args import LlamaArgs

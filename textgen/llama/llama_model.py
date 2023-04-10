@@ -6,276 +6,529 @@
 modified from https://github.com/tloen/alpaca-lora/blob/main/finetune.py
 """
 import os
+import random
 import sys
-from typing import List
+from typing import List, Tuple
 
+import numpy as np
 import torch
-import transformers
-from datasets import load_dataset
-
+from loguru import logger
 from peft import (
-    LoraConfig,
     get_peft_model,
+    LoraConfig,
+    TaskType,
+    PeftModel,
     get_peft_model_state_dict,
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
 )
-from transformers import LlamaForCausalLM, LlamaTokenizer
+from tqdm.auto import tqdm
+from transformers import GenerationConfig, DataCollatorForSeq2Seq
+from transformers import Trainer, TrainingArguments, AutoTokenizer, AutoModelForCausalLM, AutoConfig
+from transformers.trainer import TRAINING_ARGS_NAME
 
-PROMPT_DICT = {
-    "prompt_input": (
-        "Below is an instruction that describes a task, paired with an input that provides further context. "
-        "Write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:"
-    ),
-    "prompt_no_input": (
-        "Below is an instruction that describes a task. "
-        "Write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n\n### Response:"
-    ),
+from textgen.config.model_args import LlamaArgs
+from textgen.llama.llama_utils import load_hf_dataset, LlamaDataset
+
+try:
+    import wandb
+
+    wandb_available = True
+except ImportError:
+    wandb_available = False
+
+has_cuda = torch.cuda.is_available()
+os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+MODEL_CLASSES = {
+    "llama": (AutoConfig, AutoModelForCausalLM, AutoTokenizer),
 }
 
 
-def train(
-        # model/data params
-        base_model: str = "",  # the only required argument
-        data_path: str = "yahma/alpaca-cleaned",
-        output_dir: str = "./lora-alpaca",
-        # training hyperparams
-        batch_size: int = 128,
-        micro_batch_size: int = 4,
-        num_epochs: int = 3,
-        learning_rate: float = 3e-4,
-        cutoff_len: int = 256,
-        val_set_size: int = 2000,
-        # lora hyperparams
-        lora_r: int = 8,
-        lora_alpha: int = 16,
-        lora_dropout: float = 0.05,
-        lora_target_modules: List[str] = ["q_proj", "v_proj"],
-        # llm hyperparams
-        train_on_inputs: bool = True,  # if False, masks out inputs in loss
-        group_by_length: bool = False,  # faster, but produces an odd training loss curve
-        # wandb params
-        wandb_project: str = "",
-        wandb_run_name: str = "",
-        wandb_watch: str = "",  # options: false | gradients | all
-        wandb_log_model: str = "",  # options: false | true
-        resume_from_checkpoint: str = None,  # either training checkpoint or final adapter
-        prompt_template_name: str = "alpaca",  # The prompt template to use, will default to alpaca.
-        int8: bool = False,
-):
-    if int(os.environ.get("LOCAL_RANK", 0)) == 0:
-        print(
-            f"Training Alpaca-LoRA model with params:\n"
-            f"base_model: {base_model}\n"
-            f"data_path: {data_path}\n"
-            f"output_dir: {output_dir}\n"
-            f"batch_size: {batch_size}\n"
-            f"micro_batch_size: {micro_batch_size}\n"
-            f"num_epochs: {num_epochs}\n"
-            f"learning_rate: {learning_rate}\n"
-            f"cutoff_len: {cutoff_len}\n"
-            f"val_set_size: {val_set_size}\n"
-            f"lora_r: {lora_r}\n"
-            f"lora_alpha: {lora_alpha}\n"
-            f"lora_dropout: {lora_dropout}\n"
-            f"lora_target_modules: {lora_target_modules}\n"
-            f"train_on_inputs: {train_on_inputs}\n"
-            f"group_by_length: {group_by_length}\n"
-            f"wandb_project: {wandb_project}\n"
-            f"wandb_run_name: {wandb_run_name}\n"
-            f"wandb_watch: {wandb_watch}\n"
-            f"wandb_log_model: {wandb_log_model}\n"
-            f"resume_from_checkpoint: {resume_from_checkpoint or False}\n"
-            f"prompt template: {prompt_template_name}\n"
-        )
-    assert (
-        base_model
-    ), "Please specify a --base_model, e.g. --base_model='huggyllama/llama-7b'"
-    gradient_accumulation_steps = batch_size // micro_batch_size
+class LlamaModel:
+    def __init__(
+            self,
+            model_type,
+            model_name,
+            lora_name=None,
+            args=None,
+            use_cuda=has_cuda,
+            cuda_device=-1,
+            **kwargs,
+    ):
 
-    device_map = "auto"
-    world_size = int(os.environ.get("WORLD_SIZE", 1))
-    ddp = world_size != 1
-    if ddp:
-        device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)}
-        gradient_accumulation_steps = gradient_accumulation_steps // world_size
+        """
+        Initializes a LlamaModel model.
 
-    # Check if parameter passed or if set within environ
-    use_wandb = len(wandb_project) > 0 or (
-            "WANDB_PROJECT" in os.environ and len(os.environ["WANDB_PROJECT"]) > 0
-    )
-    # Only overwrite environ if wandb param passed
-    if len(wandb_project) > 0:
-        os.environ["WANDB_PROJECT"] = wandb_project
-    if len(wandb_watch) > 0:
-        os.environ["WANDB_WATCH"] = wandb_watch
-    if len(wandb_log_model) > 0:
-        os.environ["WANDB_LOG_MODEL"] = wandb_log_model
+        Args:
+            model_type: The type of model (llama)
+            model_name: The exact architecture and trained weights to use. This may be a Hugging Face Transformers compatible pre-trained model, a community model, or the path to a directory containing model files.
+            lora_name (optional): Lora name
+            args (optional): Default args will be used if this parameter is not provided. If provided, it should be a dict containing the args that should be changed in the default args.
+            use_cuda (optional): Use GPU if available. Setting to False will force model to use CPU only.
+            cuda_device (optional): Specific GPU that should be used. Will use the first available GPU by default.
+            **kwargs (optional): For providing proxies, force_download, resume_download, cache_dir and other options specific to the 'from_pretrained' implementation where this will be supplied.
+        """  # noqa: ignore flake8"
+        model_type = model_type.lower()
+        self.args = self._load_model_args(model_name)
 
-    model = LlamaForCausalLM.from_pretrained(
-        base_model,
-        load_in_8bit=True if int8 else False,
-        torch_dtype=torch.float16,
-        device_map=device_map,
-    )
+        if isinstance(args, dict):
+            self.args.update_from_dict(args)
+        elif isinstance(args, LlamaArgs):
+            self.args = args
 
-    tokenizer = LlamaTokenizer.from_pretrained(base_model)
+        self.is_sweeping = False
+        if self.args.manual_seed:
+            random.seed(self.args.manual_seed)
+            np.random.seed(self.args.manual_seed)
+            torch.manual_seed(self.args.manual_seed)
+            if self.args.n_gpu > 0:
+                torch.cuda.manual_seed_all(self.args.manual_seed)
 
-    tokenizer.pad_token_id = (
-        0  # unk. we want this to be different from the eos token
-    )
-    tokenizer.padding_side = "left"  # Allow batched inference
-
-    def tokenize(prompt, add_eos_token=True):
-        # there's probably a way to do this with the tokenizer settings
-        # but again, gotta move fast
-        result = tokenizer(
-            prompt,
-            truncation=True,
-            max_length=cutoff_len,
-            padding=False,
-            return_tensors=None,
-        )
-        if (
-                result["input_ids"][-1] != tokenizer.eos_token_id
-                and len(result["input_ids"]) < cutoff_len
-                and add_eos_token
-        ):
-            result["input_ids"].append(tokenizer.eos_token_id)
-            result["attention_mask"].append(1)
-
-        result["labels"] = result["input_ids"].copy()
-
-        return result
-
-    def generate_and_tokenize_prompt(data_point):
-        prompt_input, prompt_no_input = PROMPT_DICT["prompt_input"], PROMPT_DICT["prompt_no_input"]
-        full_prompt = prompt_input.format_map(data_point)
-        tokenized_full_prompt = tokenize(full_prompt)
-        if not train_on_inputs:
-            user_prompt = prompt_no_input.format_map(data_point)
-            tokenized_user_prompt = tokenize(user_prompt, add_eos_token=False)
-            user_prompt_len = len(tokenized_user_prompt["input_ids"])
-
-            tokenized_full_prompt["labels"] = [
-                                                  -100
-                                              ] * user_prompt_len + tokenized_full_prompt["labels"][
-                                                                    user_prompt_len:
-                                                                    ]  # could be sped up, probably
-        return tokenized_full_prompt
-
-    if int8:
-        model = prepare_model_for_int8_training(model)
-
-    config = LoraConfig(
-        r=lora_r,
-        lora_alpha=lora_alpha,
-        target_modules=lora_target_modules,
-        lora_dropout=lora_dropout,
-        bias="none",
-        task_type="CAUSAL_LM",
-    )
-    model = get_peft_model(model, config)
-
-    if data_path.endswith(".json") or data_path.endswith(".jsonl"):
-        data = load_dataset("json", data_files=data_path)
-    else:
-        data = load_dataset(data_path)
-
-    if resume_from_checkpoint:
-        # Check the available weights and load them
-        checkpoint_name = os.path.join(
-            resume_from_checkpoint, "pytorch_model.bin"
-        )  # Full checkpoint
-        if not os.path.exists(checkpoint_name):
-            checkpoint_name = os.path.join(
-                resume_from_checkpoint, "adapter_model.bin"
-            )  # only LoRA model - LoRA config above has to fit
-            resume_from_checkpoint = (
-                False  # So the trainer won't try loading its state
-            )
-        # The two files above have a different name depending on how they were saved, but are actually the same.
-        if os.path.exists(checkpoint_name):
-            print(f"Restarting from {checkpoint_name}")
-            adapters_weights = torch.load(checkpoint_name)
-            model = set_peft_model_state_dict(model, adapters_weights)
+        if use_cuda:
+            if torch.cuda.is_available():
+                if cuda_device == -1:
+                    self.device = torch.device("cuda")
+                else:
+                    self.device = torch.device(f"cuda:{cuda_device}")
+            else:
+                raise ValueError(
+                    "'use_cuda' set to True when cuda is unavailable."
+                    "Make sure CUDA is available or set `use_cuda=False`."
+                )
         else:
-            print(f"Checkpoint {checkpoint_name} not found")
+            self.device = "cpu"
+        logger.debug(f"Device: {self.device}")
+        if not use_cuda:
+            self.args.fp16 = False
+            self.args.int8 = False
 
-    model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
+        self.results = {}
+        config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
+        if model_name is None:
+            model_name = "huggyllama/llama-7b"
+        config = AutoConfig.from_pretrained(model_name, **kwargs)
+        device_map = "auto"
+        world_size = int(os.environ.get("WORLD_SIZE", 1))
+        self.ddp = world_size != 1
+        if self.ddp:
+            device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)}
 
-    if val_set_size > 0:
-        train_val = data["train"].train_test_split(
-            test_size=val_set_size, shuffle=True, seed=42
+        self.model = model_class.from_pretrained(
+            model_name,
+            config=config,
+            load_in_8bit=self.args.int8,
+            torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+            device_map=device_map,
         )
-        train_data = (
-            train_val["train"].shuffle().map(generate_and_tokenize_prompt)
+
+        self.tokenizer_class = tokenizer_class
+        if self.args.tokenizer_name:
+            self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name)
+        else:
+            self.tokenizer = tokenizer_class.from_pretrained(model_name)
+            self.args.tokenizer_name = self.args.model_name
+
+        self.tokenizer.pad_token_id = (
+            0  # unk. we want this to be different from the eos token
         )
-        val_data = (
-            train_val["test"].shuffle().map(generate_and_tokenize_prompt)
+        self.model.config.pad_token_id = 0  # unk
+        self.model.config.bos_token_id = 1
+        self.model.config.eos_token_id = 2
+        self.tokenizer.padding_side = "left"  # Allow batched inference
+        self.args.model_type = model_type
+        if model_name is None:
+            self.args.model_name = "Llama_from_scratch"
+        else:
+            self.args.model_name = model_name
+
+        self.lora_name = lora_name
+        self.lora_loaded = False
+
+    def train_model(
+            self,
+            train_data,
+            output_dir=None,
+            args=None,
+            eval_data=None,
+            verbose=True,
+            **kwargs,
+    ):
+        """
+        Trains the model using 'train_data'
+
+        Args:
+            train_data: Pandas DataFrame containing the 3 columns - `instruction`, `input`, `output`.
+                        - `instruction`: The instruction text. (E.g. `"correct the following:"`)
+                        - `input`: The input text sequence. `instruction` is automatically prepended to form the full input. (<instruction> `\n` <input>)
+                        - `output`: The target sequence
+            output_dir: The directory where model files will be saved. If not given, self.args.output_dir will be used.
+            args (optional): Optional changes to the args dict of the model. Any changes made will persist for the model.
+            eval_data (optional): A DataFrame against which evaluation will be performed when evaluate_during_training is enabled. Is required if evaluate_during_training is enabled.
+            verbose (optional): If True, all of the warnings related to data processing will be printed. 
+            **kwargs: Additional metrics that should be used. Pass in the metrics as keyword arguments (name of metric: function to use).
+                        A metric function should take in two parameters. The first parameter will be the true labels, and the second parameter will be the predictions. Both inputs
+                        will be lists of strings. Note that this will slow down training significantly as the predicted sequences need to be generated.
+
+        Returns:
+            global_step: Number of global steps trained
+            training_details: Average training loss if evaluate_during_training is False or full training progress scores if evaluate_during_training is True
+        """  # noqa: ignore flake8"
+
+        if args:
+            self.args.update_from_dict(args)
+        if self.args.evaluate_during_training and eval_data is None:
+            raise ValueError(
+                "evaluate_during_training is enabled but eval_data is not specified."
+                " Pass eval_data to model.train_model() if using evaluate_during_training."
+            )
+
+        if not output_dir:
+            output_dir = self.args.output_dir
+        if (
+                os.path.exists(output_dir)
+                and os.listdir(output_dir)
+                and not self.args.overwrite_output_dir
+        ):
+            raise ValueError(
+                "Output directory ({}) already exists and is not empty."
+                " Set args.overwrite_output_dir = True to overcome.".format(output_dir)
+            )
+        # update model train config
+        self.model.gradient_checkpointing_enable()
+        self.model.enable_input_require_grads()
+        if not self.ddp and torch.cuda.device_count() > 1:
+            # keeps Trainer from trying its own DataParallelism when more than 1 gpu is available
+            self.model.is_parallelizable = True
+            self.model.model_parallel = True
+        self.model.config.use_cache = False
+        resume_from_checkpoint = self.args.resume_from_checkpoint
+
+        # setup peft, add lora config
+        if self.args.use_lora:
+            peft_config = LoraConfig(
+                task_type=TaskType.CAUSAL_LM,
+                inference_mode=False,
+                r=self.args.lora_r,
+                lora_alpha=self.args.lora_alpha,
+                lora_dropout=self.args.lora_dropout,
+                target_modules=self.args.lora_target_modules,
+                bias=self.args.lora_bias,
+            )
+            if self.args.int8:
+                self.model = prepare_model_for_int8_training(self.model)
+            self.model = get_peft_model(self.model, peft_config)
+
+            if resume_from_checkpoint:
+                # Check the available weights and load them
+                checkpoint_name = os.path.join(resume_from_checkpoint, "pytorch_model.bin")  # Full checkpoint
+                if not os.path.exists(checkpoint_name):
+                    checkpoint_name = os.path.join(
+                        resume_from_checkpoint, "adapter_model.bin")  # only LoRA model - LoRA config above has to fit
+                    resume_from_checkpoint = (
+                        False  # So the trainer won't try loading its state
+                    )
+                # The two files above have a different name depending on how they were saved, but are actually the same.
+                if os.path.exists(checkpoint_name):
+                    logger.info(f"Restarting from {checkpoint_name}")
+                    adapters_weights = torch.load(checkpoint_name)
+                    self.model = set_peft_model_state_dict(self.model, adapters_weights)
+                else:
+                    logger.info(f"Checkpoint {checkpoint_name} not found")
+
+            self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
+            self.lora_loaded = True
+        else:
+            logger.error("only impl lora fine-tune, set `use_lora=True` for train.")
+            raise ValueError("set `use_lora=True` for train.")
+        self._move_model_to_device()
+        os.makedirs(output_dir, exist_ok=True)
+
+        # load dataset
+        train_dataset = self.load_and_cache_examples(train_data)
+        if verbose:
+            logger.debug(f"train_dataset len: {len(train_dataset)}, train_dataset[0]: {train_dataset[0]}")
+        eval_dataset = None
+        if eval_data is not None:
+            eval_dataset = self.load_and_cache_examples(eval_data, evaluate=True)
+            if verbose:
+                logger.debug(f"eval_dataset len: {len(eval_dataset)}, eval_dataset[0]: {eval_dataset[0]}")
+
+        # start train
+        training_args = TrainingArguments(
+            output_dir=self.args.output_dir,
+            learning_rate=self.args.learning_rate,
+            num_train_epochs=self.args.num_train_epochs,
+            logging_dir=f"{self.args.output_dir}/logs",
+            logging_steps=self.args.logging_steps,
+            max_steps=self.args.max_steps,
+            per_device_train_batch_size=self.args.per_device_train_batch_size,
+            per_device_eval_batch_size=self.args.per_device_train_batch_size,
+            gradient_accumulation_steps=self.args.gradient_accumulation_steps,
+            warmup_steps=self.args.warmup_steps,
+            save_steps=self.args.save_steps,
+            optim=self.args.optim,
+            save_strategy=self.args.save_strategy,
+            evaluation_strategy='steps' if eval_data is not None else 'no',
+            eval_steps=self.args.eval_steps if eval_data is not None else None,
+            load_best_model_at_end=True if eval_data is not None else False,
+            ddp_find_unused_parameters=False if self.ddp else None,
+            save_total_limit=self.args.save_total_limit,
+            fp16=self.args.fp16,
+            remove_unused_columns=self.args.remove_unused_columns,
+            overwrite_output_dir=self.args.overwrite_output_dir,
+            no_cuda=True if self.device == "cpu" else False,
+            **kwargs
         )
-    else:
-        train_data = data["train"].shuffle().map(generate_and_tokenize_prompt)
-        val_data = None
-
-    if not ddp and torch.cuda.device_count() > 1:
-        # keeps Trainer from trying its own DataParallelism when more than 1 gpu is available
-        model.is_parallelizable = True
-        model.model_parallel = True
-
-    trainer = transformers.Trainer(
-        model=model,
-        train_dataset=train_data,
-        eval_dataset=val_data,
-        args=transformers.TrainingArguments(
-            per_device_train_batch_size=micro_batch_size,
-            gradient_accumulation_steps=gradient_accumulation_steps,
-            warmup_steps=100,
-            num_train_epochs=num_epochs,
-            learning_rate=learning_rate,
-            fp16=True,
-            logging_steps=10,
-            optim="adamw_torch",
-            evaluation_strategy="steps" if val_set_size > 0 else "no",
-            save_strategy="steps",
-            eval_steps=200 if val_set_size > 0 else None,
-            save_steps=200,
-            output_dir=output_dir,
-            save_total_limit=3,
-            load_best_model_at_end=True if val_set_size > 0 else False,
-            ddp_find_unused_parameters=False if ddp else None,
-            group_by_length=group_by_length,
-            report_to="wandb" if use_wandb else None,
-            run_name=wandb_run_name if use_wandb else None,
-        ),
-        data_collator=transformers.DataCollatorForSeq2Seq(
-            tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True
-        ),
-    )
-    model.config.use_cache = False
-
-    old_state_dict = model.state_dict
-    model.state_dict = (
-        lambda self, *_, **__: get_peft_model_state_dict(
-            self, old_state_dict()
+        # Log on each process the small summary:
+        logger.warning(
+            f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}, "
+            + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
         )
-    ).__get__(model, type(model))
+        logger.info(f"Training/evaluation parameters {training_args}")
 
-    if torch.__version__ >= "2" and sys.platform != "win32":
-        model = torch.compile(model)
+        data_collator = DataCollatorForSeq2Seq(
+            self.tokenizer, pad_to_multiple_of=self.args.pad_to_multiple_of,
+            return_tensors="pt", padding=True
+        )
+        trainer = FinetuneTrainer(
+            model=self.model,
+            train_dataset=train_dataset,
+            eval_dataset=eval_dataset if eval_data is not None else None,
+            args=training_args,
+            tokenizer=self.tokenizer,
+            data_collator=data_collator,
+        )
 
-    trainer.train(resume_from_checkpoint=resume_from_checkpoint)
+        if self.args.only_lora_state_dict:
+            old_state_dict = self.model.state_dict
+            self.model.state_dict = (
+                lambda self, *_, **__: get_peft_model_state_dict(
+                    self, old_state_dict()
+                )
+            ).__get__(self.model, type(self.model))
 
-    model.save_pretrained(output_dir)
+        if torch.__version__ >= "2" and sys.platform != "win32":
+            self.model = torch.compile(self.model)
 
-    print(
-        "\n If there's a warning about missing keys above, please disregard :)"
-    )
+        logger.info("*** Train ***")
+        (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
+        self.handle_metrics("train", metrics, self.args.output_dir)
+        self.results.update(metrics)
+        self.save_model(model=self.model)
+
+        if eval_data is not None:
+            logger.info("*** Evaluate ***")
+            if torch.cuda.is_available() and self.args.fp16:
+                self.model = self.model.half().cuda()
+            metrics = trainer.evaluate(metric_key_prefix="eval")
+            logger.debug(f"eval metrics: {metrics}")
+            self.handle_metrics("eval", metrics, self.args.output_dir)
+            self.results.update(metrics)
+
+        if verbose:
+            logger.debug(f"metrics: {self.results}")
+            logger.info(
+                " Training of {} model complete. Saved to {}.".format(
+                    self.args.model_name, output_dir
+                )
+            )
+        return global_step, training_loss
+
+    @staticmethod
+    def handle_metrics(split, metrics, output_dir):
+        """
+        Log and save metrics
+
+        Args:
+        - split: one of train, val, test
+        - metrics: metrics dict
+        - output_dir: where to save the metrics
+        """
+
+        logger.info(f"***** {split} metrics *****")
+        for key in sorted(metrics.keys()):
+            logger.info(f"  {key} = {metrics[key]}")
+        output_file = os.path.join(output_dir, f"{split}_results.txt")
+        with open(output_file, "w") as writer:
+            for key in sorted(metrics.keys()):
+                writer.write("{} = {}\n".format(key, str(metrics[key])))
+
+    def load_lora(self):
+        if self.args.use_lora:
+            if self.lora_name:
+                self.model = PeftModel.from_pretrained(self.model, self.lora_name)
+                logger.info(f"Loaded lora model from {self.lora_name}")
+                self.lora_loaded = True
+            else:
+                lora_path = os.path.join(self.args.output_dir, self.args.lora_name)
+                if lora_path and os.path.exists(lora_path):
+                    self.model = PeftModel.from_pretrained(self.model, self.args.output_dir)
+                    logger.info(f"Loaded lora model from {lora_path}")
+                    self.lora_loaded = True
+            if torch.__version__ >= "2" and sys.platform != "win32":
+                self.model = torch.compile(self.model)
+
+    @torch.no_grad()
+    def predict(self, sentences, keep_prompt=False, max_length=None, **kwargs):
+        """
+        Performs predictions on a list of text.
+
+        Args:
+            sentences: A python list of text (str) to be sent to the model for prediction. 
+            keep_prompt: Whether to keep the prompt in the generated text.
+            max_length: The maximum length of the generated text.
+
+        Returns:
+            preds: A python list of the generated sequences.
+        """  # noqa: ignore flake8"
+
+        if not self.lora_loaded:
+            self.load_lora()
+        if torch.cuda.is_available() and self.args.fp16:
+            self.model = self.model.half().cuda()
+        self._move_model_to_device()
+        self.model.eval()
+
+        all_outputs = []
+        # Batching
+        for batch in tqdm(
+                [
+                    sentences[i: i + self.args.eval_batch_size]
+                    for i in range(0, len(sentences), self.args.eval_batch_size)
+                ],
+                desc="Generating outputs",
+                disable=self.args.silent,
+        ):
+            inputs = self.tokenizer(batch, padding=True, return_tensors='pt').to(self.device)
+            generation_config = GenerationConfig(
+                max_length=max_length if max_length else self.args.max_length,
+                temperature=self.args.temperature,
+                top_p=self.args.top_p,
+                top_k=self.args.top_k,
+                num_beams=self.args.num_beams,
+                eos_token_id=self.tokenizer.eos_token_id,
+                **kwargs,
+            )
+            outputs = self.model.generate(**inputs, generation_config=generation_config,
+                                          return_dict_in_generate=True, output_scores=True)
+            for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs)):
+                # Decode text
+                text = self.tokenizer.decode(generated_sequence)
+                prompt_len = len(prompt_text)
+                gen_text = text[prompt_len:]
+                if keep_prompt:
+                    total_sequence = prompt_text + gen_text
+                else:
+                    total_sequence = gen_text
+                all_outputs.append(total_sequence)
+        return all_outputs
+
+    @torch.no_grad()
+    def chat(self, query: str, history: List[Tuple[str, str]] = None,
+             keep_prompt=False, max_length=128, **kwargs):
+        """
+        Chat with the model
+        :param query:
+        :param history:
+        :param keep_prompt:
+        :param max_length:
+        :param kwargs:
+        :return: response, history
+        """
+        self._move_model_to_device()
+        self.model.eval()
+        if history is None:
+            history = []
+        if not history:
+            prompt = query
+        else:
+            prompt = ""
+            for i, (old_query, response) in enumerate(history):
+                prompt += "[Round {}]\n问：{}\n答：{}\n".format(i, old_query, response)
+            prompt += "[Round {}]\n问：{}\n答：".format(len(history), query)
+        response = self.predict([prompt], keep_prompt=keep_prompt, max_length=len(prompt) + max_length, **kwargs)[0]
+        history = history + [(query, response)]
+        return response, history
+
+    def _move_model_to_device(self):
+        self.model.to(self.device)
+
+    def load_and_cache_examples(
+            self, data, evaluate=False, no_cache=False, verbose=True, silent=False
+    ):
+        """
+        Creates a LlamaDataset from data.
+
+        Utility function for train() and eval() methods. Not intended to be used directly.
+        """
+
+        tokenizer = self.tokenizer
+        args = self.args
+
+        if not no_cache:
+            no_cache = args.no_cache
+
+        if not no_cache:
+            os.makedirs(self.args.cache_dir, exist_ok=True)
+
+        mode = "dev" if evaluate else "train"
+
+        if self.args.use_hf_datasets:
+            dataset = load_hf_dataset(data, tokenizer, self.args, mode)
+            return dataset
+        elif args.dataset_class:
+            CustomDataset = args.dataset_class
+            return CustomDataset(tokenizer, args, data, mode)
+        else:
+            return LlamaDataset(
+                tokenizer,
+                self.args,
+                data,
+                mode,
+            )
+
+    def save_model(
+            self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
+    ):
+        if not output_dir:
+            output_dir = self.args.output_dir
+        os.makedirs(output_dir, exist_ok=True)
+
+        if model and not self.args.no_save:
+            # Take care of distributed/parallel training
+            model_to_save = model.module if hasattr(model, "module") else model
+            model_to_save.save_pretrained(output_dir)
+            self.tokenizer.save_pretrained(output_dir)
+            torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
+            if optimizer and scheduler and self.args.save_optimizer_and_scheduler:
+                torch.save(
+                    optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt")
+                )
+                torch.save(
+                    scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt")
+                )
+            # save model
+            self.save_model_args(output_dir)
+
+    def save_model_args(self, output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+        self.args.save(output_dir)
+
+    def _load_model_args(self, input_dir):
+        args = LlamaArgs()
+        args.load(input_dir)
+        return args
+
+    def get_named_parameters(self):
+        return [n for n, p in self.model.named_parameters()]
 
 
-if __name__ == '__main__':
-    import fire
-
-    fire.Fire(train)
+class FinetuneTrainer(Trainer):
+    def save_model(self, output_dir=None, _internal_call=False):
+        os.makedirs(output_dir, exist_ok=True)
+        torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
+        # saved_params = {k: v.to("cpu") for k, v in self.model.named_parameters() if v.requires_grad}
+        # torch.save(saved_params, os.path.join(output_dir, lora_name))
+        self.model.save_pretrained(output_dir)

@@ -247,7 +247,7 @@ class ChatGlmModel:
                 else:
                     logger.info(f"Checkpoint {checkpoint_name} not found")
 
-            print_trainable_parameters(self.model)
+            self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
             self.lora_loaded = True
         else:
             logger.error("only impl lora fine-tune, set `use_lora=True` for train.")
@@ -738,18 +738,3 @@ class FinetuneTrainer(Trainer):
 class CastOutputToFloat(nn.Sequential):
     def forward(self, x):
         return super().forward(x).to(torch.float32)
-
-
-def print_trainable_parameters(model):
-    """
-    Prints the number of trainable parameters in the model.
-    """
-    trainable_params = 0
-    all_param = 0
-    for _, param in model.named_parameters():
-        all_param += param.numel()
-        if param.requires_grad:
-            trainable_params += param.numel()
-    logger.debug(
-        f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
-    )

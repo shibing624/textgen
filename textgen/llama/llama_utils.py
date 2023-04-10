@@ -23,19 +23,32 @@ def preprocess_data(data):
     if input_text:
         prompt += f"{input_text}\n"
     prompt += "答："
+    if target_text:
+        prompt += f"{target_text}"
 
-    prompt_ids = tokenizer.encode(prompt, max_length=args.max_seq_length)
-    target_ids = tokenizer.encode(target_text, max_length=args.max_length,
-                                  add_special_tokens=False)
-    input_ids = prompt_ids + target_ids
-    input_ids = input_ids[:(args.max_seq_length + args.max_length)] + [tokenizer.eos_token_id]
+    full_max_length = args.max_seq_length + args.max_length
+    example = tokenizer(
+        prompt,
+        truncation=True,
+        max_length=full_max_length,
+        padding=False,
+        return_tensors=None,
+    )
+    if (
+            example["input_ids"][-1] != tokenizer.eos_token_id
+            and len(example["input_ids"]) < full_max_length
+    ):
+        example["input_ids"].append(tokenizer.eos_token_id)
+        example["attention_mask"].append(1)
 
-    return input_ids
+    example["labels"] = example["input_ids"].copy()
+
+    return example
 
 
 def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):
     data = (dataset["instruction"], dataset["input"], dataset["output"], tokenizer, args)
-    dataset['input_ids'] = preprocess_data(data)
+    dataset = preprocess_data(data)
     return dataset
 
 
@@ -67,7 +80,7 @@ def load_hf_dataset(data, tokenizer, args, mode):
 
     dataset.set_format(type="np", columns=["input_ids"])
 
-    return dataset["input_ids"]
+    return dataset
 
 
 class LlamaDataset(Dataset):
@@ -125,4 +138,3 @@ class LlamaDataset(Dataset):
 
     def __getitem__(self, index):
         return self.examples[index]
-

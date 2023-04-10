@@ -58,7 +58,7 @@ class ModelArgs:
     evaluate_each_epoch: bool = True
     fp16: bool = False
     gradient_accumulation_steps: int = 1
-    learning_rate: float = 4e-5
+    learning_rate: float = 2e-5
     local_rank: int = -1
     logging_steps: int = 50
     manual_seed: int = None
@@ -339,9 +339,10 @@ class ChatGlmArgs(ModelArgs):
 
     model_class: str = "ChatGlmArgs"
     dataset_class: Dataset = None
+    learning_rate: float = 2e-4
     fp16: bool = True
     int8: bool = False
-    quantization_bit:int = None  # if use quantization bit, set 4, else None
+    quantization_bit: int = None  # if use quantization bit, set 4, else None
     debug: bool = False
     max_seq_length: int = 256  # max length of input sequence
     max_length = 384  # max length of the sequence to be generated
@@ -374,5 +375,56 @@ class ChatGlmArgs(ModelArgs):
     save_total_limit = 2
     remove_unused_columns = False
     logging_steps = 50
-    resume_from_checkpoint:str = None
+    resume_from_checkpoint: str = None
 
+
+@dataclass
+class LlamaArgs(ModelArgs):
+    """
+    Model args for a LlamaModel
+    """
+
+    model_class: str = "LlamaArgs"
+    dataset_class: Dataset = None
+    learning_rate: float = 3e-4
+    fp16: bool = True
+    int8: bool = False
+    quantization_bit: int = None  # if use quantization bit, set 4, else None
+    debug: bool = False
+    max_seq_length: int = 256  # max length of input sequence
+    max_length = 384  # max length of the sequence to be generated
+    do_sample: bool = True
+    early_stopping: bool = True
+    evaluate_generated_text: bool = True
+    warmup_steps: int = 100
+    optim: str = "adamw_torch"
+    save_strategy: str = "steps"
+    eval_steps: int = 200
+    save_steps: int = 1000
+    pad_to_multiple_of: int = 8
+    max_eval_samples: int = 200
+    length_penalty: float = 2.0
+    num_beams: int = 4
+    num_return_sequences: int = 1
+    repetition_penalty: float = 1.0
+    temperature: float = 0.95
+    special_tokens_list: list = field(default_factory=list)
+    top_k: float = 30
+    top_p: float = 0.7
+    model_name_or_path: Optional[str] = field(default="huggyllama/llama-7b")
+    use_lora: bool = True
+    lora_name: str = field(default="adapter_model.bin")
+    lora_r: int = 8
+    lora_alpha = 16
+    lora_dropout = 0.05
+    lora_target_modules = ["query_key_value"]
+    lora_bias = "none"
+    only_lora_state_dict: bool = True
+    num_train_epochs = 3
+    max_steps = -1
+    per_device_train_batch_size = 4
+    gradient_accumulation_steps = 2
+    save_total_limit = 3
+    remove_unused_columns = False
+    logging_steps = 50
+    resume_from_checkpoint: str = None
