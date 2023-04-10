@@ -46,16 +46,17 @@ def main():
     if args.do_train:
         logger.info('Loading data...')
         model_args = {
-            'use_lora': True,
+            "use_lora": True,
             "reprocess_input_data": True,
             "overwrite_output_dir": True,
             "max_seq_length": args.max_seq_length,
             "max_length": args.max_length,
             "per_device_train_batch_size": args.batch_size,
+            "eval_batch_size": args.batch_size,
             "num_train_epochs": args.num_epochs,
             "save_eval_checkpoints": False,
             "output_dir": args.output_dir,
-            'eval_batch_size': args.batch_size,
+            "resume_from_checkpoint": args.output_dir,
         }
         model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
         train_data = load_data(args.train_file)

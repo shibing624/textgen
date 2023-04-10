@@ -284,7 +284,6 @@ class ChatGlmModel:
             fp16=self.args.fp16,
             remove_unused_columns=self.args.remove_unused_columns,
             overwrite_output_dir=self.args.overwrite_output_dir,
-            do_train=True,
             no_cuda=True if self.device == "cpu" else False,
             **kwargs
         )
