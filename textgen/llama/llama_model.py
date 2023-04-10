@@ -410,6 +410,7 @@ class LlamaModel:
                 top_k=self.args.top_k,
                 num_beams=self.args.num_beams,
                 eos_token_id=self.tokenizer.eos_token_id,
+                pad_token_id=self.tokenizer.pad_token_id,
                 **kwargs,
             )
             outputs = self.model.generate(**inputs, generation_config=generation_config,
