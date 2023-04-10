@@ -417,7 +417,7 @@ class LlamaArgs(ModelArgs):
     lora_r: int = 8
     lora_alpha = 16
     lora_dropout = 0.05
-    lora_target_modules = ["query_key_value"]
+    lora_target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
     lora_bias = "none"
     only_lora_state_dict: bool = True
     num_train_epochs = 3

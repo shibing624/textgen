@@ -414,7 +414,7 @@ class LlamaModel:
             )
             outputs = self.model.generate(**inputs, generation_config=generation_config,
                                           return_dict_in_generate=True, output_scores=True)
-            for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs)):
+            for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs.sequences)):
                 # Decode text
                 text = self.tokenizer.decode(generated_sequence)
                 prompt_len = len(prompt_text)
