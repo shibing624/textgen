@@ -396,11 +396,11 @@ class LlamaArgs(ModelArgs):
     do_sample: bool = True
     early_stopping: bool = True
     evaluate_generated_text: bool = True
-    warmup_steps: int = 100
+    warmup_steps: int = 50
     optim: str = "adamw_torch"
     save_strategy: str = "steps"
     eval_steps: int = 200
-    save_steps: int = 1000
+    save_steps: int = 400
     pad_to_multiple_of: int = 8
     max_eval_samples: int = 200
     length_penalty: float = 2.0
