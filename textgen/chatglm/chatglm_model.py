@@ -3,21 +3,18 @@
 @author:XuMing(xuming624@qq.com)
 @description:
 """
+import os
+import random
+import re
+import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import os
-import sys
-import re
-import random
-import math
-
-import numpy as np
 import jieba
-from rouge_chinese import Rouge
-from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+import numpy as np
 import torch
 import torch.nn as nn
 from loguru import logger
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from peft import (
     get_peft_model,
     LoraConfig,
@@ -27,12 +24,13 @@ from peft import (
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
 )
+from rouge_chinese import Rouge
 from tqdm.auto import tqdm
-import transformers
 from transformers import Trainer, TrainingArguments, AutoTokenizer, AutoModel, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
-from textgen.config.model_args import ChatGlmArgs
+
 from textgen.chatglm.chatglm_utils import load_hf_dataset, ChatGlmDataset
+from textgen.config.model_args import ChatGlmArgs
 
 try:
     import wandb
@@ -222,7 +220,7 @@ class ChatGlmModel:
             peft_config = LoraConfig(
                 task_type=TaskType.CAUSAL_LM,
                 inference_mode=False,
-                r=self.args.lora_rank,
+                r=self.args.lora_r,
                 lora_alpha=self.args.lora_alpha,
                 lora_dropout=self.args.lora_dropout,
                 target_modules=self.args.lora_target_modules,

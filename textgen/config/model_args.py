@@ -361,9 +361,9 @@ class ChatGlmArgs(ModelArgs):
     dataset_name_or_path: Optional[str] = field(default="shibing624/alpaca-zh")
     use_lora: bool = True
     lora_name: str = field(default="adapter_model.bin")
-    lora_rank: int = field(default=8)
-    lora_alpha = 32
-    lora_dropout = 0.1
+    lora_r: int = 8
+    lora_alpha = 16
+    lora_dropout = 0.05
     lora_target_modules = ["query_key_value"]
     lora_bias = "none"
     only_lora_state_dict: bool = False
