@@ -24,7 +24,8 @@ from peft import (
 )
 from tqdm.auto import tqdm
 from transformers import GenerationConfig, DataCollatorForSeq2Seq
-from transformers import Trainer, TrainingArguments, AutoTokenizer, AutoModelForCausalLM, AutoConfig
+from transformers import LlamaForCausalLM, LlamaTokenizer
+from transformers import Trainer, TrainingArguments, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
 
 from textgen.config.model_args import LlamaArgs
@@ -42,7 +43,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 MODEL_CLASSES = {
-    "llama": (AutoConfig, AutoModelForCausalLM, AutoTokenizer),
+    "llama": (AutoConfig, LlamaForCausalLM, LlamaTokenizer),
 }
 
 
