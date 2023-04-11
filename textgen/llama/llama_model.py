@@ -79,7 +79,6 @@ class LlamaModel:
         elif isinstance(args, LlamaArgs):
             self.args = args
 
-        self.is_sweeping = False
         if self.args.manual_seed:
             random.seed(self.args.manual_seed)
             np.random.seed(self.args.manual_seed)
@@ -108,7 +107,7 @@ class LlamaModel:
         self.results = {}
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
         if model_name is None:
-            model_name = "decapoda-research/llama-7b-hf"
+            model_name = self.args.model_name_or_path
         config = AutoConfig.from_pretrained(model_name, **kwargs)
         device_map = "auto"
         world_size = int(os.environ.get("WORLD_SIZE", 1))
@@ -269,7 +268,7 @@ class LlamaModel:
             gradient_accumulation_steps=self.args.gradient_accumulation_steps,
             warmup_steps=self.args.warmup_steps,
             save_steps=self.args.save_steps,
-            optim=self.args.optim,
+            optim=self.args.optimizer,
             save_strategy=self.args.save_strategy,
             evaluation_strategy='steps' if eval_data is not None else 'no',
             eval_steps=self.args.eval_steps if eval_data is not None else None,
@@ -403,8 +402,6 @@ class LlamaModel:
 
         if not self.lora_loaded:
             self.load_lora()
-        # if torch.cuda.is_available() and self.args.fp16:
-        #     self.model = self.model.half().cuda()
         self._move_model_to_device()
         self.model.eval()
 
@@ -457,8 +454,6 @@ class LlamaModel:
         :param kwargs:
         :return: response, history
         """
-        self._move_model_to_device()
-        self.model.eval()
         if history is None:
             history = []
         if not history:
@@ -541,14 +536,9 @@ class LlamaModel:
         args.load(input_dir)
         return args
 
-    def get_named_parameters(self):
-        return [n for n, p in self.model.named_parameters()]
-
 
 class FinetuneTrainer(Trainer):
     def save_model(self, output_dir=None, _internal_call=False):
         os.makedirs(output_dir, exist_ok=True)
         torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
-        # saved_params = {k: v.to("cpu") for k, v in self.model.named_parameters() if v.requires_grad}
-        # torch.save(saved_params, os.path.join(output_dir, lora_name))
         self.model.save_pretrained(output_dir)

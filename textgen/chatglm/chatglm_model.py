@@ -79,8 +79,6 @@ class ChatGlmModel:
             self.args.update_from_dict(args)
         elif isinstance(args, ChatGlmArgs):
             self.args = args
-
-        self.is_sweeping = False
         if self.args.manual_seed:
             random.seed(self.args.manual_seed)
             np.random.seed(self.args.manual_seed)
@@ -102,23 +100,21 @@ class ChatGlmModel:
         else:
             self.device = "cpu"
         logger.debug(f"Device: {self.device}")
-        if not use_cuda:
+        if self.device == "cpu":
             self.args.fp16 = False
             self.args.int8 = False
 
         self.results = {}
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
         if model_name is None:
-            model_name = "THUDM/chatglm-6b"
+            model_name = self.args.model_name_or_path
         config = AutoConfig.from_pretrained(model_name, trust_remote_code=True, **kwargs)
-        if use_cuda and torch.cuda.is_available():
+        if self.device != "cpu":
             self.model = model_class.from_pretrained(
                 model_name, config=config, trust_remote_code=True, load_in_8bit=self.args.int8)
             if self.args.quantization_bit:
                 logger.debug(f"Quantized to {self.args.quantization_bit} bit")
                 self.model = self.model.quantize(self.args.quantization_bit)
-            if self.args.fp16:
-                self.model = self.model.half().cuda()
         else:
             self.model = model_class.from_pretrained(
                 model_name, config=config, trust_remote_code=True).float()
@@ -209,8 +205,9 @@ class ChatGlmModel:
         # update model train config
         self.model.gradient_checkpointing_enable()
         self.model.enable_input_require_grads()
-        self.model.is_parallelizable = True
-        self.model.model_parallel = True
+        if torch.cuda.device_count() > 1:
+            self.model.is_parallelizable = True
+            self.model.model_parallel = True
         self.model.lm_head = CastOutputToFloat(self.model.lm_head)
         self.model.config.use_cache = False
         resume_from_checkpoint = self.args.resume_from_checkpoint
@@ -277,7 +274,9 @@ class ChatGlmModel:
             per_device_train_batch_size=self.args.per_device_train_batch_size,
             per_device_eval_batch_size=self.args.per_device_train_batch_size,
             gradient_accumulation_steps=self.args.gradient_accumulation_steps,
+            warmup_steps=self.args.warmup_steps,
             save_steps=self.args.save_steps,
+            optim=self.args.optimizer,
             save_strategy=self.args.save_strategy,
             evaluation_strategy='steps' if eval_data is not None else 'no',
             eval_steps=self.args.eval_steps if eval_data is not None else None,
@@ -330,7 +329,6 @@ class ChatGlmModel:
                     self.args.model_name, output_dir
                 )
             )
-
         return global_step, training_loss
 
     @staticmethod
@@ -397,8 +395,6 @@ class ChatGlmModel:
 
         if not self.lora_loaded:
             self.load_lora()
-        if torch.cuda.is_available() and self.args.fp16:
-            self.model = self.model.half().cuda()
         self._move_model_to_device()
         self.model.eval()
 
@@ -448,8 +444,6 @@ class ChatGlmModel:
         :param kwargs:
         :return: response, history
         """
-        self._move_model_to_device()
-        self.model.eval()
         if history is None:
             history = []
         if not history:
@@ -464,7 +458,7 @@ class ChatGlmModel:
         return response, history
 
     def _move_model_to_device(self):
-        self.model.to(self.device)
+        self.model.to(self.device, dtype=torch.float16 if self.args.fp16 else torch.float32)
 
     def load_and_cache_examples(
             self, data, evaluate=False, no_cache=False, verbose=True, silent=False
@@ -531,9 +525,6 @@ class ChatGlmModel:
         args = ChatGlmArgs()
         args.load(input_dir)
         return args
-
-    def get_named_parameters(self):
-        return [n for n, p in self.model.named_parameters()]
 
 
 class FinetuneTrainer(Trainer):

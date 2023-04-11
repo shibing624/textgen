@@ -349,6 +349,7 @@ class ChatGlmArgs(ModelArgs):
     do_sample: bool = True
     early_stopping: bool = True
     evaluate_generated_text: bool = True
+    optimizer: str = "adamw_torch"
     save_strategy: str = "steps"
     eval_steps: int = 200
     save_steps: int = 400
@@ -401,7 +402,7 @@ class LlamaArgs(ModelArgs):
     early_stopping: bool = True
     evaluate_generated_text: bool = True
     warmup_steps: int = 50
-    optim: str = "adamw_torch"
+    optimizer: str = "adamw_torch"
     save_strategy: str = "steps"
     eval_steps: int = 200
     save_steps: int = 400
