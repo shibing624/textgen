@@ -249,7 +249,6 @@ class ChatGlmModel:
         else:
             logger.error("only impl lora fine-tune, set `use_lora=True` for train.")
             raise ValueError("set `use_lora=True` for train.")
-        self._move_model_to_device()
         os.makedirs(output_dir, exist_ok=True)
 
         # load dataset
@@ -533,6 +532,16 @@ class FinetuneTrainer(Trainer):
             input_ids=inputs["input_ids"],
             labels=inputs["labels"],
         ).loss
+
+    def evaluate(
+            self,
+            eval_dataset=None,
+            ignore_keys: Optional[List[str]] = None,
+            metric_key_prefix: str = "eval",
+    ) -> Dict[str, float]:
+        if self.args.fp16:
+            self.model.half()
+        return super().evaluate(eval_dataset, ignore_keys, metric_key_prefix)
 
     def save_model(self, output_dir=None, _internal_call=False):
         os.makedirs(output_dir, exist_ok=True)
