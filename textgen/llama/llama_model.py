@@ -236,9 +236,9 @@ class LlamaModel:
                     adapters_weights = torch.load(checkpoint_name)
                     self.model = set_peft_model_state_dict(self.model, adapters_weights)
                 else:
-                    logger.info(f"Checkpoint {checkpoint_name} not found")
+                    logger.warning(f"Checkpoint {checkpoint_name} not found")
 
-            self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
+            logger.info(self.model.print_trainable_parameters())  # Be more transparent about the % of trainable params.
             self.lora_loaded = True
         else:
             logger.error("only impl lora fine-tune, set `use_lora=True` for train.")
@@ -403,8 +403,8 @@ class LlamaModel:
 
         if not self.lora_loaded:
             self.load_lora()
-        if torch.cuda.is_available() and self.args.fp16:
-            self.model = self.model.half().cuda()
+        # if torch.cuda.is_available() and self.args.fp16:
+        #     self.model = self.model.half().cuda()
         self._move_model_to_device()
         self.model.eval()
 
@@ -473,7 +473,7 @@ class LlamaModel:
         return response, history
 
     def _move_model_to_device(self):
-        self.model.to(self.device)
+        self.model.to(self.device, dtype=torch.float16 if self.args.fp16 else torch.float32)
 
     def load_and_cache_examples(
             self, data, evaluate=False, no_cache=False, verbose=True, silent=False

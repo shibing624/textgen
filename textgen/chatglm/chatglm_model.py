@@ -245,9 +245,9 @@ class ChatGlmModel:
                     adapters_weights = torch.load(checkpoint_name)
                     self.model = set_peft_model_state_dict(self.model, adapters_weights)
                 else:
-                    logger.info(f"Checkpoint {checkpoint_name} not found")
+                    logger.warning(f"Checkpoint {checkpoint_name} not found")
 
-            self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
+            logger.info(self.model.print_trainable_parameters())  # Be more transparent about the % of trainable params.
             self.lora_loaded = True
         else:
             logger.error("only impl lora fine-tune, set `use_lora=True` for train.")

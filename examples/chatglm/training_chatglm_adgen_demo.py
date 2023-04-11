@@ -80,7 +80,6 @@ def main():
             "max_length": args.max_length,
             "per_device_train_batch_size": args.batch_size,
             "num_train_epochs": args.num_epochs,
-            "save_eval_checkpoints": False,
             "output_dir": args.output_dir,
         }
         model = ChatGlmModel(args.model_type, args.model_name, args=model_args)

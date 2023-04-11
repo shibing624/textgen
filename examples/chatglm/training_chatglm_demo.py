@@ -54,7 +54,6 @@ def main():
             "per_device_train_batch_size": args.batch_size,
             "eval_batch_size": args.batch_size,
             "num_train_epochs": args.num_epochs,
-            "save_eval_checkpoints": False,
             "output_dir": args.output_dir,
             "resume_from_checkpoint": args.output_dir,
         }
