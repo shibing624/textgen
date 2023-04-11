@@ -22,6 +22,7 @@
 - [Reference](#reference)
 
 # Feature
+
 ## 文本生成
 
 1. seq2seq: Seq2Seq、ConvSeq2Seq、BART
@@ -31,37 +32,55 @@
 5. chatglm: ChatGLM
 
 ## 文本扩增
+
 ### 词粒度扩增
+
 1. UDA，非核心词替换
 2. EDA，简单数据增强技术：相似词、同义词替换，随机词插入、删除、替换
 
 ### 句粒度扩增
+
 1. 回译（BT, Back Translate）：中文-英文-中文
 2. GPT2模型续写：短文本->长文本
 3. BART摘要模型：长文本->短文本
 4. TGLS：无监督相似文本生成模型
 
 ## 功能列表
-- [UDA(非核心词替换)/EDA](textgen/augment/word_level_augment.py)：本项目参考Google的UDA(非核心词替换)算法和EDA算法，基于TF-IDF将句子中部分不重要词替换为同义词，随机词插入、删除、替换等方法，产生新的文本，实现了文本扩增
+
+- [UDA(非核心词替换)/EDA](textgen/augment/word_level_augment.py)：本项目参考Google的UDA(非核心词替换)
+  算法和EDA算法，基于TF-IDF将句子中部分不重要词替换为同义词，随机词插入、删除、替换等方法，产生新的文本，实现了文本扩增
 - [BT(回译)](textgen/augment/sentence_level_augment.py)：本项目基于百度翻译API实现了回译功能，先把中文句子翻译为英文，再把英文翻译为新的中文
 - [Seq2Seq](textgen/seq2seq)：本项目基于PyTorch实现了Seq2Seq、ConvSeq2Seq、BART模型的训练和预测，可以用于文本翻译、对话生成、摘要生成等文本生成任务
 - [T5](textgen/t5)：本项目基于PyTorch实现了T5和CopyT5模型训练和预测，可以用于文本翻译、对话生成、对联生成、文案撰写等文本生成任务
 - [GPT2](textgen/language_modeling)：本项目基于PyTorch实现了GTP2模型训练和预测，可以用于文章生成、对联生成等文本生成任务
 - [SongNet](textgen/language_modeling/songnet_model.py)：本项目基于PyTorch实现了SongNet模型训练和预测，可以用于规范格式的诗词、歌词等文本生成任务
-- [TGLS](textgen/unsup_generation)：本项目实现了[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)无监督相似文本生成模型，是一种“先搜索后学习”的文本生成方法，通过反复迭代学习候选集，最终模型能生成类似候选集的高质量相似文本
-
+- [TGLS](textgen/unsup_generation)
+  ：本项目实现了[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)无监督相似文本生成模型，是一种“先搜索后学习”的文本生成方法，通过反复迭代学习候选集，最终模型能生成类似候选集的高质量相似文本
+- [ChatGLM]
+- [LLAMA]
 
 ## Release Models
+
 release基于`textgen`训练的中文模型，模型已经release到HuggingFace models，指定模型名称`textgen`会自动下载模型，可直接使用。
 
-|Model|Arch|Intro|Training|Inference|
-|:-- |:--- |:--- |:--- |:--- |
-|[shibing624/prompt-t5-base-chinese](https://huggingface.co/shibing624/prompt-t5-base-chinese)|T5|中文NLP多任务Prompt模型|[prompt-t5-base-chinese.md](https://github.com/shibing624/textgen/blob/main/docs/prompt-t5-base-chinese.md)|[predict script](https://github.com/shibing624/textgen/blob/main/examples/t5_prompt_demo.py)|
-|[shibing624/t5-chinese-couplet](https://huggingface.co/shibing624/t5-chinese-couplet)|T5|fine-tuned中文对联后的模型|[对联生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%AF%B9%E8%81%94%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)|[predict script](https://github.com/shibing624/textgen/blob/main/examples/t5_couplet_demo.py)|
+|Model|Arch|Introduce|Training|Inference| |:-- |:--- |:--- |:--- |:--- |
+|[shibing624/prompt-t5-base-chinese](https://huggingface.co/shibing624/prompt-t5-base-chinese)|T5|中文NLP多任务Prompt模型|[prompt-t5-base-chinese.md](https://github.com/shibing624/textgen/blob/main/docs/prompt-t5-base-chinese.md)|[predict
+script](https://github.com/shibing624/textgen/blob/main/examples/t5_prompt_demo.py)|
+|[shibing624/t5-chinese-couplet](https://huggingface.co/shibing624/t5-chinese-couplet)|T5|fine-tuned中文对联后的模型|[对联生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%AF%B9%E8%81%94%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)|[predict
+script](https://github.com/shibing624/textgen/blob/main/examples/t5_couplet_demo.py)|
 |[shibing624/songnet-base-chinese](https://huggingface.co/shibing624/songnet-base-chinese)|SongNet|SongNet预训练模型|-|-|
-|[shibing624/songnet-base-chinese-songci](https://huggingface.co/shibing624/songnet-base-chinese-songci)|SongNet|fine-tuned宋词后的模型|[training script](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_songnet_demo.py)|[predict script](https://github.com/shibing624/textgen/blob/main/examples/songnet_songci_demo.py)|
-|[shibing624/songnet-base-chinese-couplet](https://huggingface.co/shibing624/songnet-base-chinese-couplet)|SongNet|fine-tuned对联后的模型|[training script](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_songnet_demo.py)|[predict script](https://github.com/shibing624/textgen/blob/main/examples/songnet_couplet_demo.py)|
-
+|[shibing624/songnet-base-chinese-songci](https://huggingface.co/shibing624/songnet-base-chinese-songci)|SongNet|fine-tuned宋词后的模型|[training
+script](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_songnet_demo.py)|[predict
+script](https://github.com/shibing624/textgen/blob/main/examples/songnet_songci_demo.py)|
+|[shibing624/songnet-base-chinese-couplet](https://huggingface.co/shibing624/songnet-base-chinese-couplet)|SongNet|fine-tuned对联后的模型|[training
+script](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_songnet_demo.py)|[predict
+script](https://github.com/shibing624/textgen/blob/main/examples/songnet_couplet_demo.py)|
+|[shibing624/chatglm-6b-csc-zh-lora](https://huggingface.co/shibing624/chatglm-6b-csc-zh-lora)|ChatGLM-6B|在27万中文拼写纠错数据[shibing624/CSC](https://huggingface.co/datasets/shibing624/CSC)上微调了一版ChatGLM-6B，纠错效果有提升，发布微调后的LoRA权重|[training
+script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_csc_demo.py)|[predict
+script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/csc_demo.py)|
+|[shibing624/chatglm-6b-belle-zh-lora](https://huggingface.co/shibing624/chatglm-6b-belle-zh-lora)|ChatGLM-6B|在100万条中文ChatGPT指令Belle数据集[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)上微调了一版ChatGLM-6B，问答效果有提升，发布微调后的LoRA权重|[training
+script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_hfdataset_demo.py)|[predict
+script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_hfdataset_demo.py)|
 
 # Demo
 
@@ -75,12 +94,12 @@ run example: [examples/gradio_demo.py](examples/gradio_demo.py) to see the demo:
 python examples/gradio_demo.py
 ```
 
-model trained by [examples/T5/T5_Finetune_Chinese_Couplet.ipynb](https://github.com/shibing624/textgen/blob/main/examples/T5/T5_Finetune_Chinese_Couplet.ipynb)
+model trained
+by [examples/T5/T5_Finetune_Chinese_Couplet.ipynb](https://github.com/shibing624/textgen/blob/main/examples/T5/T5_Finetune_Chinese_Couplet.ipynb)
 
 # Install
 
 ```shell
-pip install torch # conda install pytorch
 pip install -U textgen
 ```
 
@@ -90,15 +109,56 @@ or
 pip install torch # conda install pytorch
 git clone https://github.com/shibing624/textgen.git
 cd textgen
-python3 setup.py install
+python setup.py install
 ```
 
 # Usage
 
+## ChatGLM-6B LoRA 模型
+
+### 使用ChatGLM-6B LoRA微调后的模型
+
+```python
+import sys
+
+sys.path.append('../..')
+from textgen import ChatGlmModel
+
+model = ChatGlmModel("chatglm", "THUDM/chatglm-6b", lora_name="shibing624/chatglm-6b-csc-zh-lora")
+r = model.predict(["对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答："])
+print(r)  # ['少先队员应该为老人让座。\n错误字：因，坐']
+```
+
+### 训练ChatGLM-6B LoRA模型
+
+支持自定义数据集，数据集格式参考[examples/data/zh_csc_test.tsv](https://github.com/shibing624/textgen/blob/main/examples/data/zh_csc_test.tsv)。
+
+example: [examples/chatglm/training_chatglm_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_demo.py)
+
+## LLAMA LoRA 模型
+
+### 使用LLAMA LoRA微调后的模型
+
+```python
+import sys
+
+sys.path.append('../..')
+from textgen import LlamaModel
+
+model = LlamaModel("llama", "huggyllama/llama-7b", lora_name="qychen/luotuo-lora-7b-0.1")
+r = model.predict(["失眠了怎么办？"])
+print(r)
+```
+
+### 训练LLAMA LoRA模型
+
+example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)
+
 ## ConvSeq2Seq 模型
+
 训练并预测ConvSeq2Seq模型：
 
-example: [examples/seq2sesq/training_convseq2seq_model_demo.py](examples/seq2seq/training_convseq2seq_model_demo.py)
+example: [examples/seq2sesq/training_convseq2seq_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/seq2seq/training_convseq2seq_model_demo.py)
 
 ```python
 import argparse
@@ -148,10 +208,10 @@ outputs: ['人工智能是工程和科学的分支,致力于构建思维的机�
 ```
 
 ## BART 模型
+
 训练并预测BART模型：
 
-example: [examples/seq2sesq/training_bartseq2seq_zh_demo.py](examples/seq2seq/training_bartseq2seq_zh_demo.py)
-
+example: [examples/seq2sesq/training_bartseq2seq_zh_demo.py](https://github.com/shibing624/textgen/blob/main/examples/seq2seq/training_bartseq2seq_zh_demo.py)
 
 output:
 
@@ -159,7 +219,6 @@ output:
 inputs: ['什么是ai', '你是什么类型的计算机', '你知道热力学吗']
 outputs: ['人工智能是工程和科学的分支,致力于构', '我的程序运行在python,所以我在任何电脑上', '什么是热力学吗？']
 ```
-
 
 ## T5 模型
 
@@ -256,13 +315,11 @@ if __name__ == '__main__':
 ```
 
 output:
+
 ```shell
 inputs: ['什么是ai', '你是什么类型的计算机', '你知道热力学吗']
 outputs: ['人工智能有两个广义的定义,任何拟人的机械,如在卡雷尔capeks', '我的程序运行在Python,所以我在任何电脑上工作!', '什么是热力学']
 ```
-
-
-
 
 ## GPT2 模型
 
@@ -279,6 +336,7 @@ example: [examples/language_generation/training_zh_gpt2_demo.py](https://github.
 example: [examples/language_generation/training_couplet_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_couplet_gpt2_demo.py)
 
 #### GPT2 vs T5：
+
 1. 都是从Transformer改进来的，T5同时有编码器和解码器，GPT2只有解码器
 2. T5的模型优势是处理给定输入，产出对应输出的任务，如翻译、对话、问答等
 3. GPT2的模型优势是自由创作，如写一篇短文
@@ -293,8 +351,6 @@ example: [examples/language_generation/training_couplet_gpt2_demo.py](https://gi
 适用于强韵律格式要求的诗歌、对联、歌词生成等任务。
 
 example: [examples/language_generation/training_zh_songnet_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_songnet_demo.py)
-
-
 
 ## Keyword Text Augmentation(EDA/UDA)
 
@@ -410,6 +466,16 @@ output:
 
 前10句是真实用户评论，后10句是生成的。
 
+# Dataset
+
+1. 50万条中文ChatGPT指令Belle数据集：[BelleGroup/train_0.5M_CN](https://huggingface.co/datasets/BelleGroup/train_0.5M_CN)
+2. 100万条中文ChatGPT指令Belle数据集：[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)
+3.
+5万条英文ChatGPT指令Alpaca数据集：[50k English Stanford Alpaca dataset](https://github.com/tatsu-lab/stanford_alpaca#data-release)
+4. 2万条中文ChatGPT指令Alpaca数据集：[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
+5. 69万条中文指令Guanaco数据集(Belle50万条+Guanaco19万条)
+   ：[Chinese-Vicuna/guanaco_belle_merge_v1.0](https://huggingface.co/datasets/Chinese-Vicuna/guanaco_belle_merge_v1.0)
+
 # Contact
 
 - Issue(建议)
@@ -418,7 +484,6 @@ output:
 - 微信我： 加我*微信号：xuming624, 备注：姓名-公司名-NLP* 进NLP交流群。
 
 <img src="docs/wechat.jpeg" width="200" />
-
 
 # Citation
 
@@ -457,3 +522,4 @@ output:
 - [RUCAIBox/TextBox](https://github.com/RUCAIBox/TextBox)
 - [Tiiiger/bert_score]()
 - [1YCxZ/Fake-review-generation](https://github.com/1YCxZ/Fake-review-generation)
+- [tloen/alpaca-lora](https://github.com/tloen/alpaca-lora/blob/main/finetune.py)
