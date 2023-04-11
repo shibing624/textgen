@@ -349,6 +349,9 @@ class ChatGlmArgs(ModelArgs):
     do_sample: bool = True
     early_stopping: bool = True
     evaluate_generated_text: bool = True
+    save_strategy: str = "steps"
+    eval_steps: int = 200
+    save_steps: int = 400
     max_eval_samples: int = 20
     length_penalty: float = 2.0
     num_beams: int = 1
@@ -371,9 +374,9 @@ class ChatGlmArgs(ModelArgs):
     num_train_epochs = 1
     max_steps = -1
     per_device_train_batch_size = 2
-    eval_batch_size: int = 4
+    eval_batch_size: int = 2
     gradient_accumulation_steps = 1
-    save_total_limit = 2
+    save_total_limit = 3
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
@@ -423,9 +426,9 @@ class LlamaArgs(ModelArgs):
     only_lora_state_dict: bool = True
     num_train_epochs = 3
     max_steps = -1
-    per_device_train_batch_size = 4
-    eval_batch_size: int = 4
-    gradient_accumulation_steps = 2
+    per_device_train_batch_size = 2
+    eval_batch_size: int = 2
+    gradient_accumulation_steps = 1
     save_total_limit = 3
     remove_unused_columns = False
     logging_steps = 50

@@ -93,7 +93,7 @@ def main():
         ref_model = ChatGlmModel(args.model_type, args.model_name,
                                  args={'use_lora': False, 'eval_batch_size': args.batch_size})
         test_df['predict_before'] = ref_model.predict(test_df['prompt'].tolist())
-        logger.debug('test_df result: {}'.format(test_df))
+        logger.debug('test_df result: {}'.format(test_df[['output', 'predict_after']]))
         out_df = test_df[['instruction', 'input', 'output', 'predict_before', 'predict_after']]
         out_df.to_json('test_result.json', force_ascii=False, orient='records', lines=True)
 

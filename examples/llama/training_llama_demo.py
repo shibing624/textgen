@@ -84,7 +84,7 @@ def main():
 
         test_df['prompt'] = test_df.apply(get_prompt, axis=1)
         test_df['predict_after'] = model.predict(test_df['prompt'].tolist())
-        logger.debug('test_df result: {}'.format(test_df))
+        logger.debug('test_df result: {}'.format(test_df[['output', 'predict_after']]))
         out_df = test_df[['instruction', 'input', 'output', 'predict_after']]
         out_df.to_json('test_result.json', force_ascii=False, orient='records', lines=True)
 
