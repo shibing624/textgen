@@ -378,6 +378,12 @@ class LlamaModel:
                     self.model = PeftModel.from_pretrained(self.model, self.args.output_dir)
                     logger.info(f"Loaded lora model from {lora_path}")
                     self.lora_loaded = True
+
+            # unwind broken decapoda-research config
+            self.tokenizer.padding_side = "left"
+            self.model.config.pad_token_id = self.tokenizer.pad_token_id = 0  # unk
+            self.model.config.bos_token_id = 1
+            self.model.config.eos_token_id = 2
             if torch.__version__ >= "2" and sys.platform != "win32":
                 self.model = torch.compile(self.model)
 

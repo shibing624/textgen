@@ -41,7 +41,7 @@ def main():
             "num_train_epochs": args.num_epochs,
             "save_eval_checkpoints": False,
             "output_dir": args.output_dir,
-            "use_hf_datasets": True
+            "use_hf_datasets": True,
         }
         model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
 

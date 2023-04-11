@@ -4,9 +4,10 @@
 @description: 
 """
 import sys
+import os
 import argparse
 from loguru import logger
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 from torch.utils.data import Dataset
 
 sys.path.append('../..')
@@ -29,7 +30,12 @@ def preprocess_batch_for_hf_dataset(example, tokenizer, args):
 
 class CscDataset(Dataset):
     def __init__(self, tokenizer, args, data, mode):
-        dataset = load_dataset(data)
+        if data.endswith('.json') or data.endswith('.jsonl'):
+            dataset = load_dataset("json", data_files=data)
+        elif os.path.isdir(data):
+            dataset = load_from_disk(data)
+        else:
+            dataset = load_dataset(data)
         # This is not necessarily a train dataset. The datasets library insists on calling it train.
         dataset = dataset["train"]
         dataset = dataset.map(
@@ -79,7 +85,7 @@ def main():
         }
         model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
 
-        model.train_model(args.train_file)
+        model.train_model(args.train_file, eval_data=args.train_file)
     if args.do_predict:
         if model is None:
             model = ChatGlmModel(
