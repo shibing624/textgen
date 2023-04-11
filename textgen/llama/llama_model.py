@@ -131,10 +131,6 @@ class LlamaModel:
             self.tokenizer = tokenizer_class.from_pretrained(model_name)
             self.args.tokenizer_name = self.args.model_name
 
-        self.model.resize_token_embeddings(len(self.tokenizer))
-        assert self.model.get_input_embeddings().weight.size(0) == len(self.tokenizer)
-        logger.debug(f"Tokenizer vocabulary size: {len(self.tokenizer)}")
-
         self.tokenizer.pad_token_id = (
             0  # unk. we want this to be different from the eos token
         )
@@ -363,6 +359,16 @@ class LlamaModel:
     def load_lora(self):
         if self.args.use_lora:
             if self.lora_name:
+                if os.path.isdir(self.lora_name) and os.path.exists(
+                        os.path.join(self.lora_name, "tokenizer_config.json")):
+                    update_tokenizer = True
+                else:
+                    update_tokenizer = False
+                if "ziqingyang/chinese" in self.lora_name or update_tokenizer:
+                    self.tokenizer = LlamaTokenizer.from_pretrained(self.lora_name)
+                    self.model.resize_token_embeddings(len(self.tokenizer))
+                    assert self.model.get_input_embeddings().weight.size(0) == len(self.tokenizer)
+                    logger.debug(f"Tokenizer updated, vocabulary size: {len(self.tokenizer)}")
                 self.model = PeftModel.from_pretrained(self.model, self.lora_name)
                 logger.info(f"Loaded lora model from {self.lora_name}")
                 self.lora_loaded = True
