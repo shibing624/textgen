@@ -8,6 +8,6 @@ import sys
 sys.path.append('../..')
 from textgen import LlamaModel
 
-model = LlamaModel("llama", "decapoda-research/llama-7b-hf", lora_name="qychen/luotuo-lora-7b-0.1")
+model = LlamaModel("llama", "decapoda-research/llama-7b-hf", lora_name="ziqingyang/chinese-alpaca-lora-7b")
 r = model.predict(["失眠怎么办？"])
 print(r)

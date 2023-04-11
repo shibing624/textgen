@@ -371,6 +371,7 @@ class ChatGlmArgs(ModelArgs):
     num_train_epochs = 1
     max_steps = -1
     per_device_train_batch_size = 2
+    eval_batch_size: int = 4
     gradient_accumulation_steps = 1
     save_total_limit = 2
     remove_unused_columns = False
@@ -404,14 +405,14 @@ class LlamaArgs(ModelArgs):
     pad_to_multiple_of: int = 8
     max_eval_samples: int = 200
     length_penalty: float = 2.0
-    num_beams: int = 4
+    num_beams: int = 1
     num_return_sequences: int = 1
     repetition_penalty: float = 1.0
     temperature: float = 0.95
     special_tokens_list: list = field(default_factory=list)
     top_k: float = 30
     top_p: float = 0.7
-    model_name_or_path: Optional[str] = field(default="huggyllama/llama-7b")
+    model_name_or_path: Optional[str] = field(default="decapoda-research/llama-7b-hf")
     use_lora: bool = True
     lora_name: str = field(default="adapter_model.bin")
     lora_r: int = 8
@@ -423,6 +424,7 @@ class LlamaArgs(ModelArgs):
     num_train_epochs = 3
     max_steps = -1
     per_device_train_batch_size = 4
+    eval_batch_size: int = 4
     gradient_accumulation_steps = 2
     save_total_limit = 3
     remove_unused_columns = False

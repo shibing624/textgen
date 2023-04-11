@@ -108,7 +108,7 @@ class LlamaModel:
         self.results = {}
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
         if model_name is None:
-            model_name = "huggyllama/llama-7b"
+            model_name = "decapoda-research/llama-7b-hf"
         config = AutoConfig.from_pretrained(model_name, **kwargs)
         device_map = "auto"
         world_size = int(os.environ.get("WORLD_SIZE", 1))
@@ -130,6 +130,10 @@ class LlamaModel:
         else:
             self.tokenizer = tokenizer_class.from_pretrained(model_name)
             self.args.tokenizer_name = self.args.model_name
+
+        self.model.resize_token_embeddings(len(self.tokenizer))
+        assert self.model.get_input_embeddings().weight.size(0) == len(self.tokenizer)
+        logger.debug(f"Tokenizer vocabulary size: {len(self.tokenizer)}")
 
         self.tokenizer.pad_token_id = (
             0  # unk. we want this to be different from the eos token
@@ -404,17 +408,19 @@ class LlamaModel:
         ):
             inputs = self.tokenizer(batch, padding=True, return_tensors='pt').to(self.device)
             generation_config = GenerationConfig(
-                max_length=max_length if max_length else self.args.max_length,
+                max_new_tokens=max_length if max_length else self.args.max_length,
                 temperature=self.args.temperature,
                 top_p=self.args.top_p,
                 top_k=self.args.top_k,
                 num_beams=self.args.num_beams,
                 eos_token_id=self.tokenizer.eos_token_id,
                 pad_token_id=self.tokenizer.pad_token_id,
+                num_return_sequences=self.args.num_return_sequences,
+                return_dict_in_generate=True,
+                output_scores=True,
                 **kwargs,
             )
-            outputs = self.model.generate(**inputs, generation_config=generation_config,
-                                          return_dict_in_generate=True, output_scores=True)
+            outputs = self.model.generate(**inputs, generation_config=generation_config)
             for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs.sequences)):
                 # Decode text
                 text = self.tokenizer.decode(generated_sequence)

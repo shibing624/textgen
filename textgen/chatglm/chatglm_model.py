@@ -448,7 +448,7 @@ class ChatGlmModel:
         ):
             inputs = self.tokenizer(batch, padding=True, return_tensors='pt').to(self.device)
             gen_kwargs = {
-                "max_length": max_length if max_length else self.args.max_length,
+                "max_new_tokens": max_length if max_length else self.args.max_length,
                 "num_beams": self.args.num_beams,
                 "do_sample": self.args.do_sample,
                 "top_p": self.args.top_p,
