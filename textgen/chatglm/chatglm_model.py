@@ -107,7 +107,7 @@ class ChatGlmModel:
         config = AutoConfig.from_pretrained(model_name, trust_remote_code=True, **kwargs)
         if self.device != "cpu":
             self.model = model_class.from_pretrained(
-                model_name, config=config, trust_remote_code=True, load_in_8bit=self.args.int8)
+                model_name, config=config, trust_remote_code=True, load_in_8bit=self.args.int8).cuda()
             if self.args.quantization_bit:
                 logger.debug(f"Quantized to {self.args.quantization_bit} bit")
                 self.model = self.model.quantize(self.args.quantization_bit)
