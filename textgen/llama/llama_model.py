@@ -237,7 +237,7 @@ class LlamaModel:
                 else:
                     logger.warning(f"Checkpoint {checkpoint_name} not found")
 
-            logger.info(self.model.print_trainable_parameters())  # Be more transparent about the % of trainable params.
+            self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
             self.lora_loaded = True
         else:
             logger.error("only impl lora fine-tune, set `use_lora=True` for train.")

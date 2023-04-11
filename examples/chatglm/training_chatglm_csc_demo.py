@@ -84,7 +84,7 @@ def main():
         }
         model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
 
-        model.train_model(args.train_file, eval_data=args.train_file)
+        model.train_model(args.train_file)
     if args.do_predict:
         if model is None:
             model = ChatGlmModel(

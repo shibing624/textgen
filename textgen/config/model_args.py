@@ -351,7 +351,8 @@ class ChatGlmArgs(ModelArgs):
     evaluate_generated_text: bool = True
     optimizer: str = "adamw_torch"
     save_strategy: str = "steps"
-    eval_steps: int = 200
+    evaluation_strategy: str = "no"
+    eval_steps: int = None
     save_steps: int = 400
     max_eval_samples: int = 20
     length_penalty: float = 2.0

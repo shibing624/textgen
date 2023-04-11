@@ -61,8 +61,7 @@ def main():
         train_data = load_data(args.train_file)
         logger.debug('train_data: {}'.format(train_data[:10]))
         train_df = pd.DataFrame(train_data, columns=["instruction", "input", "output"])
-        eval_df = train_df[:10]
-        model.train_model(train_df, eval_data=eval_df)
+        model.train_model(train_df)
     if args.do_predict:
         if model is None:
             model = ChatGlmModel(
