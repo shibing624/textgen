@@ -11,3 +11,23 @@ from textgen import LlamaModel
 model = LlamaModel("llama", "decapoda-research/llama-7b-hf", lora_name="ziqingyang/chinese-alpaca-lora-7b")
 r = model.predict(["失眠怎么办？"])
 print(r)
+
+sents = [
+    "失眠怎么办？",
+    '问：用一句话描述地球为什么是独一无二的。\n答：',
+    '问：给定两个数字，计算它们的平均值。 数字: 25, 36\n答：',
+    '问：基于以下提示填写以下句子的空格。 空格应填写一个形容词 句子: ______出去享受户外活动，包括在公园里散步，穿过树林或在海岸边散步。\n答：',
+    "Tell me about alpacas.",
+    "Tell me about the president of Mexico in 2019.",
+    "Tell me about the king of France in 2019.",
+    "List all Canadian provinces in alphabetical order.",
+    "Write a Python program that prints the first 10 Fibonacci numbers.",
+    "Write a program that prints the numbers from 1 to 100. But for multiples of three print 'Fizz' instead of the number and for the multiples of five print 'Buzz'. For numbers which are multiples of both three and five print 'FizzBuzz'.",
+    "Tell me five words that rhyme with 'shock'.",
+    "Translate the sentence 'I have no mouth but I must scream' into Spanish.",
+    "Count up from 1 to 500.",
+]
+res = model.predict(sents)
+for s, i in zip(sents, res):
+    print(s, i)
+    print()
