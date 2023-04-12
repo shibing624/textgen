@@ -46,10 +46,10 @@ def preprocess_data(data):
     return example
 
 
-def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):
-    data = (dataset["instruction"], dataset["input"], dataset["output"], tokenizer, args)
-    dataset = preprocess_data(data)
-    return dataset
+def preprocess_batch_for_hf_dataset(example, tokenizer, args):
+    data = (example["instruction"], example["input"], example["output"], tokenizer, args)
+    example = preprocess_data(data)
+    return example
 
 
 def load_hf_dataset(data, tokenizer, args, mode):
@@ -77,8 +77,6 @@ def load_hf_dataset(data, tokenizer, args, mode):
         lambda x: preprocess_batch_for_hf_dataset(x, tokenizer=tokenizer, args=args),
         batched=False, remove_columns=dataset.column_names
     ).filter(lambda x: len(x['input_ids']) > 0)
-
-    dataset.set_format(type="np", columns=["input_ids"])
 
     return dataset
 
