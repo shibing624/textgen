@@ -38,5 +38,3 @@ def test_save_args():
     assert m.adafactor_clip_threshold == 2.0
     shutil.rmtree('outputs/')
 
-
-test_save_args()

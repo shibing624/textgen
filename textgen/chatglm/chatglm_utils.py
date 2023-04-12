@@ -66,7 +66,7 @@ def load_hf_dataset(data, tokenizer, args, mode):
     dataset = dataset.map(
         lambda x: preprocess_batch_for_hf_dataset(x, tokenizer=tokenizer, args=args),
         batched=False,
-    )
+    ).filter(lambda x: len(x['input_ids']) > 0)
 
     dataset.set_format(type="np", columns=["input_ids"])
 
