@@ -8,7 +8,7 @@ import argparse
 from loguru import logger
 
 sys.path.append('../..')
-from textgen import ChatGlmModel
+from textgen import LlamaModel
 
 
 def main():
@@ -42,12 +42,12 @@ def main():
             "output_dir": args.output_dir,
             "use_hf_datasets": True,
         }
-        model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
+        model = LlamaModel(args.model_type, args.model_name, args=model_args)
 
         model.train_model(args.train_file)
     if args.do_predict:
         if model is None:
-            model = ChatGlmModel(
+            model = LlamaModel(
                 args.model_type, args.model_name,
                 args={'use_lora': True, 'eval_batch_size': args.batch_size,
                       'output_dir': args.output_dir, "max_length": args.max_length, }
@@ -62,16 +62,6 @@ def main():
         response, history = model.chat("给出三个保持健康的秘诀。", history=[])
         print(response)
         response, history = model.chat("给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。\n", history=history)
-        print(response)
-        del model
-
-        ref_model = ChatGlmModel(args.model_type, args.model_name,
-                                 args={'use_lora': False, 'eval_batch_size': args.batch_size})
-        response = ref_model.predict(sents)
-        print(response)
-        response, history = ref_model.chat("给出三个保持健康的秘诀。", history=[])
-        print(response)
-        response, history = ref_model.chat("给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。\n", history=history)
         print(response)
 
 

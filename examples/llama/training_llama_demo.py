@@ -87,9 +87,9 @@ def main():
         out_df = test_df[['instruction', 'input', 'output', 'predict_after']]
         out_df.to_json('test_result.json', force_ascii=False, orient='records', lines=True)
 
-        response, history = model.chat("你好", history=[])
+        response, history = model.chat("给出三个保持健康的秘诀。", history=[])
         print(response)
-        response, history = model.chat("晚上睡不着应该怎么办", history=history)
+        response, history = model.chat("给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。\n", history=history)
         print(response)
 
 
