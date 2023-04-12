@@ -72,11 +72,6 @@ class Seq2SeqTrainer(Trainer):
 
         if self.args.label_smoothing == 0:
             self.loss_fn = torch.nn.CrossEntropyLoss(ignore_index=self.config.pad_token_id)
-        else:
-            # dynamically import label_smoothed_nll_loss
-            from utils import label_smoothed_nll_loss
-
-            self.loss_fn = label_smoothed_nll_loss
 
     def create_optimizer_and_scheduler(self, num_training_steps: int):
         """

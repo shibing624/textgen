@@ -205,7 +205,7 @@ def preprocess_data(data):
         )
         target_inputs = encoder_tokenizer.generator(
             target_text,
-            max_length=args.max_seq_length,
+            max_length=args.max_length,
             padding="max_length",
             return_tensors="pt",
             truncation=True,
@@ -229,7 +229,7 @@ def preprocess_data(data):
 
         target_text = decoder_tokenizer.encode(
             target_text,
-            max_length=args.max_seq_length,
+            max_length=args.max_length,
             padding="max_length",
             return_tensors="pt",
             truncation=True,
@@ -312,7 +312,7 @@ def preprocess_data_bart(data):
 
     target_ids = tokenizer.batch_encode_plus(
         [target_text],
-        max_length=args.max_seq_length,
+        max_length=args.max_length,
         padding="max_length",
         return_tensors="pt",
         truncation=True,
@@ -334,6 +334,7 @@ def preprocess_data_mbart(data):
         src_lang=args.src_lang,
         tgt_lang=args.tgt_lang,
         max_length=args.max_seq_length,
+        max_target_length=args.max_length,
         padding="max_length",  # pad_to_max_length=True won't work in this case
         return_tensors="pt",
         truncation=True,

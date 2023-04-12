@@ -63,7 +63,7 @@ class ModelArgs:
     logging_steps: int = 50
     manual_seed: int = None
     max_grad_norm: float = 1.0
-    max_seq_length: int = 128
+    max_seq_length: int = 128  # max length of input sequence
     model_name: str = None
     model_type: str = None
     multiprocessing_chunksize: int = -1
@@ -153,7 +153,7 @@ class T5Args(ModelArgs):
     early_stopping: bool = True
     evaluate_generated_text: bool = False
     length_penalty: float = 2.0
-    max_length: int = 20
+    max_length: int = 128  # max length of the sequence to be generated
     max_steps: int = -1
     num_beams: int = 1
     num_return_sequences: int = 1
@@ -183,7 +183,7 @@ class CopyT5Args(ModelArgs):
     early_stopping: bool = True
     evaluate_generated_text: bool = False
     length_penalty: float = 2.0
-    max_length: int = 20
+    max_length: int = 128  # max length of the sequence to be generated
     max_steps: int = -1
     num_beams: int = 3
     num_return_sequences: int = 1
@@ -247,7 +247,7 @@ class Seq2SeqArgs(ModelArgs):
     faiss_d: int = 768
     faiss_m: int = 128
     length_penalty: float = 2.0
-    max_length: int = 20
+    max_length: int = 128  # max length of the sequence to be generated
     max_steps: int = -1
     num_beams: int = 1
     num_return_sequences: int = 1
@@ -275,7 +275,7 @@ class LanguageGenerationArgs(ModelArgs):
     early_stopping: bool = True
     evaluate_generated_text: bool = False
     length_penalty: float = 2.0
-    max_length: int = 20
+    max_length: int = 128  # max length of the sequence to be generated
     max_steps: int = -1
     num_beams: int = 1
     num_return_sequences: int = 1

@@ -8,24 +8,16 @@ import os
 import random
 import warnings
 from dataclasses import asdict
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool
 
 import numpy as np
 import pandas as pd
 import torch
+from datasets import load_from_disk
+from loguru import logger
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
-from torch.utils.data.distributed import DistributedSampler
 from tqdm.auto import tqdm, trange
-from transformers.optimization import (
-    get_constant_schedule,
-    get_constant_schedule_with_warmup,
-    get_linear_schedule_with_warmup,
-    get_cosine_schedule_with_warmup,
-    get_cosine_with_hard_restarts_schedule_with_warmup,
-    get_polynomial_decay_schedule_with_warmup,
-)
-from transformers.optimization import AdamW, Adafactor
 from transformers import (
     AutoConfig,
     AutoModel,
@@ -45,7 +37,6 @@ from transformers import (
     ElectraConfig,
     ElectraModel,
     ElectraTokenizerFast,
-    EncoderDecoderConfig,
     EncoderDecoderModel,
     LongformerConfig,
     LongformerModel,
@@ -56,8 +47,6 @@ from transformers import (
     MobileBertConfig,
     MobileBertModel,
     MobileBertTokenizerFast,
-    PreTrainedModel,
-    PreTrainedTokenizerFast,
     RagTokenizer,
     RagRetriever,
     RagTokenForGeneration,
@@ -67,8 +56,15 @@ from transformers import (
     RobertaModel,
     RobertaTokenizerFast,
 )
-from datasets import load_from_disk
-from loguru import logger
+from transformers.optimization import AdamW, Adafactor
+from transformers.optimization import (
+    get_constant_schedule,
+    get_constant_schedule_with_warmup,
+    get_linear_schedule_with_warmup,
+    get_cosine_schedule_with_warmup,
+    get_cosine_with_hard_restarts_schedule_with_warmup,
+    get_polynomial_decay_schedule_with_warmup,
+)
 
 from textgen.config.model_args import Seq2SeqArgs
 from textgen.seq2seq.bart_seq2seq_utils import (
