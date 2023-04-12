@@ -41,7 +41,7 @@ class AdgDataset(Dataset):
         dataset = dataset.map(
             lambda x: preprocess_batch_for_hf_dataset(x, tokenizer, args),
             batched=False,
-        )
+        ).filter(lambda x: tokenizer.bos_token_id in list(x['input_ids']))  # must contain bos_token_id
         dataset.set_format(type="np", columns=["input_ids"])
 
         self.examples = dataset["input_ids"]

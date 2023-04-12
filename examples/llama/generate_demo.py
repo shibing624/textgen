@@ -41,10 +41,7 @@ def generate_prompt(instruction, input=None):
 {input}
 ### Response:"""
     else:
-        return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.
-### Instruction:
-{instruction}
-### Response:"""
+        return f"""回答下面的指令任务。\n### 问：{instruction}\n### 答："""
 
 
 generation_config = GenerationConfig(

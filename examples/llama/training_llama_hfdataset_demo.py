@@ -16,8 +16,9 @@ def main():
     parser.add_argument('--train_file', default='tatsu-lab/alpaca', type=str,
                         help='Dataset name (e.g. tatsu-lab/alpaca, shibing624/alpaca-zh, BelleGroup/train_1M_CN, '
                              'Chinese-Vicuna/guanaco_belle_merge_v1.0)')
-    parser.add_argument('--model_type', default='chatglm', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='THUDM/chatglm-6b', type=str, help='Transformers model or path')
+    parser.add_argument('--model_type', default='llama', type=str, help='Transformers model type')
+    parser.add_argument('--model_name', default='decapoda-research/llama-7b-hf', type=str,
+                        help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs-alpaca/', type=str, help='Model output directory')
@@ -28,7 +29,7 @@ def main():
     args = parser.parse_args()
     logger.info(args)
     model = None
-    # fine-tune chatGLM model
+    # fine-tune LLAMA model
     if args.do_train:
         logger.info('Loading data...')
         model_args = {

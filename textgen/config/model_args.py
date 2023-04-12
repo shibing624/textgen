@@ -408,7 +408,7 @@ class LlamaArgs(ModelArgs):
     eval_steps: int = 200
     save_steps: int = 400
     pad_to_multiple_of: int = 8
-    max_eval_samples: int = 200
+    max_eval_samples: int = 20
     length_penalty: float = 2.0
     num_beams: int = 1
     num_return_sequences: int = 1
