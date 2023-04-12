@@ -74,7 +74,7 @@ class ModelArgs:
     num_train_epochs: int = 1
     optimizer: str = "AdamW"
     output_dir: str = "outputs/"
-    overwrite_output_dir: bool = False
+    overwrite_output_dir: bool = True
     polynomial_decay_schedule_lr_end: float = 1e-7
     polynomial_decay_schedule_power: float = 1.0
     process_count: int = field(default_factory=get_default_process_count)
