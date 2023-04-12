@@ -6,7 +6,6 @@
 from loguru import logger
 from jieba import analyse
 import jieba
-from text2vec import Word2Vec
 
 from textgen.augment.sentence_level_augment import back_translation
 from textgen.augment.word_level_augment import (
@@ -32,6 +31,11 @@ class TextAugment:
         :param sentence_list: list, docs
         """
         self.tokenizer = tokenizer if tokenizer is not None else Tokenizer()
+        try:
+            from text2vec import Word2Vec
+        except ImportError:
+            logger.warning("text2vec not installed, please install text2vec with command: `pip install text2vec`")
+            raise ImportError
         vec = Word2Vec()
         self.w2v = vec.w2v
         if sentence_list is None:

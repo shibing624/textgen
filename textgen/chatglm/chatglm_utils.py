@@ -9,14 +9,13 @@ import pickle
 from multiprocessing import Pool
 
 import datasets
+import numpy as np
 from datasets import Dataset as HFDataset
 from datasets import load_dataset
 from loguru import logger
-from torch.utils.data import Dataset
-import numpy as np
-from tqdm.auto import tqdm
-from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from rouge import Rouge
+from torch.utils.data import Dataset
+from tqdm.auto import tqdm
 
 
 def preprocess_data(data):
@@ -131,6 +130,7 @@ class ChatGlmDataset(Dataset):
 
 
 def compute_bleu(label, pred, weights=None):
+    from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
     weights = weights or (0.25, 0.25, 0.25, 0.25)
     return np.mean([sentence_bleu(references=[list(a)], hypothesis=list(b),
                                   smoothing_function=SmoothingFunction().method1, weights=weights)

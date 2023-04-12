@@ -11,6 +11,5 @@ pandas
 wandb>=0.10.32
 sacremoses
 Rouge
-rouge_chinese
 cpm_kernels
 peft
