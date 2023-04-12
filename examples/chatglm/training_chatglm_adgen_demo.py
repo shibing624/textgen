@@ -40,7 +40,7 @@ class AdgDataset(Dataset):
         dataset = dataset["train"]
         dataset = dataset.map(
             lambda x: preprocess_batch_for_hf_dataset(x, tokenizer, args),
-            batched=False,
+            batched=False, remove_columns=dataset.column_names
         ).filter(lambda x: tokenizer.bos_token_id in list(x['input_ids']))  # must contain bos_token_id
         dataset.set_format(type="np", columns=["input_ids"])
 
