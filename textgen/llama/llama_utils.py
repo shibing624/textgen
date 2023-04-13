@@ -36,11 +36,10 @@ def preprocess_data(data):
         prompt = PROMPT_DICT["prompt_no_input"].format(instruction=instruction)
 
     full_prompt = prompt + target_text + tokenizer.eos_token
-    full_max_length = args.max_seq_length + args.max_length
     example = tokenizer(
         full_prompt,
         truncation=True,
-        max_length=full_max_length,
+        max_length=args.max_seq_length + args.max_length,
         padding=False,
         return_tensors=None,
     )
