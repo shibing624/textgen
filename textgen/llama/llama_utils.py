@@ -44,18 +44,18 @@ def preprocess_data(data):
         padding=False,
         return_tensors=None,
     )
+    example["labels"] = example["input_ids"].copy()
     if args.is_chat_task:
         user_example = tokenizer(
             prompt,
             truncation=True,
-            max_length=full_max_length,
+            max_length=args.max_seq_length,
             padding=False,
             return_tensors=None,
         )
         user_prompt_len = len(user_example["input_ids"])
         example["labels"] = [-100] * user_prompt_len + example["labels"][user_prompt_len:]
-    else:
-        example["labels"] = example["input_ids"].copy()
+
     return example
 
 
