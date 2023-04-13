@@ -52,12 +52,17 @@ def main():
                 args={'use_lora': True, 'eval_batch_size': args.batch_size,
                       'output_dir': args.output_dir, "max_length": args.max_length, }
             )
+
+        def generate_prompt(instruction):
+            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:"""
+
         sents = [
-            '问：用一句话描述地球为什么是独一无二的。\n答：',
-            '问：给定两个数字，计算它们的平均值。 数字: 25, 36\n答：',
-            '问：基于以下提示填写以下句子的空格。 空格应填写一个形容词 句子: ______出去享受户外活动，包括在公园里散步，穿过树林或在海岸边散步。\n答：',
+            '用一句话描述地球为什么是独一无二的。',
+            '给定两个数字，计算它们的平均值。 数字: 25, 36\n',
+            '基于以下提示填写以下句子的空格。 空格应填写一个形容词 句子: ______出去享受户外活动，包括在公园里散步，穿过树林或在海岸边散步。',
         ]
-        response = model.predict(sents)
+        prompt_sents = [generate_prompt(sent) for sent in sents]
+        response = model.predict(prompt_sents)
         print(response)
         response, history = model.chat("给出三个保持健康的秘诀。", history=[])
         print(response)

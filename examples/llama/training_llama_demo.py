@@ -77,9 +77,9 @@ def main():
 
         def get_prompt(arr):
             if arr['input'].strip():
-                return f"问：{arr['instruction']}\n{arr['input']}\n答："
+                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n### Input:\n{arr['input']}\n\n### Response:"""
             else:
-                return f"问：{arr['instruction']}\n答："
+                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n\n### Response:"""
 
         test_df['prompt'] = test_df.apply(get_prompt, axis=1)
         test_df['predict_after'] = model.predict(test_df['prompt'].tolist())

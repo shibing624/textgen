@@ -393,7 +393,7 @@ class LlamaModel:
         Performs predictions on a list of text.
 
         Args:
-            sentences: A python list of text (str) to be sent to the model for prediction. 
+            sentences: A python list of text (str) to be sent to the model for prediction. Note that the prefix should be prepended to the text.
             keep_prompt: Whether to keep the prompt in the generated text.
             max_length: The maximum length of the generated text.
 

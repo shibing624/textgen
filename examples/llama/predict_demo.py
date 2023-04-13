@@ -8,8 +8,14 @@ import sys
 sys.path.append('../..')
 from textgen import LlamaModel
 
+
+def generate_prompt(instruction):
+    return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:"""
+
+
 model = LlamaModel("llama", "decapoda-research/llama-7b-hf", lora_name="ziqingyang/chinese-alpaca-lora-7b")
-r = model.predict(["失眠怎么办？"])
+predict_sentence = generate_prompt("失眠怎么办？")
+r = model.predict([predict_sentence])
 print(r)
 
 sents = [
@@ -27,6 +33,7 @@ sents = [
     "Translate the sentence 'I have no mouth but I must scream' into Spanish.",
     "Count up from 1 to 500.",
 ]
+predict_sentences = [generate_prompt(s) for s in sents]
 res = model.predict(sents)
 for s, i in zip(sents, res):
     print(s, i)

@@ -5,10 +5,6 @@
 """
 import os
 import sys
-import json
-import os.path as osp
-from typing import Union
-import fire
 import gradio as gr
 import torch
 import transformers
@@ -30,12 +26,23 @@ try:
 except:  # noqa: E722
     pass
 
+PROMPT_DICT = {
+    "prompt_input": (
+        "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
+        "### Instruction:\n{instruction}\n### Input:\n{input_text}\n\n### Response:"
+    ),
+    "prompt_no_input": (
+        "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
+        "### Instruction:\n{instruction}\n\n### Response:"
+    ),
+}
+
 
 def predict(
         instruction,
         model,
         tokenizer,
-        prompter,
+        prompter="prompt_no_input",
         input=None,
         temperature=0.1,
         top_p=0.75,
@@ -45,7 +52,7 @@ def predict(
         stream_output=False,
         **kwargs,
 ):
-    prompt = prompter.generate_prompt(instruction, input)
+    prompt = PROMPT_DICT.get(prompter).format(instruction=instruction, input_text=input)
     inputs = tokenizer(prompt, return_tensors="pt")
     input_ids = inputs["input_ids"].to(device)
     generation_config = GenerationConfig(
@@ -92,7 +99,7 @@ def predict(
                 if output[-1] in [tokenizer.eos_token_id]:
                     break
 
-                yield prompter.get_response(decoded_output)
+                yield decoded_output
         return  # early return for stream_output
 
     # Without streaming
@@ -106,14 +113,13 @@ def predict(
         )
     s = generation_output.sequences[0]
     output = tokenizer.decode(s)
-    yield prompter.get_response(output)
+    yield output
 
 
 def main(
         load_8bit: bool = False,
         base_model: str = "",
         lora_weights: str = "tloen/alpaca-lora-7b",
-        prompt_template: str = "",  # The prompt template to use, will default to alpaca.
         server_name: str = "0.0.0.0",  # Allows to listen on all interfaces by providing '0.
         share_gradio: bool = False,
 ):
@@ -122,7 +128,6 @@ def main(
         base_model
     ), "Please specify a --base_model, e.g. --base_model='decapoda-research/llama-7b-hf'"
 
-    prompter = Prompter(prompt_template)
     tokenizer = LlamaTokenizer.from_pretrained(base_model)
     if device == "cuda":
         model = LlamaForCausalLM.from_pretrained(
@@ -185,7 +190,6 @@ def main(
             instruction,
             model,
             tokenizer,
-            prompter,
             input=input,
             temperature=temperature,
             top_p=top_p,
@@ -195,62 +199,42 @@ def main(
             stream_output=stream_output,
             **kwargs)
 
-    def gradio_demo():
-        gr.Interface(
-            fn=evaluate,
-            inputs=[
-                gr.components.Textbox(
-                    lines=2,
-                    label="Instruction",
-                    placeholder="Tell me about alpacas.",
-                ),
-                gr.components.Textbox(lines=2, label="Input", placeholder="none"),
-                gr.components.Slider(
-                    minimum=0, maximum=1, value=0.1, label="Temperature"
-                ),
-                gr.components.Slider(
-                    minimum=0, maximum=1, value=0.75, label="Top p"
-                ),
-                gr.components.Slider(
-                    minimum=0, maximum=100, step=1, value=40, label="Top k"
-                ),
-                gr.components.Slider(
-                    minimum=1, maximum=4, step=1, value=4, label="Beams"
-                ),
-                gr.components.Slider(
-                    minimum=1, maximum=2000, step=1, value=128, label="Max tokens"
-                ),
-                gr.components.Checkbox(label="Stream output"),
-            ],
-            outputs=[
-                gr.inputs.Textbox(
-                    lines=5,
-                    label="Output",
-                )
-            ],
-            title="🦙🌲 Alpaca-LoRA",
-            description="Alpaca-LoRA is a 7B-parameter LLaMA model finetuned to follow instructions. It is trained on the [Stanford Alpaca](https://github.com/tatsu-lab/stanford_alpaca) dataset and makes use of the Huggingface LLaMA implementation. For more information, please visit [the project's website](https://github.com/tloen/alpaca-lora).",
-            # noqa: E501
-        ).queue().launch(server_name="0.0.0.0", share=share_gradio)
-
-    def simple_demo():
-        for instruction in [
-            "Tell me about alpacas.",
-            "Tell me about the president of Mexico in 2019.",
-            "Tell me about the king of France in 2019.",
-            "List all Canadian provinces in alphabetical order.",
-            "Write a Python program that prints the first 10 Fibonacci numbers.",
-            "Write a program that prints the numbers from 1 to 100. But for multiples of three print 'Fizz' instead of the number and for the multiples of five print 'Buzz'. For numbers which are multiples of both three and five print 'FizzBuzz'.",
-            # noqa: E501
-            "Tell me five words that rhyme with 'shock'.",
-            "Translate the sentence 'I have no mouth but I must scream' into Spanish.",
-            "Count up from 1 to 500.",
-        ]:
-            print("Instruction:", instruction)
-            print("Response:", evaluate(instruction))
-            print()
-
-    simple_demo()
+    gr.Interface(
+        fn=evaluate,
+        inputs=[
+            gr.components.Textbox(
+                lines=2,
+                label="Instruction",
+                placeholder="Tell me about alpacas.",
+            ),
+            gr.components.Textbox(lines=2, label="Input", placeholder="none"),
+            gr.components.Slider(
+                minimum=0, maximum=1, value=0.1, label="Temperature"
+            ),
+            gr.components.Slider(
+                minimum=0, maximum=1, value=0.75, label="Top p"
+            ),
+            gr.components.Slider(
+                minimum=0, maximum=100, step=1, value=40, label="Top k"
+            ),
+            gr.components.Slider(
+                minimum=1, maximum=4, step=1, value=4, label="Beams"
+            ),
+            gr.components.Slider(
+                minimum=1, maximum=2000, step=1, value=128, label="Max tokens"
+            ),
+            gr.components.Checkbox(label="Stream output"),
+        ],
+        outputs=[
+            gr.inputs.Textbox(
+                lines=5,
+                label="Output",
+            )
+        ],
+        title="🦙🌲 Alpaca-LoRA",
+        description="Alpaca-LoRA is a 7B-parameter LLaMA model finetuned to follow instructions. It is trained on the [Stanford Alpaca](https://github.com/tatsu-lab/stanford_alpaca) dataset and makes use of the Huggingface LLaMA implementation. For more information, please visit [the project's website](https://github.com/tloen/alpaca-lora).",
+        # noqa: E501
+    ).queue().launch(server_name=server_name, share=share_gradio)
 
 
 class Stream(transformers.StoppingCriteria):
@@ -315,49 +299,5 @@ class Iteratorize:
         self.stop_now = True
 
 
-class Prompter(object):
-    __slots__ = ("template", "_verbose")
-
-    def __init__(self, template_name: str = "", verbose: bool = False):
-        self._verbose = verbose
-        if not template_name:
-            # Enforce the default here, so the constructor can be called with '' and will not break.
-            template_name = "alpaca"
-        file_name = osp.join("templates", f"{template_name}.json")
-        if not osp.exists(file_name):
-            raise ValueError(f"Can't read {file_name}")
-        with open(file_name) as fp:
-            self.template = json.load(fp)
-        if self._verbose:
-            print(
-                f"Using prompt template {template_name}: {self.template['description']}"
-            )
-
-    def generate_prompt(
-            self,
-            instruction: str,
-            input: Union[None, str] = None,
-            label: Union[None, str] = None,
-    ) -> str:
-        # returns the full prompt from instruction and optional input
-        # if a label (=response, =output) is provided, it's also appended.
-        if input:
-            res = self.template["prompt_input"].format(
-                instruction=instruction, input=input
-            )
-        else:
-            res = self.template["prompt_no_input"].format(
-                instruction=instruction
-            )
-        if label:
-            res = f"{res}{label}"
-        if self._verbose:
-            print(res)
-        return res
-
-    def get_response(self, output: str) -> str:
-        return output.split(self.template["response_split"])[1].strip()
-
-
-if __name__ == "__main__":
-    fire.Fire(main)
+if __name__ == '__main__':
+    main(load_8bit=False, base_model="decapoda-research/llama-7b-hf", lora_weights="tloen/alpaca-lora-7b")
