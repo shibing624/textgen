@@ -402,6 +402,7 @@ class LlamaArgs(ModelArgs):
     do_sample: bool = True
     early_stopping: bool = True
     evaluate_generated_text: bool = True
+    is_chat_task: bool = True
     warmup_steps: int = 50
     optimizer: str = "adamw_torch"
     save_strategy: str = "steps"

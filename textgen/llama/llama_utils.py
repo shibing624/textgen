@@ -15,34 +15,49 @@ from loguru import logger
 from torch.utils.data import Dataset
 from tqdm.auto import tqdm
 
+PROMPT_DICT = {
+    "prompt_input": (
+        "Below is an instruction that describes a task, paired with an input that provides further context. "
+        "Write a response that appropriately completes the request.\n\n"
+        "### Instruction:\n{instruction}\n\n### Input:\n{input_text}\n\n### Response:"
+    ),
+    "prompt_no_input": (
+        "Below is an instruction that describes a task. "
+        "Write a response that appropriately completes the request.\n\n"
+        "### Instruction:\n{instruction}\n\n### Response:"
+    ),
+}
+
 
 def preprocess_data(data):
     instruction, input_text, target_text, tokenizer, args = data
 
-    prompt = f"问：{instruction}\n"
     if input_text:
-        prompt += f"{input_text}\n"
-    prompt += "答："
-    if target_text:
-        prompt += f"{target_text}"
+        prompt = PROMPT_DICT["prompt_input"].format(instruction=instruction, input_text=input_text)
+    else:
+        prompt = PROMPT_DICT["prompt_no_input"].format(instruction=instruction)
 
+    full_prompt = prompt + target_text + tokenizer.eos_token
     full_max_length = args.max_seq_length + args.max_length
     example = tokenizer(
-        prompt,
+        full_prompt,
         truncation=True,
         max_length=full_max_length,
         padding=False,
         return_tensors=None,
     )
-    if (
-            example["input_ids"][-1] != tokenizer.eos_token_id
-            and len(example["input_ids"]) < full_max_length
-    ):
-        example["input_ids"].append(tokenizer.eos_token_id)
-        example["attention_mask"].append(1)
-
-    example["labels"] = example["input_ids"].copy()
-
+    if args.is_chat_task:
+        user_example = tokenizer(
+            prompt,
+            truncation=True,
+            max_length=full_max_length,
+            padding=False,
+            return_tensors=None,
+        )
+        user_prompt_len = len(user_example["input_ids"])
+        example["labels"] = [-100] * user_prompt_len + example["labels"][user_prompt_len:]
+    else:
+        example["labels"] = example["input_ids"].copy()
     return example
 
 

@@ -43,7 +43,18 @@ def generate_prompt(instruction, input=None):
     else:
         return f"""回答下面的指令任务。\n### 问：{instruction}\n### 答："""
 
+"""
+Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
 
+### Instruction:
+{instruction}
+
+### Input:
+{input}
+
+### Response:
+
+"""
 generation_config = GenerationConfig(
     temperature=0.1,
     top_p=0.75,

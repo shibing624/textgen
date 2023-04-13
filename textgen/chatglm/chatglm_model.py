@@ -140,8 +140,7 @@ class ChatGlmModel:
         for ids_l, example in sorted(zip(len_ids, batch), key=lambda x: -x[0]):
             ids = list(example)
             seq_len = ids.index(self.tokenizer.bos_token_id) + 1  # is equal to prompt length
-            ignore_idx = -100
-            labels = ([ignore_idx] * (seq_len - 1) + ids[(seq_len - 1):] + [ignore_idx] * (longest - ids_l))
+            labels = ([-100] * (seq_len - 1) + ids[(seq_len - 1):] + [-100] * (longest - ids_l))
             ids = ids + [self.tokenizer.pad_token_id] * (longest - ids_l)
             _ids = torch.LongTensor(ids)
             labels_list.append(torch.LongTensor(labels))

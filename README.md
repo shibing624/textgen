@@ -86,6 +86,8 @@ model trained by [examples/T5/T5_Finetune_Chinese_Couplet.ipynb](https://github.
 # Install
 
 ```shell
+pip install git+https://github.com/huggingface/transformers
+pip install git+https://github.com/huggingface/peft
 pip install -U textgen
 ```
 
