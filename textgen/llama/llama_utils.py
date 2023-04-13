@@ -43,6 +43,12 @@ def preprocess_data(data):
         padding=False,
         return_tensors=None,
     )
+    if (
+            example["input_ids"][-1] != tokenizer.eos_token_id
+            and len(example["input_ids"]) < args.max_seq_length + args.max_length
+    ):
+        example["input_ids"].append(tokenizer.eos_token_id)
+        example["attention_mask"].append(1)
     example["labels"] = example["input_ids"].copy()
     if args.is_chat_task:
         user_example = tokenizer(
