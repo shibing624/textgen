@@ -105,16 +105,17 @@ class ChatGlmModel:
         if model_name is None:
             model_name = self.args.model_name_or_path
         config = AutoConfig.from_pretrained(model_name, trust_remote_code=True, **kwargs)
-        if self.device != "cpu":
-            self.model = model_class.from_pretrained(
-                model_name, config=config, trust_remote_code=True, load_in_8bit=self.args.int8).cuda()
-            if self.args.quantization_bit:
-                logger.debug(f"Quantized to {self.args.quantization_bit} bit")
-                self.model = self.model.quantize(self.args.quantization_bit)
-        else:
-            self.model = model_class.from_pretrained(
-                model_name, config=config, trust_remote_code=True).float()
-
+        self.model = model_class.from_pretrained(
+            model_name,
+            config=config,
+            trust_remote_code=True,
+            load_in_8bit=self.args.int8,
+            torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+            device_map="auto",
+        )
+        if self.args.quantization_bit:
+            logger.debug(f"Quantized to {self.args.quantization_bit} bit")
+            self.model = self.model.quantize(self.args.quantization_bit)
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
             self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name, trust_remote_code=True)
@@ -349,6 +350,8 @@ class ChatGlmModel:
                     self.lora_loaded = True
             if torch.__version__ >= "2" and sys.platform != "win32":
                 self.model = torch.compile(self.model)
+            if self.args.fp16:
+                self.model.half()
 
     def process_response(self, response):
         response = response.strip().replace("[[训练时间]]", "2023年")
@@ -380,7 +383,6 @@ class ChatGlmModel:
 
         if not self.lora_loaded:
             self.load_lora()
-        self._move_model_to_device()
         self.model.eval()
 
         all_outputs = []
@@ -441,9 +443,6 @@ class ChatGlmModel:
         response = self.predict([prompt], keep_prompt=keep_prompt, max_length=len(prompt) + max_length, **kwargs)[0]
         history = history + [(query, response)]
         return response, history
-
-    def _move_model_to_device(self):
-        self.model.to(self.device, dtype=torch.float16 if self.args.fp16 else torch.float32)
 
     def load_and_cache_examples(
             self, data, evaluate=False, no_cache=False, verbose=True, silent=False

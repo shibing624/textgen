@@ -384,6 +384,8 @@ class LlamaModel:
             self.model.config.eos_token_id = 2
             if torch.__version__ >= "2" and sys.platform != "win32":
                 self.model = torch.compile(self.model)
+            if self.args.fp16:
+                self.model.half()
 
     @torch.no_grad()
     def predict(self, sentences, keep_prompt=False, max_length=None, **kwargs):
@@ -401,7 +403,6 @@ class LlamaModel:
 
         if not self.lora_loaded:
             self.load_lora()
-        self._move_model_to_device()
         self.model.eval()
 
         all_outputs = []
@@ -431,7 +432,7 @@ class LlamaModel:
             outputs = self.model.generate(**inputs, generation_config=generation_config)
             for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs.sequences)):
                 # Decode text
-                text = self.tokenizer.decode(generated_sequence)
+                text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
                 prompt_len = len(prompt_text)
                 gen_text = text[prompt_len:]
                 if keep_prompt:
@@ -465,9 +466,6 @@ class LlamaModel:
         response = self.predict([prompt], keep_prompt=keep_prompt, max_length=len(prompt) + max_length, **kwargs)[0]
         history = history + [(query, response)]
         return response, history
-
-    def _move_model_to_device(self):
-        self.model.to(self.device, dtype=torch.float16 if self.args.fp16 else torch.float32)
 
     def load_and_cache_examples(
             self, data, evaluate=False, no_cache=False, verbose=True, silent=False
