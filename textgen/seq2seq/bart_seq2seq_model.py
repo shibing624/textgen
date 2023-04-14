@@ -703,7 +703,7 @@ class BartSeq2SeqModel:
                 config={**asdict(args)},
                 **args.wandb_kwargs,
             )
-            wandb.run._label(repo="simpletransformers")
+            wandb.run._label(repo="textgen")
             wandb.watch(self.model)
             self.wandb_run_id = wandb.run.id
 

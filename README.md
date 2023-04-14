@@ -21,7 +21,7 @@
 - [Contact](#Contact)
 - [Reference](#reference)
 
-# Feature
+# 😊 Feature
 
 ## 文本生成
 
@@ -71,7 +71,7 @@ release基于`textgen`训练的中文模型，模型已经release到HuggingFace 
 |[shibing624/chatglm-6b-belle-zh-lora](https://huggingface.co/shibing624/chatglm-6b-belle-zh-lora)|ChatGLM-6B|在100万条中文ChatGPT指令Belle数据集[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)上微调了一版ChatGLM-6B，问答效果有提升，发布微调后的LoRA权重|[training script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_hfdataset_demo.py)|[predict script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_hfdataset_demo.py)|
 |[shibing624/llama-13b-belle-zh-lora](https://huggingface.co/shibing624/llama-13b-belle-zh-lora)|ChatGLM-6B|在100万条中文ChatGPT指令Belle数据集[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)上微调了一版Llama-13B，问答效果有提升，发布微调后的LoRA权重|[training script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_hfdataset_demo.py)|[predict script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_hfdataset_demo.py)|
 
-# Demo
+# 🚀 Demo
 
 HuggingFace Demo: https://huggingface.co/spaces/shibing624/chinese-couplet-generate
 
@@ -103,7 +103,7 @@ cd textgen
 python setup.py install
 ```
 
-# Usage
+# 😎 Usage
 
 ## ChatGLM-6B LoRA 模型
 
@@ -482,7 +482,7 @@ output:
 
 前10句是真实用户评论，后10句是生成的。
 
-# Dataset
+# 📚 Dataset 
 
 1. 50万条中文ChatGPT指令Belle数据集：[BelleGroup/train_0.5M_CN](https://huggingface.co/datasets/BelleGroup/train_0.5M_CN)
 2. 100万条中文ChatGPT指令Belle数据集：[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)
@@ -490,7 +490,7 @@ output:
 4. 2万条中文ChatGPT指令Alpaca数据集：[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
 5. 69万条中文指令Guanaco数据集(Belle50万条+Guanaco19万条)：[Chinese-Vicuna/guanaco_belle_merge_v1.0](https://huggingface.co/datasets/Chinese-Vicuna/guanaco_belle_merge_v1.0)
 
-# Contact
+# ☎️ Contact
 
 - Issue(建议)
   ：[![GitHub issues](https://img.shields.io/github/issues/shibing624/textgen.svg)](https://github.com/shibing624/textgen/issues)
@@ -499,7 +499,7 @@ output:
 
 <img src="docs/wechat.jpeg" width="200" />
 
-# Citation
+# 😇 Citation
 
 如果你在研究中使用了textgen，请按如下格式引用：
 
@@ -512,11 +512,11 @@ output:
 }
 ```
 
-# License
+# 🤗 License
 
 授权协议为 [The Apache License 2.0](/LICENSE)，可免费用做商业用途。请在产品说明中附加textgen的链接和授权协议。
 
-# Contribute
+# 😍 Contribute
 
 项目代码还很粗糙，如果大家对代码有所改进，欢迎提交回本项目，在提交之前，注意以下两点：
 
@@ -525,7 +525,7 @@ output:
 
 之后即可提交PR。
 
-## Acknowledgements
+## 💕 Acknowledgements 
 
 - [PaddlePaddle/ERNIE](https://github.com/PaddlePaddle/ERNIE)
 - [minimaxir/textgenrnn](https://github.com/minimaxir/textgenrnn)
@@ -534,7 +534,8 @@ output:
 - [yangjianxin1/GPT2-chitchat](https://github.com/yangjianxin1/GPT2-chitchat)
 - [williamSYSU/TextGAN-PyTorch](https://github.com/williamSYSU/TextGAN-PyTorch)
 - [RUCAIBox/TextBox](https://github.com/RUCAIBox/TextBox)
-- [Tiiiger/bert_score]()
+- [Tiiiger/bert_score](https://github.com/Tiiiger/bert_score)
+- [ThilinaRajapakse/simpletransformers](https://github.com/ThilinaRajapakse/simpletransformers)
 - [1YCxZ/Fake-review-generation](https://github.com/1YCxZ/Fake-review-generation)
 - [tloen/alpaca-lora](https://github.com/tloen/alpaca-lora/blob/main/finetune.py)
 
