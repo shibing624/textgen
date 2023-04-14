@@ -349,6 +349,7 @@ class ChatGlmArgs(ModelArgs):
     do_sample: bool = True
     early_stopping: bool = True
     evaluate_generated_text: bool = True
+    report_to = "tensorboard"
     optimizer: str = "adamw_torch"
     save_strategy: str = "steps"
     evaluation_strategy: str = "no"
@@ -404,6 +405,7 @@ class LlamaArgs(ModelArgs):
     evaluate_generated_text: bool = True
     is_chat_task: bool = True
     warmup_steps: int = 50
+    report_to = "tensorboard"
     optimizer: str = "adamw_torch"
     save_strategy: str = "steps"
     eval_steps: int = 200

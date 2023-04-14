@@ -107,6 +107,12 @@ python setup.py install
 
 ## ChatGLM-6B LoRA 模型
 
+安装最新开发版的peft库，支持LoRA模型
+
+```shell
+pip install git+https://github.com/huggingface/peft
+```
+
 ### 使用ChatGLM-6B LoRA微调后的模型
 
 example: [examples/chatglm/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/predict_demo.py)
@@ -122,6 +128,8 @@ r = model.predict(["对下面中文拼写纠错：\n少先队员因该为老人�
 print(r)  # ['少先队员应该为老人让座。\n错误字：因，坐']
 ```
 
+PS：由于使用了开发中的peft库，可能由于版本更新，导致LoRA模型加载失败，建议使用下面的训练方法，自己训练LoRA模型。
+
 ### 训练ChatGLM-6B LoRA模型
 
 支持自定义数据集，数据集格式参考[examples/data/zh_csc_test.tsv](https://github.com/shibing624/textgen/blob/main/examples/data/zh_csc_test.tsv)。
@@ -129,6 +137,13 @@ print(r)  # ['少先队员应该为老人让座。\n错误字：因，坐']
 example: [examples/chatglm/training_chatglm_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_demo.py)
 
 ## LLAMA LoRA 模型
+
+安装最新开发版的transformers和peft库，支持LLAMA、LoRA模型
+
+```shell
+pip install git+https://github.com/huggingface/transformers
+pip install git+https://github.com/huggingface/peft
+```
 
 ### 使用LLAMA LoRA微调后的模型
 

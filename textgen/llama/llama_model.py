@@ -276,6 +276,7 @@ class LlamaModel:
             save_total_limit=self.args.save_total_limit,
             fp16=self.args.fp16,
             remove_unused_columns=self.args.remove_unused_columns,
+            report_to=self.args.report_to,
             overwrite_output_dir=self.args.overwrite_output_dir,
             no_cuda=True if self.device == "cpu" else False,
             **kwargs
@@ -384,8 +385,6 @@ class LlamaModel:
             self.model.config.eos_token_id = 2
             if torch.__version__ >= "2" and sys.platform != "win32":
                 self.model = torch.compile(self.model)
-            if self.args.fp16:
-                self.model.half()
 
     @torch.no_grad()
     def predict(self, sentences, keep_prompt=False, max_length=None, **kwargs):
@@ -403,6 +402,8 @@ class LlamaModel:
 
         if not self.lora_loaded:
             self.load_lora()
+        if self.args.fp16:
+            self.model.half()
         self.model.eval()
 
         all_outputs = []

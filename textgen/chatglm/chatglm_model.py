@@ -278,6 +278,7 @@ class ChatGlmModel:
             save_total_limit=self.args.save_total_limit,
             fp16=self.args.fp16,
             remove_unused_columns=self.args.remove_unused_columns,
+            report_to=self.args.report_to,
             overwrite_output_dir=self.args.overwrite_output_dir,
             no_cuda=True if self.device == "cpu" else False,
             **kwargs
@@ -349,8 +350,6 @@ class ChatGlmModel:
                     self.lora_loaded = True
             if torch.__version__ >= "2" and sys.platform != "win32":
                 self.model = torch.compile(self.model)
-            if self.args.fp16:
-                self.model.half()
 
     def process_response(self, response):
         response = response.strip().replace("[[训练时间]]", "2023年")
@@ -382,6 +381,8 @@ class ChatGlmModel:
 
         if not self.lora_loaded:
             self.load_lora()
+        if self.args.fp16:
+            self.model.half()
         self.model.eval()
 
         all_outputs = []
