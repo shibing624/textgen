@@ -9,7 +9,7 @@
 
 # TextGen
 
-🌈 Implementation of Text Generation models.
+🌈Implementation of Text Generation models.
 
 **textgen**实现了多种文本生成模型，包括：LLAMA、ChatGLM、UDA、GPT2、Seq2Seq、BART、T5、SongNet等模型，开箱即用。
 
@@ -19,31 +19,31 @@
 - [Install](#install)
 - [Usage](#usage)
 - [Contact](#Contact)
-- [Reference](#reference)
+- [License](#License)
 
-# 😊 Feature
+## 😊Feature
 
-## 文本生成
+### 文本生成
 
 1. seq2seq: Seq2Seq、ConvSeq2Seq、BART
 2. language_modeling: GPT2、SongNet、ChatGLM、LLAMA
 3. t5: T5、CopyT5
 
-## 文本扩增
+### 文本扩增
 
-### 词粒度扩增
+#### 词粒度扩增
 
 1. UDA，非核心词替换
 2. EDA，简单数据增强技术：相似词、同义词替换，随机词插入、删除、替换
 
-### 句粒度扩增
+#### 句粒度扩增
 
 1. 回译（BT, Back Translate）：中文-英文-中文
 2. GPT2模型续写：短文本->长文本
 3. BART摘要模型：长文本->短文本
 4. TGLS：无监督相似文本生成模型
 
-## 功能列表
+### 功能列表
 
 - [ChatGLM](textgen/chatglm)：本项目基于PyTorch实现了ChatGLM-6B模型LoRA微调训练和预测，可以用于句子纠错、对话等文本生成任务
 - [LLAMA](textgen/llama)：本项目基于PyTorch实现了LLAMA模型LoRA微调训练和预测，可以用于多轮对话生成任务
@@ -55,7 +55,7 @@
 - [SongNet](textgen/language_modeling/songnet_model.py)：本项目基于PyTorch实现了SongNet模型训练和预测，可以用于规范格式的诗词、歌词等文本生成任务
 - [TGLS](textgen/unsup_generation)：本项目实现了[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)无监督相似文本生成模型，是一种“先搜索后学习”的文本生成方法，通过反复迭代学习候选集，最终模型能生成类似候选集的高质量相似文本
 
-## Release Models
+### Release Models
 
 release基于`textgen`训练的中文模型，模型已经release到HuggingFace models，指定模型名称`textgen`会自动下载模型，可直接使用。
 
@@ -71,7 +71,7 @@ release基于`textgen`训练的中文模型，模型已经release到HuggingFace 
 |[shibing624/chatglm-6b-belle-zh-lora](https://huggingface.co/shibing624/chatglm-6b-belle-zh-lora)|ChatGLM-6B|在100万条中文ChatGPT指令Belle数据集[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)上微调了一版ChatGLM-6B，问答效果有提升，发布微调后的LoRA权重|[training script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_hfdataset_demo.py)|[predict script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_hfdataset_demo.py)|
 |[shibing624/llama-13b-belle-zh-lora](https://huggingface.co/shibing624/llama-13b-belle-zh-lora)|ChatGLM-6B|在100万条中文ChatGPT指令Belle数据集[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)上微调了一版Llama-13B，问答效果有提升，发布微调后的LoRA权重|[training script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_hfdataset_demo.py)|[predict script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_hfdataset_demo.py)|
 
-# 🚀 Demo
+## 🚀Demo
 
 HuggingFace Demo: https://huggingface.co/spaces/shibing624/chinese-couplet-generate
 
@@ -83,10 +83,9 @@ run example: [examples/gradio_demo.py](examples/gradio_demo.py) to see the demo:
 python examples/gradio_demo.py
 ```
 
-model trained
-by [examples/T5/T5_Finetune_Chinese_Couplet.ipynb](https://github.com/shibing624/textgen/blob/main/examples/T5/T5_Finetune_Chinese_Couplet.ipynb)
+model trained by [examples/T5/T5_Finetune_Chinese_Couplet.ipynb](https://github.com/shibing624/textgen/blob/main/examples/T5/T5_Finetune_Chinese_Couplet.ipynb)
 
-# Install
+## 💾Install
 
 ```shell
 pip install git+https://github.com/huggingface/transformers
@@ -103,9 +102,9 @@ cd textgen
 python setup.py install
 ```
 
-# 😎 Usage
+## 😎Usage
 
-## ChatGLM-6B LoRA 模型
+### ChatGLM-6B LoRA 模型
 
 安装最新开发版的peft库，支持LoRA模型
 
@@ -113,7 +112,7 @@ python setup.py install
 pip install git+https://github.com/huggingface/peft
 ```
 
-### 使用ChatGLM-6B LoRA微调后的模型
+#### 使用ChatGLM-6B LoRA微调后的模型
 
 example: [examples/chatglm/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/predict_demo.py)
 
@@ -130,13 +129,13 @@ print(r)  # ['少先队员应该为老人让座。\n错误字：因，坐']
 
 PS：由于使用了开发中的peft库，可能由于版本更新，导致LoRA模型加载失败，建议使用下面的训练方法，自己训练LoRA模型。
 
-### 训练ChatGLM-6B LoRA模型
+#### 训练ChatGLM-6B LoRA模型
 
 支持自定义数据集，数据集格式参考[examples/data/zh_csc_test.tsv](https://github.com/shibing624/textgen/blob/main/examples/data/zh_csc_test.tsv)。
 
 example: [examples/chatglm/training_chatglm_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_demo.py)
 
-## LLAMA LoRA 模型
+### LLAMA LoRA 模型
 
 安装最新开发版的transformers和peft库，支持LLAMA、LoRA模型
 
@@ -145,7 +144,7 @@ pip install git+https://github.com/huggingface/transformers
 pip install git+https://github.com/huggingface/peft
 ```
 
-### 使用LLAMA LoRA微调后的模型
+#### 使用LLAMA LoRA微调后的模型
 
 example: [examples/llama/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/predict_demo.py)
 
@@ -166,11 +165,11 @@ r = model.predict([predict_sentence])
 print(r)  # ['地球是唯一一颗拥有生命的行星。']
 ```
 
-### 训练LLAMA LoRA模型
+#### 训练LLAMA LoRA模型
 
 example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)
 
-## ConvSeq2Seq 模型
+### ConvSeq2Seq 模型
 
 训练并预测ConvSeq2Seq模型：
 
@@ -223,7 +222,7 @@ inputs: ["什么是ai", "你是什么类型的计算机", "你知道热力学吗
 outputs: ['人工智能是工程和科学的分支,致力于构建思维的机器。', '我的程序运行在python,所以我在任何运脑上工作！', '我不能错热是一个疯狂的人工智能"200年。']
 ```
 
-## BART 模型
+### BART 模型
 
 训练并预测BART模型：
 
@@ -236,7 +235,7 @@ inputs: ['什么是ai', '你是什么类型的计算机', '你知道热力学吗
 outputs: ['人工智能是工程和科学的分支,致力于构', '我的程序运行在python,所以我在任何电脑上', '什么是热力学吗？']
 ```
 
-## T5 模型
+### T5 模型
 
 example: [examples/T5/training_zh_t5_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/T5/training_zh_t5_model_demo.py)
 
@@ -337,21 +336,21 @@ inputs: ['什么是ai', '你是什么类型的计算机', '你知道热力学吗
 outputs: ['人工智能有两个广义的定义,任何拟人的机械,如在卡雷尔capeks', '我的程序运行在Python,所以我在任何电脑上工作!', '什么是热力学']
 ```
 
-## GPT2 模型
+### GPT2 模型
 
-### 中文GPT2 - 文章生成
+#### 中文GPT2 - 文章生成
 
 使用中文数据集（段落格式，`\n`间隔），训练GPT2模型，可以用于诗歌生成、文章生成等任务。
 
 example: [examples/language_generation/training_zh_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_gpt2_demo.py)
 
-### 中文GPT2 - 对联生成
+#### 中文GPT2 - 对联生成
 
 使用中文对联数据集（tsv格式，`\t`间隔），自定义数据集读取Dataset，训练GPT2模型，可以用于对联生成、对话生成等任务。
 
 example: [examples/language_generation/training_couplet_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_couplet_gpt2_demo.py)
 
-#### GPT2 vs T5：
+GPT2 vs T5：
 
 1. 都是从Transformer改进来的，T5同时有编码器和解码器，GPT2只有解码器
 2. T5的模型优势是处理给定输入，产出对应输出的任务，如翻译、对话、问答等
@@ -361,14 +360,14 @@ example: [examples/language_generation/training_couplet_gpt2_demo.py](https://gi
 - [对联生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%AF%B9%E8%81%94%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)
 - [古诗生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%8F%A4%E8%AF%97%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)
 
-## SongNet 模型
+### SongNet 模型
 
 格式控制的文本生成模型，paper见[SongNet: Rigid Formats Controlled Text Generation](https://arxiv.org/abs/2004.08022)，
 适用于强韵律格式要求的诗歌、对联、歌词生成等任务。
 
 example: [examples/language_generation/training_zh_songnet_demo.py](https://github.com/shibing624/textgen/blob/main/examples/language_generation/training_zh_songnet_demo.py)
 
-## Keyword Text Augmentation(EDA/UDA)
+### Keyword Text Augmentation(EDA/UDA)
 
 example: [examples/text_augmentation_demo.py](examples/text_augmentation_demo.py)
 
@@ -415,7 +414,7 @@ tfidf-0.2: ('一是研究机器学习、深度学习、计算机听觉、智能�
 mix-0.2: ('主要研究机器学习、深度学、计算机听觉、智能对话软件系统相关内容', [('学习', '学', 11, 12), ('视觉', '听觉', 16, 18), ('系统', '软件系统', 23, 27)])
 ```
 
-## TGLS 模型（无监督相似文本生成模型）
+### TGLS 模型（无监督相似文本生成模型）
 
 无监督的中文电商评论生成：从**电商评论**中提取用户表达观点的短句并进行组合来生成仿真评论。
 
@@ -482,7 +481,7 @@ output:
 
 前10句是真实用户评论，后10句是生成的。
 
-# 📚 Dataset 
+## 📚Dataset 
 
 1. 50万条中文ChatGPT指令Belle数据集：[BelleGroup/train_0.5M_CN](https://huggingface.co/datasets/BelleGroup/train_0.5M_CN)
 2. 100万条中文ChatGPT指令Belle数据集：[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)
@@ -490,7 +489,7 @@ output:
 4. 2万条中文ChatGPT指令Alpaca数据集：[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
 5. 69万条中文指令Guanaco数据集(Belle50万条+Guanaco19万条)：[Chinese-Vicuna/guanaco_belle_merge_v1.0](https://huggingface.co/datasets/Chinese-Vicuna/guanaco_belle_merge_v1.0)
 
-# ☎️ Contact
+## ☎️Contact
 
 - Issue(建议)
   ：[![GitHub issues](https://img.shields.io/github/issues/shibing624/textgen.svg)](https://github.com/shibing624/textgen/issues)
@@ -499,7 +498,7 @@ output:
 
 <img src="docs/wechat.jpeg" width="200" />
 
-# 😇 Citation
+## 😇Citation
 
 如果你在研究中使用了textgen，请按如下格式引用：
 
@@ -512,11 +511,11 @@ output:
 }
 ```
 
-# 🤗 License
+## 🤗License
 
 授权协议为 [The Apache License 2.0](/LICENSE)，可免费用做商业用途。请在产品说明中附加textgen的链接和授权协议。
 
-# 😍 Contribute
+## 😍Contribute
 
 项目代码还很粗糙，如果大家对代码有所改进，欢迎提交回本项目，在提交之前，注意以下两点：
 
@@ -525,7 +524,7 @@ output:
 
 之后即可提交PR。
 
-## 💕 Acknowledgements 
+## 💕Acknowledgements 
 
 - [PaddlePaddle/ERNIE](https://github.com/PaddlePaddle/ERNIE)
 - [minimaxir/textgenrnn](https://github.com/minimaxir/textgenrnn)
