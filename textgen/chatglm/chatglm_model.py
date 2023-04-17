@@ -106,19 +106,15 @@ class ChatGlmModel:
             model_name = self.args.model_name_or_path
         config = AutoConfig.from_pretrained(model_name, trust_remote_code=True, **kwargs)
 
-        device_map = "auto"
-        world_size = int(os.environ.get("WORLD_SIZE", 1))
-        self.ddp = world_size != 1
-        if self.ddp or torch.cuda.device_count() > 1:
-            device_map = {"": int(os.environ.get("LOCAL_RANK") or cuda_device)}
         self.model = model_class.from_pretrained(
             model_name,
             config=config,
             trust_remote_code=True,
             load_in_8bit=self.args.int8,
-            torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
-            device_map=device_map,
         )
+        if self.args.fp16:
+            self.model.half()
+        self.model.to(self.device)
 
         if self.args.quantization_bit:
             logger.debug(f"Quantized to {self.args.quantization_bit} bit")
