@@ -28,7 +28,7 @@ setup(
     install_requires=[
         'loguru',
         'jieba>=0.39',
-        'transformers',
+        'transformers>=4.28.1',
         'datasets',
         'gensim>=4.0.0',
         'text2vec',

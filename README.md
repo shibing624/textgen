@@ -139,7 +139,7 @@ example: [examples/chatglm/training_chatglm_demo.py](https://github.com/shibing6
 安装最新开发版的transformers和peft库，支持LLAMA、LoRA模型
 
 ```shell
-pip install git+https://github.com/huggingface/transformers
+pip install transformers>=4.28.1
 pip install git+https://github.com/huggingface/peft
 ```
 

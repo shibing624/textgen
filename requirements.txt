@@ -1,6 +1,6 @@
 loguru
 jieba>=0.39
-transformers
+transformers>=4.28.1
 huggingface-hub
 datasets
 gensim>=4.0.0
