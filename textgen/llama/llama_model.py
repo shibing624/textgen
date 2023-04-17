@@ -68,7 +68,7 @@ class LlamaModel:
             lora_name (optional): Lora name
             args (optional): Default args will be used if this parameter is not provided. If provided, it should be a dict containing the args that should be changed in the default args.
             use_cuda (optional): Use GPU if available. Setting to False will force model to use CPU only.
-            cuda_device (optional): Specific GPU that should be used. Will use the first available GPU by default.
+            cuda_device (int, optional): Specific GPU that should be used. Will use the first available GPU by default.
             **kwargs (optional): For providing proxies, force_download, resume_download, cache_dir and other options specific to the 'from_pretrained' implementation where this will be supplied.
         """  # noqa: ignore flake8"
         model_type = model_type.lower()
@@ -90,6 +90,7 @@ class LlamaModel:
             if torch.cuda.is_available():
                 if cuda_device == -1:
                     self.device = torch.device("cuda")
+                    cuda_device = 0
                 else:
                     self.device = torch.device(f"cuda:{cuda_device}")
             else:
@@ -109,12 +110,12 @@ class LlamaModel:
         if model_name is None:
             model_name = self.args.model_name_or_path
         config = AutoConfig.from_pretrained(model_name, **kwargs)
+
         device_map = "auto"
         world_size = int(os.environ.get("WORLD_SIZE", 1))
         self.ddp = world_size != 1
-        if self.ddp:
-            device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)}
-
+        if self.ddp or torch.cuda.device_count() > 1:
+            device_map = {"": int(os.environ.get("LOCAL_RANK") or cuda_device)}
         self.model = model_class.from_pretrained(
             model_name,
             config=config,
