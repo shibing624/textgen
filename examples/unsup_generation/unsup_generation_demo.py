@@ -6,7 +6,7 @@
 import os
 import sys
 
-sys.path.append('..')
+sys.path.append('../..')
 from textgen.unsup_generation import TglsModel, load_list
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))

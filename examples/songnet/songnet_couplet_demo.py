@@ -5,7 +5,7 @@
 """
 import sys
 
-sys.path.append('..')
+sys.path.append('../..')
 from textgen.language_modeling import SongNetModel
 
 if __name__ == '__main__':

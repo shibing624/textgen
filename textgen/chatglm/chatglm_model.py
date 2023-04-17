@@ -267,7 +267,6 @@ class ChatGlmModel:
         # start train
         training_args = TrainingArguments(
             output_dir=self.args.output_dir,
-            auto_find_batch_size=True,
             learning_rate=self.args.learning_rate,
             num_train_epochs=self.args.num_train_epochs,
             logging_dir=f"{self.args.output_dir}/logs",
