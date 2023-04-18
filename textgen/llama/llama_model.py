@@ -31,13 +31,6 @@ from transformers.trainer import TRAINING_ARGS_NAME
 from textgen.config.model_args import LlamaArgs
 from textgen.llama.llama_utils import load_hf_dataset, LlamaDataset
 
-try:
-    import wandb
-
-    wandb_available = True
-except ImportError:
-    wandb_available = False
-
 has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -388,7 +381,7 @@ class LlamaModel:
                 self.model = torch.compile(self.model)
 
     @torch.no_grad()
-    def predict(self, sentences, keep_prompt=False, max_length=None, **kwargs):
+    def predict(self, sentences: List[str], keep_prompt: bool = False, max_length: int = None, **kwargs):
         """
         Performs predictions on a list of text.
 
@@ -446,7 +439,7 @@ class LlamaModel:
 
     @torch.no_grad()
     def chat(self, query: str, history: List[Tuple[str, str]] = None,
-             keep_prompt=False, max_length=128, **kwargs):
+             keep_prompt: bool = False, max_length: int = 128, **kwargs):
         """
         Chat with the model
         :param query:
