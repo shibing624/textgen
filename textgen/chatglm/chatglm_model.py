@@ -7,7 +7,7 @@ import os
 import random
 import re
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -126,7 +126,11 @@ class ChatGlmModel:
             self.args.model_name = model_name
 
         self.lora_name = lora_name
-        self.lora_loaded = False
+        if self.args.use_lora:
+            self.load_lora()
+
+        if torch.__version__ >= "2" and sys.platform != "win32":
+            self.model = torch.compile(self.model)
 
     def data_collator(self, batch):
         len_ids = [len(example) for example in batch]
@@ -237,10 +241,8 @@ class ChatGlmModel:
                     logger.warning(f"Checkpoint {checkpoint_name} not found")
 
             self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
-            self.lora_loaded = True
         else:
-            logger.error("only impl lora fine-tune, set `use_lora=True` for train.")
-            raise ValueError("set `use_lora=True` for train.")
+            logger.warning("Now full model params fine-tune, which is slow, set `use_lora=True` for lora fine-tune.")
         os.makedirs(output_dir, exist_ok=True)
 
         # load dataset
@@ -332,19 +334,14 @@ class ChatGlmModel:
                 writer.write("{} = {}\n".format(key, str(metrics[key])))
 
     def load_lora(self):
-        if self.args.use_lora:
-            if self.lora_name:
-                self.model = PeftModel.from_pretrained(self.model, self.lora_name)
-                logger.info(f"Loaded lora model from {self.lora_name}")
-                self.lora_loaded = True
-            else:
-                lora_path = os.path.join(self.args.output_dir, self.args.lora_name)
-                if lora_path and os.path.exists(lora_path):
-                    self.model = PeftModel.from_pretrained(self.model, self.args.output_dir)
-                    logger.info(f"Loaded lora model from {lora_path}")
-                    self.lora_loaded = True
-            if torch.__version__ >= "2" and sys.platform != "win32":
-                self.model = torch.compile(self.model)
+        if self.lora_name:
+            self.model = PeftModel.from_pretrained(self.model, self.lora_name)
+            logger.info(f"Loaded lora model from {self.lora_name}")
+        else:
+            lora_path = os.path.join(self.args.output_dir, self.args.lora_bin_name)
+            if lora_path and os.path.exists(lora_path):
+                self.model = PeftModel.from_pretrained(self.model, self.args.output_dir)
+                logger.info(f"Loaded lora model from {lora_path}")
 
     def process_response(self, response):
         response = response.strip().replace("[[训练时间]]", "2023年")
@@ -353,7 +350,7 @@ class ChatGlmModel:
             ["!", "！"],
             [":", "："],
             [";", "；"],
-            ["\?", "？"],
+            ["\\?", "？"],
         ]
         for item in punkts:
             response = re.sub(r"([\u4e00-\u9fff])%s" % item[0], r"\1%s" % item[1], response)
@@ -374,8 +371,6 @@ class ChatGlmModel:
             preds: A python list of the generated sequences.
         """  # noqa: ignore flake8"
 
-        if not self.lora_loaded:
-            self.load_lora()
         if self.args.fp16:
             self.model.half()
         self.model.eval()

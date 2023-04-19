@@ -124,13 +124,6 @@ class LlamaModel:
             self.tokenizer = tokenizer_class.from_pretrained(model_name)
             self.args.tokenizer_name = self.args.model_name
 
-        self.tokenizer.pad_token_id = (
-            0  # unk. we want this to be different from the eos token
-        )
-        self.model.config.pad_token_id = 0  # unk
-        self.model.config.bos_token_id = 1
-        self.model.config.eos_token_id = 2
-        self.tokenizer.padding_side = "left"  # Allow batched inference
         self.args.model_type = model_type
         if model_name is None:
             self.args.model_name = "Llama_from_scratch"
@@ -138,7 +131,17 @@ class LlamaModel:
             self.args.model_name = model_name
 
         self.lora_name = lora_name
-        self.lora_loaded = False
+        if self.args.use_lora:
+            self.load_lora()
+
+        # unwind broken decapoda-research config
+        self.tokenizer.padding_side = "left"
+        self.tokenizer.pad_token_id = 0  # unk. we want this to be different from the eos token
+        self.model.config.pad_token_id = 0  # unk
+        self.model.config.bos_token_id = 1
+        self.model.config.eos_token_id = 2
+        if torch.__version__ >= "2" and sys.platform != "win32":
+            self.model = torch.compile(self.model)
 
     def train_model(
             self,
@@ -232,10 +235,8 @@ class LlamaModel:
                     logger.warning(f"Checkpoint {checkpoint_name} not found")
 
             self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
-            self.lora_loaded = True
         else:
-            logger.error("only impl lora fine-tune, set `use_lora=True` for train.")
-            raise ValueError("set `use_lora=True` for train.")
+            logger.warning("Now full model params fine-tune, which is slow, set `use_lora=True` for lora fine-tune.")
         os.makedirs(output_dir, exist_ok=True)
 
         # load dataset
@@ -350,35 +351,24 @@ class LlamaModel:
                 writer.write("{} = {}\n".format(key, str(metrics[key])))
 
     def load_lora(self):
-        if self.args.use_lora:
-            if self.lora_name:
-                if os.path.isdir(self.lora_name) and os.path.exists(
-                        os.path.join(self.lora_name, "tokenizer_config.json")):
-                    update_tokenizer = True
-                else:
-                    update_tokenizer = False
-                if "ziqingyang/chinese" in self.lora_name or update_tokenizer:
-                    self.tokenizer = LlamaTokenizer.from_pretrained(self.lora_name)
-                    self.model.resize_token_embeddings(len(self.tokenizer))
-                    assert self.model.get_input_embeddings().weight.size(0) == len(self.tokenizer)
-                    logger.debug(f"Tokenizer updated, vocabulary size: {len(self.tokenizer)}")
-                self.model = PeftModel.from_pretrained(self.model, self.lora_name)
-                logger.info(f"Loaded lora model from {self.lora_name}")
-                self.lora_loaded = True
+        if self.lora_name:
+            if os.path.isdir(self.lora_name) and os.path.exists(
+                    os.path.join(self.lora_name, "tokenizer_config.json")):
+                update_tokenizer = True
             else:
-                lora_path = os.path.join(self.args.output_dir, self.args.lora_name)
-                if lora_path and os.path.exists(lora_path):
-                    self.model = PeftModel.from_pretrained(self.model, self.args.output_dir)
-                    logger.info(f"Loaded lora model from {lora_path}")
-                    self.lora_loaded = True
-
-            # unwind broken decapoda-research config
-            self.tokenizer.padding_side = "left"
-            self.model.config.pad_token_id = self.tokenizer.pad_token_id = 0  # unk
-            self.model.config.bos_token_id = 1
-            self.model.config.eos_token_id = 2
-            if torch.__version__ >= "2" and sys.platform != "win32":
-                self.model = torch.compile(self.model)
+                update_tokenizer = False
+            if "ziqingyang/chinese" in self.lora_name or update_tokenizer:
+                self.tokenizer = LlamaTokenizer.from_pretrained(self.lora_name)
+                self.model.resize_token_embeddings(len(self.tokenizer))
+                assert self.model.get_input_embeddings().weight.size(0) == len(self.tokenizer)
+                logger.debug(f"Tokenizer updated, vocabulary size: {len(self.tokenizer)}")
+            self.model = PeftModel.from_pretrained(self.model, self.lora_name)
+            logger.info(f"Loaded lora model from {self.lora_name}")
+        else:
+            lora_path = os.path.join(self.args.output_dir, self.args.lora_bin_name)
+            if lora_path and os.path.exists(lora_path):
+                self.model = PeftModel.from_pretrained(self.model, self.args.output_dir)
+                logger.info(f"Loaded lora model from {lora_path}")
 
     @torch.no_grad()
     def predict(self, sentences: List[str], keep_prompt: bool = False, max_length: int = None, **kwargs):
@@ -394,8 +384,6 @@ class LlamaModel:
             preds: A python list of the generated sequences.
         """  # noqa: ignore flake8"
 
-        if not self.lora_loaded:
-            self.load_lora()
         if self.args.fp16:
             self.model.half()
         self.model.eval()
