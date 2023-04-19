@@ -133,6 +133,7 @@ class ChatGlmModel:
             self.model = torch.compile(self.model)
 
     def data_collator(self, batch):
+        """Data collator that will dynamically pad the inputs received."""
         len_ids = [len(example) for example in batch]
         longest = max(len_ids)
         input_ids = []
@@ -334,6 +335,7 @@ class ChatGlmModel:
                 writer.write("{} = {}\n".format(key, str(metrics[key])))
 
     def load_lora(self):
+        """Load lora model."""
         if self.lora_name:
             self.model = PeftModel.from_pretrained(self.model, self.lora_name)
             logger.info(f"Loaded lora model from {self.lora_name}")
@@ -344,6 +346,7 @@ class ChatGlmModel:
                 logger.info(f"Loaded lora model from {lora_path}")
 
     def process_response(self, response):
+        """Process response text."""
         response = response.strip().replace("[[训练时间]]", "2023年")
         punkts = [
             [",", "，"],
@@ -471,6 +474,7 @@ class ChatGlmModel:
     def save_model(
             self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
     ):
+        """Save the model and the tokenizer to the `output_dir`."""
         if not output_dir:
             output_dir = self.args.output_dir
         os.makedirs(output_dir, exist_ok=True)
@@ -502,18 +506,24 @@ class ChatGlmModel:
 
 
 class FinetuneTrainer(Trainer):
+    """Finetune trainer for ChatGlmModel"""
+
     def compute_loss(self, model, inputs, return_outputs=False):
+        """Computes the loss."""
         return model(
             input_ids=inputs["input_ids"],
             labels=inputs["labels"],
         ).loss
 
     def save_model(self, output_dir=None, _internal_call=False):
+        """Save the LoRA model"""
         os.makedirs(output_dir, exist_ok=True)
         torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
         self.model.save_pretrained(output_dir)
 
 
 class CastOutputToFloat(nn.Sequential):
+    """Cast the output of the model to float"""
+
     def forward(self, x):
         return super().forward(x).to(torch.float32)

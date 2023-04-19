@@ -351,6 +351,7 @@ class LlamaModel:
                 writer.write("{} = {}\n".format(key, str(metrics[key])))
 
     def load_lora(self):
+        """Load lora model"""
         if self.lora_name:
             if os.path.isdir(self.lora_name) and os.path.exists(
                     os.path.join(self.lora_name, "tokenizer_config.json")):
@@ -487,6 +488,7 @@ class LlamaModel:
     def save_model(
             self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
     ):
+        """Save the model and the tokenizer."""
         if not output_dir:
             output_dir = self.args.output_dir
         os.makedirs(output_dir, exist_ok=True)
@@ -518,7 +520,12 @@ class LlamaModel:
 
 
 class FinetuneTrainer(Trainer):
+    """
+    Trainer for finetuning models
+    """
+
     def save_model(self, output_dir=None, _internal_call=False):
+        """Save the LoRA model."""
         os.makedirs(output_dir, exist_ok=True)
         torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
         self.model.save_pretrained(output_dir)
