@@ -374,8 +374,11 @@ class ChatGlmModel:
             preds: A python list of the generated sequences.
         """  # noqa: ignore flake8"
 
+        if self.device == 'cpu':
+            self.model.float()
         if self.args.fp16:
             self.model.half()
+        self.model.to(self.device)
         self.model.eval()
 
         all_outputs = []
