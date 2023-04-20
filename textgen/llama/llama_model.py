@@ -140,8 +140,6 @@ class LlamaModel:
         self.model.config.pad_token_id = 0  # unk
         self.model.config.bos_token_id = 1
         self.model.config.eos_token_id = 2
-        if torch.__version__ >= "2" and sys.platform != "win32":
-            self.model = torch.compile(self.model)
 
     def train_model(
             self,
@@ -304,8 +302,9 @@ class LlamaModel:
                 )
             ).__get__(self.model, type(self.model))
 
-        if torch.__version__ >= "2" and sys.platform != "win32":
-            self.model = torch.compile(self.model)
+        if self.args.enable_torch_compile:
+            if torch.__version__ >= "2" and sys.platform != "win32":
+                self.model = torch.compile(self.model)
 
         logger.info("*** Train ***")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)

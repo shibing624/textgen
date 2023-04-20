@@ -129,9 +129,6 @@ class ChatGlmModel:
         if self.args.use_lora:
             self.load_lora()
 
-        if torch.__version__ >= "2" and sys.platform != "win32":
-            self.model = torch.compile(self.model)
-
     def data_collator(self, batch):
         """Data collator that will dynamically pad the inputs received."""
         len_ids = [len(example) for example in batch]
@@ -297,8 +294,9 @@ class ChatGlmModel:
             data_collator=self.data_collator,
         )
 
-        if torch.__version__ >= "2" and sys.platform != "win32":
-            self.model = torch.compile(self.model)
+        if self.args.enable_torch_compile:
+            if torch.__version__ >= "2" and sys.platform != "win32":
+                self.model = torch.compile(self.model)
 
         logger.info("*** Train ***")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)

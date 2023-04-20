@@ -383,6 +383,7 @@ class ChatGlmArgs(ModelArgs):
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
+    enable_torch_compile: bool = False
 
 
 @dataclass
@@ -438,3 +439,4 @@ class LlamaArgs(ModelArgs):
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
+    enable_torch_compile: bool = False
