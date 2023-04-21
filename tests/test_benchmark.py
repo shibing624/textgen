@@ -23,7 +23,8 @@ def chatglm_generate_prompt(instruction):
     return f"""{instruction}\n答："""
 
 
-sentences = open(os.path.join(pwd_path, '../examples/data/llm_benchmark_test.txt')).readlines()
+sentences = [i.strip() for i in open(os.path.join(pwd_path, '../examples/data/llm_benchmark_test.txt')).readlines() if
+             i.strip()]
 
 
 def test_llama_7b_lora():
@@ -33,7 +34,7 @@ def test_llama_7b_lora():
     predict_sentences = [llama_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
-        print('input:', s, ' output:', i)
+        print('input:', s, '\noutput:', i)
         print()
 
     res_dict = {'input': sentences, 'output': res}
@@ -48,7 +49,7 @@ def test_llama_13b_lora():
     predict_sentences = [llama_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
-        print('input:', s, ' output:', i)
+        print('input:', s, '\noutput:', i)
         print()
     res_dict = {'input': sentences, 'output': res}
     df = pd.DataFrame.from_dict(res_dict)
@@ -61,7 +62,7 @@ def test_chatglm_6b():
     predict_sentences = [chatglm_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
-        print('input:', s, ' output:', i)
+        print('input:', s, '\noutput:', i)
         print()
 
     res_dict = {'input': sentences, 'output': res}
@@ -76,7 +77,7 @@ def test_chatglm_6b_lora():
     predict_sentences = [chatglm_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
-        print('input:', s, ' output:', i)
+        print('input:', s, '\noutput:', i)
         print()
 
     res_dict = {'input': sentences, 'output': res}
