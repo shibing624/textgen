@@ -32,13 +32,12 @@ def test_llama_7b_lora():
 
     predict_sentences = [llama_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
-    res_dict = {}
     for s, i in zip(sentences, res):
-        res_dict[s] = i
         print('input:', s, ' output:', i)
         print()
 
-    df = pd.DataFrame.from_dict(res_dict, columns=['input', 'output'])
+    res_dict = {'input': sentences, 'output': res}
+    df = pd.DataFrame.from_dict(res_dict)
     df.to_json(os.path.join(pwd_path, 'llama_7b_lora_llm_benchmark_test_result.json'), force_ascii=False,
                orient='records', lines=True)
 
@@ -48,13 +47,11 @@ def test_llama_13b_lora():
                    args={'use_lora': True}, )
     predict_sentences = [llama_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
-    res_dict = {}
     for s, i in zip(sentences, res):
-        res_dict[s] = i
         print('input:', s, ' output:', i)
         print()
-
-    df = pd.DataFrame.from_dict(res_dict, columns=['input', 'output'])
+    res_dict = {'input': sentences, 'output': res}
+    df = pd.DataFrame.from_dict(res_dict)
     df.to_json(os.path.join(pwd_path, 'llama_13b_lora_llm_benchmark_test_result.json'), force_ascii=False,
                orient='records', lines=True)
 
@@ -63,13 +60,12 @@ def test_chatglm_6b():
     m = ChatGlmModel('chatglm', "THUDM/chatglm-6b", lora_name=None, args={'use_lora': False}, )
     predict_sentences = [chatglm_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
-    res_dict = {}
     for s, i in zip(sentences, res):
-        res_dict[s] = i
         print('input:', s, ' output:', i)
         print()
 
-    df = pd.DataFrame.from_dict(res_dict, columns=['input', 'output'])
+    res_dict = {'input': sentences, 'output': res}
+    df = pd.DataFrame.from_dict(res_dict)
     df.to_json(os.path.join(pwd_path, 'chatglm_6b_llm_benchmark_test_result.json'), force_ascii=False,
                orient='records', lines=True)
 
@@ -79,12 +75,11 @@ def test_chatglm_6b_lora():
                      args={'use_lora': True}, )
     predict_sentences = [chatglm_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
-    res_dict = {}
     for s, i in zip(sentences, res):
-        res_dict[s] = i
         print('input:', s, ' output:', i)
         print()
 
-    df = pd.DataFrame.from_dict(res_dict, columns=['input', 'output'])
+    res_dict = {'input': sentences, 'output': res}
+    df = pd.DataFrame.from_dict(res_dict)
     df.to_json(os.path.join(pwd_path, 'chatglm_6b_lora_llm_benchmark_test_result.json'), force_ascii=False,
                orient='records', lines=True)
