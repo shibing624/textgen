@@ -376,7 +376,7 @@ class ChatGlmArgs(ModelArgs):
     num_train_epochs = 1
     max_steps = -1
     per_device_train_batch_size = 2
-    eval_batch_size: int = 2
+    eval_batch_size: int = 4
     gradient_accumulation_steps = 1
     save_total_limit = 3
     remove_unused_columns = False
@@ -431,7 +431,7 @@ class LlamaArgs(ModelArgs):
     num_train_epochs = 3
     max_steps = -1
     per_device_train_batch_size = 2
-    eval_batch_size: int = 2
+    eval_batch_size: int = 4
     gradient_accumulation_steps = 1
     save_total_limit = 3
     remove_unused_columns = False
