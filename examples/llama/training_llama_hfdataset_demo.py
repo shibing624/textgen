@@ -17,8 +17,8 @@ def main():
                         help='Dataset name (e.g. tatsu-lab/alpaca, shibing624/alpaca-zh, BelleGroup/train_1M_CN, '
                              'Chinese-Vicuna/guanaco_belle_merge_v1.0)')
     parser.add_argument('--model_type', default='llama', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='decapoda-research/llama-7b-hf', type=str,
-                        help='Transformers model or path')
+    parser.add_argument('--model_name', default='decapoda-research/llama-7b-hf', type=str, help='model name or path')
+    parser.add_argument('--lora_name', default=None, type=str, help='Peft lora model name or dir')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs-alpaca/', type=str, help='Model output directory')
@@ -42,7 +42,7 @@ def main():
             "output_dir": args.output_dir,
             "use_hf_datasets": True,
         }
-        model = LlamaModel(args.model_type, args.model_name, args=model_args)
+        model = LlamaModel(args.model_type, args.model_name, lora_name=args.lora_name, args=model_args)
 
         model.train_model(args.train_file)
     if args.do_predict:
@@ -66,7 +66,9 @@ def main():
         print(response)
         response, history = model.chat("给出三个保持健康的秘诀。", history=[])
         print(response)
-        response, history = model.chat("给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。\n", history=history)
+        response, history = model.chat(
+            "给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。\n",
+            history=history)
         print(response)
 
 
