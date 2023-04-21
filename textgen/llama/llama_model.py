@@ -134,12 +134,8 @@ class LlamaModel:
         if self.args.use_lora:
             self.load_lora()
 
-        # unwind broken decapoda-research config
         self.tokenizer.padding_side = "left"
         self.tokenizer.pad_token_id = 0  # unk. we want this to be different from the eos token
-        self.model.config.pad_token_id = 0  # unk
-        self.model.config.bos_token_id = 1
-        self.model.config.eos_token_id = 2
 
     def train_model(
             self,
@@ -228,7 +224,7 @@ class LlamaModel:
                 if os.path.exists(checkpoint_name):
                     logger.info(f"Restarting from {checkpoint_name}")
                     adapters_weights = torch.load(checkpoint_name)
-                    self.model = set_peft_model_state_dict(self.model, adapters_weights)
+                    set_peft_model_state_dict(self.model, adapters_weights)
                 else:
                     logger.warning(f"Checkpoint {checkpoint_name} not found")
 
@@ -293,14 +289,6 @@ class LlamaModel:
             tokenizer=self.tokenizer,
             data_collator=data_collator,
         )
-
-        if self.args.only_lora_state_dict:
-            old_state_dict = self.model.state_dict
-            self.model.state_dict = (
-                lambda self, *_, **__: get_peft_model_state_dict(
-                    self, old_state_dict()
-                )
-            ).__get__(self.model, type(self.model))
 
         if self.args.enable_torch_compile:
             if torch.__version__ >= "2" and sys.platform != "win32":
