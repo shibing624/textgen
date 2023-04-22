@@ -130,6 +130,9 @@ class LlamaModel:
 
         self.tokenizer.padding_side = "left"
         self.tokenizer.pad_token_id = 0  # unk. we want this to be different from the eos token
+        self.model.config.pad_token_id = 0  # unk
+        self.model.config.bos_token_id = 1
+        self.model.config.eos_token_id = 2
 
     def train_model(
             self,
