@@ -52,7 +52,6 @@ if __name__ == '__main__':
         outputs=[
             gr.outputs.Textbox()
         ],
-        theme="grass",
         title="Chinese Spelling Correction LoRA Model chatglm-6b-csc-zh-lora",
         description="Copy or input error Chinese text. Submit and the machine will correct text.",
         article="Link to <a href='https://github.com/shibing624/textgen' style='color:blue;' target='_blank\'>Github REPO</a>",

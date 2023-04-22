@@ -18,7 +18,6 @@ from peft import (
     LoraConfig,
     TaskType,
     PeftModel,
-    get_peft_model_state_dict,
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
 )
@@ -104,18 +103,13 @@ class LlamaModel:
             model_name = self.args.model_name_or_path
         config = AutoConfig.from_pretrained(model_name, **kwargs)
 
-        device_map = "auto"
-        world_size = int(os.environ.get("WORLD_SIZE", 1))
-        self.ddp = world_size != 1
-        if self.ddp or torch.cuda.device_count() > 1:
-            device_map = {"": int(os.environ.get("LOCAL_RANK") or cuda_device)}
         self.model = model_class.from_pretrained(
             model_name,
             config=config,
             load_in_8bit=self.args.int8,
             torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
-            device_map=device_map,
         )
+        self.model.to(self.device)
 
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
