@@ -8,7 +8,7 @@
 
 # TextGen
 
-🌈Implementation of Text Generation models.
+🌈 Implementation of Text Generation models.
 
 **textgen**实现了多种文本生成模型，包括：LLAMA、ChatGLM、UDA、GPT2、Seq2Seq、BART、T5、SongNet等模型，开箱即用。
 
@@ -20,7 +20,7 @@
 - [Contact](#Contact)
 - [License](#License)
 
-## 😊Feature
+## 😊 Feature
 
 ### 文本生成
 
@@ -70,7 +70,23 @@ release基于`textgen`训练的中文模型，模型已经release到HuggingFace 
 |[shibing624/chatglm-6b-belle-zh-lora](https://huggingface.co/shibing624/chatglm-6b-belle-zh-lora)| ChatGLM-6B |在100万条中文ChatGPT指令Belle数据集[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)上微调了一版ChatGLM-6B，问答效果有提升，发布微调后的LoRA权重| [training script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_hfdataset_demo.py)                       | [predict script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_hfdataset_demo.py) |
 |[shibing624/llama-13b-belle-zh-lora](https://huggingface.co/shibing624/llama-13b-belle-zh-lora)| LLAMA-13B  |在100万条中文ChatGPT指令Belle数据集[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)上微调了一版Llama-13B，问答效果有提升，发布微调后的LoRA权重| [training script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_hfdataset_demo.py)                           | [predict script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_hfdataset_demo.py)     |
 
-## 🚀Demo
+### Evaluation
+
+| Model                                                                                                                                       |Arch| Introduce                                                                                                            | Score    |
+|:--------------------------------------------------------------------------------------------------------------------------------------------|:---|:---------------------------------------------------------------------------------------------------------------------|:---------|
+| [LLAMA-7B-Chinese-Aplaca](https://huggingface.co/ziqingyang/chinese-alpaca-lora-7b)                                                         |LLAMA-7B| 复用[ymcui/Chinese-LLaMA-Alpaca](https://github.com/ymcui/Chinese-LLaMA-Alpaca/blob/main/examples/README.md)的评估case和得分 | 4.82     |
+| [LLAMA-13B-Chinese-Aplaca](https://huggingface.co/ziqingyang/chinese-alpaca-lora-13b)                                                       |LLAMA-13B| 复用[ymcui/Chinese-LLaMA-Alpaca](https://github.com/ymcui/Chinese-LLaMA-Alpaca/blob/main/examples/README.md)的评估case和得分 | 7.03     |
+| [facat/alpaca-lora-cn-13b](https://huggingface.co/facat/alpaca-lora-cn-13b)	                                                                |LLAMA-13B| 基于`decapoda-research/llama-13b-hf`加载`facat/alpaca-lora-cn-13b`LoRA模型后评估测试集并标注得分                                      | 4.07     |  
+| [Chinese-Vicuna/Chinese-Vicuna-lora-13b-belle-and-guanaco](https://huggingface.co/Chinese-Vicuna/Chinese-Vicuna-lora-13b-belle-and-guanaco) |LLAMA-13B| 基于`decapoda-research/llama-13b-hf`加载`Chinese-Vicuna/Chinese-Vicuna-lora-13b-belle-and-guanaco`LoRA模型后评估测试集并标注得分      | 3.92     |
+| [ChatGLM-6B](https://huggingface.co/THUDM/chatglm-6b)                                                                                       |ChatGLM-6B| 基于原生`THUDM/chatglm-6b`评估测试集得分                                                                                        | **7.08** |
+| [shibing624/chatglm-6b-belle-zh-lora](https://huggingface.co/shibing624/chatglm-6b-belle-zh-lora)                                           |ChatGLM-6B| 基于`THUDM/chatglm-6b`加载`shibing624/chatglm-6b-belle-zh-lora`LoRA模型后评估测试集得分                                            | 6.97     |
+
+- 评估case，详见在线文档：中文LLM-benchmark多任务评估集(腾讯文档) https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=l6a7nk  感谢韩俊明、[杨家铭](https://github.com/yangjiam)等同学的标注
+- 评估任务类型包括：知识问答，开放式问答，数值计算，诗词、音乐、体育，娱乐，写文章，文本翻译，代码编程，伦理、拒答类，多轮问答，Score 评分是前100条（10分制）的平均分数，越高越好
+- 评估脚本：[tests/test_benchmark.py](https://github.com/shibing624/textgen/blob/main/tests/test_benchmark.py)
+- 结论：当前在[中文LLM-benchmark多任务评估集](https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=l6a7nk)上，ChatGLM-6B的表现最好，LLAMA-13B-Chinese-Aplaca的表现次之，LLAMA-7B的表现整体都差些，说明ChatGLM这种原生的中文预训练模型更理解中文语义，LLAMA-13B-Chinese-Aplaca是在原版LLaMA上扩充了中文词表，并融入了约20G的通用中文语料后的指令微调模型，表明了LLAMA-13B的底座优秀，具有强大的迁移能力
+
+## 🚀 Demo
 
 HuggingFace Demo: https://huggingface.co/spaces/shibing624/chinese-couplet-generate
 
@@ -84,10 +100,9 @@ python examples/gradio_demo.py
 
 model trained by [examples/t5/T5_Finetune_Chinese_Couplet.ipynb](https://github.com/shibing624/textgen/blob/main/examples/t5/T5_Finetune_Chinese_Couplet.ipynb)
 
-## 💾Install
+## 💾 Install
 
 ```shell
-pip install git+https://github.com/huggingface/transformers
 pip install git+https://github.com/huggingface/peft
 pip install -U textgen
 ```
@@ -101,7 +116,7 @@ cd textgen
 python setup.py install
 ```
 
-## 😎Usage
+## 😎 Usage
 
 ### ChatGLM-6B LoRA 模型
 
@@ -480,7 +495,7 @@ output:
 
 前10句是真实用户评论，后10句是生成的。
 
-## 📚Dataset 
+## 📚 Dataset 
 
 1. 50万条中文ChatGPT指令Belle数据集：[BelleGroup/train_0.5M_CN](https://huggingface.co/datasets/BelleGroup/train_0.5M_CN)
 2. 100万条中文ChatGPT指令Belle数据集：[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)
@@ -488,7 +503,7 @@ output:
 4. 2万条中文ChatGPT指令Alpaca数据集：[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
 5. 69万条中文指令Guanaco数据集(Belle50万条+Guanaco19万条)：[Chinese-Vicuna/guanaco_belle_merge_v1.0](https://huggingface.co/datasets/Chinese-Vicuna/guanaco_belle_merge_v1.0)
 
-## ☎️Contact
+## ☎️ Contact
 
 - Issue(建议)
   ：[![GitHub issues](https://img.shields.io/github/issues/shibing624/textgen.svg)](https://github.com/shibing624/textgen/issues)
@@ -497,7 +512,7 @@ output:
 
 <img src="docs/wechat.jpeg" width="200" />
 
-## 😇Citation
+## 😇 Citation
 
 如果你在研究中使用了textgen，请按如下格式引用：
 
@@ -510,11 +525,11 @@ output:
 }
 ```
 
-## 🤗License
+## 🤗 License
 
 授权协议为 [The Apache License 2.0](/LICENSE)，可免费用做商业用途。请在产品说明中附加textgen的链接和授权协议。
 
-## 😍Contribute
+## 😍 Contribute
 
 项目代码还很粗糙，如果大家对代码有所改进，欢迎提交回本项目，在提交之前，注意以下两点：
 
@@ -523,7 +538,7 @@ output:
 
 之后即可提交PR。
 
-## 💕Acknowledgements 
+## 💕 Acknowledgements 
 
 - [PaddlePaddle/ERNIE](https://github.com/PaddlePaddle/ERNIE)
 - [minimaxir/textgenrnn](https://github.com/minimaxir/textgenrnn)

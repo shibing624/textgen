@@ -415,11 +415,11 @@ class LlamaArgs(ModelArgs):
     length_penalty: float = 2.0
     num_beams: int = 1
     num_return_sequences: int = 1
-    repetition_penalty: float = 1.0
-    temperature: float = 0.95
+    repetition_penalty: float = 1.3
+    temperature: float = 0.2
     special_tokens_list: list = field(default_factory=list)
-    top_k: float = 30
-    top_p: float = 0.7
+    top_k: float = 40
+    top_p: float = 0.9
     model_name_or_path: Optional[str] = field(default="decapoda-research/llama-7b-hf")
     use_lora: bool = True
     lora_bin_name: str = field(default="adapter_model.bin")
