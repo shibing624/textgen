@@ -349,12 +349,20 @@ class LlamaModel:
                 self.model.resize_token_embeddings(len(self.tokenizer))
                 assert self.model.get_input_embeddings().weight.size(0) == len(self.tokenizer)
                 logger.debug(f"Tokenizer updated, vocabulary size: {len(self.tokenizer)}")
-            self.model = PeftModel.from_pretrained(self.model, self.lora_name)
+            self.model = PeftModel.from_pretrained(
+                self.model,
+                self.lora_name,
+                torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+            )
             logger.info(f"Loaded lora model from {self.lora_name}")
         else:
             lora_path = os.path.join(self.args.output_dir, self.args.lora_bin_name)
             if lora_path and os.path.exists(lora_path):
-                self.model = PeftModel.from_pretrained(self.model, self.args.output_dir)
+                self.model = PeftModel.from_pretrained(
+                    self.model,
+                    self.args.output_dir,
+                    torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+                )
                 logger.info(f"Loaded lora model from {lora_path}")
 
     @torch.no_grad()
