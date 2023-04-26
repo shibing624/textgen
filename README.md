@@ -12,15 +12,6 @@
 
 **textgen**实现了多种文本生成模型，包括：LLAMA、ChatGLM、UDA、GPT2、Seq2Seq、BART、T5、SongNet等模型，开箱即用。
 
-**Guide**
-
-- [Feature](## 😊 Feature)
-- [Evaluation](### Evaluation)
-- [Install](## 💾 Install)
-- [Usage](## 😎 Usage)
-- [Contact](## ☎️ Contact)
-- [License](## 🤗 License)
-
 ## 😊 Feature
 
 - [ChatGLM](textgen/chatglm)：本项目基于PyTorch实现了ChatGLM-6B模型LoRA微调训练和预测，可以用于句子纠错、对话等文本生成任务
@@ -490,6 +481,7 @@ output:
 ```
 
 前10句是真实用户评论，后10句是生成的。
+
 </details>
 
 ## 📚 Dataset 
@@ -502,6 +494,7 @@ output:
 
 <details>
 <summary>文本生成方法介绍</summary>
+
 ### 文本生成方法
 
 1. seq2seq: Seq2Seq、ConvSeq2Seq、BART
@@ -521,6 +514,7 @@ output:
 2. GPT2模型续写：短文本->长文本
 3. BART摘要模型：长文本->短文本
 4. TGLS：无监督相似文本生成模型
+
 </details>
 
 ## ☎️ Contact
