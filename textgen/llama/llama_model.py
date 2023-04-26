@@ -96,6 +96,8 @@ class LlamaModel:
         if not use_cuda:
             self.args.fp16 = False
             self.args.int8 = False
+        world_size = int(os.environ.get("WORLD_SIZE", 1))
+        self.ddp = world_size != 1
 
         self.results = {}
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]

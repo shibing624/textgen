@@ -345,7 +345,7 @@ class ChatGlmModel:
 
     def process_response(self, response):
         """Process response text."""
-        response = response.strip().replace("[[训练时间]]", "2023年")
+        response = response.strip()
         punkts = [
             [",", "，"],
             ["!", "！"],
