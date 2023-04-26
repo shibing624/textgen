@@ -14,35 +14,14 @@
 
 **Guide**
 
-- [Feature](#Feature)
-- [Install](#install)
-- [Usage](#usage)
-- [Contact](#Contact)
-- [License](#License)
+- [Feature](#😊 Feature)
+- [Evaluation](#Evaluation)
+- [Install](#💾 Install)
+- [Usage](#😎 Usage)
+- [Contact](#☎️ Contact)
+- [License](#🤗 License)
 
 ## 😊 Feature
-
-### 文本生成
-
-1. seq2seq: Seq2Seq、ConvSeq2Seq、BART
-2. language_modeling: GPT2、SongNet、ChatGLM、LLAMA
-3. t5: T5、CopyT5
-
-### 文本扩增
-
-#### 词粒度扩增
-
-1. UDA，非核心词替换
-2. EDA，简单数据增强技术：相似词、同义词替换，随机词插入、删除、替换
-
-#### 句粒度扩增
-
-1. 回译（BT, Back Translate）：中文-英文-中文
-2. GPT2模型续写：短文本->长文本
-3. BART摘要模型：长文本->短文本
-4. TGLS：无监督相似文本生成模型
-
-### 功能列表
 
 - [ChatGLM](textgen/chatglm)：本项目基于PyTorch实现了ChatGLM-6B模型LoRA微调训练和预测，可以用于句子纠错、对话等文本生成任务
 - [LLAMA](textgen/llama)：本项目基于PyTorch实现了LLAMA模型LoRA微调训练和预测，可以用于多轮对话生成任务
@@ -130,15 +109,11 @@ pip install git+https://github.com/huggingface/peft
 
 example: [examples/chatglm/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/predict_demo.py)
 
-```python
-import sys
-
-sys.path.append('../..')
-from textgen import ChatGlmModel
-
-model = ChatGlmModel("chatglm", "THUDM/chatglm-6b", lora_name="shibing624/chatglm-6b-csc-zh-lora")
-r = model.predict(["对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答："])
-print(r)  # ['少先队员应该为老人让座。\n错误字：因，坐']
+```shell
+>>> from textgen import ChatGlmModel
+>>> model = ChatGlmModel("chatglm", "THUDM/chatglm-6b", lora_name="shibing624/chatglm-6b-csc-zh-lora")
+>>> r = model.predict(["对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答："])
+>>> print(r)  # ['少先队员应该为老人让座。\n错误字：因，坐']
 ```
 
 PS：由于使用了开发中的peft库，可能由于版本更新，导致LoRA模型加载失败，建议使用下面的训练方法，自己训练LoRA模型。
@@ -162,6 +137,9 @@ pip install git+https://github.com/huggingface/peft
 
 example: [examples/llama/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/predict_demo.py)
 
+<details>
+<summary>show code example and result</summary>
+
 ```python
 import sys
 
@@ -179,6 +157,8 @@ r = model.predict([predict_sentence])
 print(r)  # ['地球是唯一一颗拥有生命的行星。']
 ```
 
+</details>
+
 #### 训练LLAMA LoRA模型
 
 example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)
@@ -188,6 +168,9 @@ example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/t
 训练并预测ConvSeq2Seq模型：
 
 example: [examples/seq2sesq/training_convseq2seq_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/seq2seq/training_convseq2seq_model_demo.py)
+
+<details>
+<summary>show code example and result</summary>
 
 ```python
 import argparse
@@ -236,6 +219,8 @@ inputs: ["什么是ai", "你是什么类型的计算机", "你知道热力学吗
 outputs: ['人工智能是工程和科学的分支,致力于构建思维的机器。', '我的程序运行在python,所以我在任何运脑上工作！', '我不能错热是一个疯狂的人工智能"200年。']
 ```
 
+</details>
+
 ### BART 模型
 
 训练并预测BART模型：
@@ -252,6 +237,9 @@ outputs: ['人工智能是工程和科学的分支,致力于构', '我的程序�
 ### T5 模型
 
 example: [examples/t5/training_zh_t5_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/t5/training_zh_t5_model_demo.py)
+
+<details>
+<summary>show code example and result</summary>
 
 ```python
 import argparse
@@ -350,6 +338,8 @@ inputs: ['什么是ai', '你是什么类型的计算机', '你知道热力学吗
 outputs: ['人工智能有两个广义的定义,任何拟人的机械,如在卡雷尔capeks', '我的程序运行在Python,所以我在任何电脑上工作!', '什么是热力学']
 ```
 
+</details>
+
 ### GPT2 模型
 
 #### 中文GPT2 - 文章生成
@@ -384,6 +374,9 @@ example: [examples/songnet/training_zh_songnet_demo.py](https://github.com/shibi
 ### Keyword Text Augmentation(EDA/UDA)
 
 example: [examples/text_augmentation/text_augmentation_demo.py](examples/text_augmentation/text_augmentation_demo.py)
+
+<details>
+<summary>show code example and result</summary>
 
 ```python
 import sys
@@ -427,12 +420,16 @@ delete-0.2: ('主要研究机器学习、深度学习、计算机视觉、对话
 tfidf-0.2: ('一是研究机器学习、深度学习、计算机听觉、智能交谈系统密切相关内容', [('主要', '一是', 0, 2), ('视觉', '听觉', 17, 19), ('对话', '交谈', 22, 24), ('相关', '密切相关', 26, 30)])
 mix-0.2: ('主要研究机器学习、深度学、计算机听觉、智能对话软件系统相关内容', [('学习', '学', 11, 12), ('视觉', '听觉', 16, 18), ('系统', '软件系统', 23, 27)])
 ```
+</details>
 
 ### TGLS 模型（无监督相似文本生成模型）
 
 无监督的中文电商评论生成：从**电商评论**中提取用户表达观点的短句并进行组合来生成仿真评论。
 
 example: [examples/unsup_generation/unsup_generation_demo.py](examples/unsup_generation/unsup_generation_demo.py)
+
+<details>
+<summary>show code example and result</summary>
 
 ```python
 import os
@@ -494,6 +491,7 @@ output:
 ```
 
 前10句是真实用户评论，后10句是生成的。
+</details>
 
 ## 📚 Dataset 
 
@@ -502,6 +500,29 @@ output:
 3. 5万条英文ChatGPT指令Alpaca数据集：[50k English Stanford Alpaca dataset](https://github.com/tatsu-lab/stanford_alpaca#data-release)
 4. 2万条中文ChatGPT指令Alpaca数据集：[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
 5. 69万条中文指令Guanaco数据集(Belle50万条+Guanaco19万条)：[Chinese-Vicuna/guanaco_belle_merge_v1.0](https://huggingface.co/datasets/Chinese-Vicuna/guanaco_belle_merge_v1.0)
+
+<details>
+<summary>文本生成方法介绍</summary>
+### 文本生成方法
+
+1. seq2seq: Seq2Seq、ConvSeq2Seq、BART
+2. language_modeling: GPT2、SongNet、ChatGLM、LLAMA
+3. t5: T5、CopyT5
+
+### 文本扩增方法
+
+#### 词粒度扩增
+
+1. UDA，非核心词替换
+2. EDA，简单数据增强技术：相似词、同义词替换，随机词插入、删除、替换
+
+#### 句粒度扩增
+
+1. 回译（BT, Back Translate）：中文-英文-中文
+2. GPT2模型续写：短文本->长文本
+3. BART摘要模型：长文本->短文本
+4. TGLS：无监督相似文本生成模型
+</details>
 
 ## ☎️ Contact
 
