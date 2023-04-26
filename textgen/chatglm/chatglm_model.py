@@ -104,9 +104,8 @@ class ChatGlmModel:
             config=config,
             trust_remote_code=True,
             load_in_8bit=self.args.int8,
+            torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
         )
-        if self.args.fp16:
-            self.model.half()
         self.model.to(self.device)
 
         if self.args.quantization_bit:
@@ -335,12 +334,20 @@ class ChatGlmModel:
     def load_lora(self):
         """Load lora model."""
         if self.lora_name:
-            self.model = PeftModel.from_pretrained(self.model, self.lora_name)
+            self.model = PeftModel.from_pretrained(
+                self.model,
+                self.lora_name,
+                torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+            )
             logger.info(f"Loaded lora model from {self.lora_name}")
         else:
             lora_path = os.path.join(self.args.output_dir, self.args.lora_bin_name)
             if lora_path and os.path.exists(lora_path):
-                self.model = PeftModel.from_pretrained(self.model, self.args.output_dir)
+                self.model = PeftModel.from_pretrained(
+                    self.model,
+                    self.args.output_dir,
+                    torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+                )
                 logger.info(f"Loaded lora model from {lora_path}")
 
     def process_response(self, response):
