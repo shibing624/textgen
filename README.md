@@ -99,11 +99,11 @@ pip install git+https://github.com/huggingface/peft
 
 example: [examples/chatglm/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/predict_demo.py)
 
-```shell
->>> from textgen import ChatGlmModel
->>> model = ChatGlmModel("chatglm", "THUDM/chatglm-6b", lora_name="shibing624/chatglm-6b-csc-zh-lora")
->>> r = model.predict(["对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答："])
->>> print(r)  # ['少先队员应该为老人让座。\n错误字：因，坐']
+```python
+from textgen import ChatGlmModel
+model = ChatGlmModel("chatglm", "THUDM/chatglm-6b", lora_name="shibing624/chatglm-6b-csc-zh-lora")
+r = model.predict(["对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答："])
+print(r)  # ['少先队员应该为老人让座。\n错误字：因，坐']
 ```
 
 PS：由于使用了开发中的peft库，可能由于版本更新，导致LoRA模型加载失败，建议使用下面的训练方法，自己训练LoRA模型。
