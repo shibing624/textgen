@@ -27,6 +27,21 @@ sentences = [i.strip() for i in open(os.path.join(pwd_path, '../examples/data/ll
              i.strip()]
 
 
+def test_llama_7b_plus_lora():
+    m = LlamaModel('llama', "shibing624/chinese-alpaca-plus-7b", args={'use_lora': True})
+
+    predict_sentences = [llama_generate_prompt(s) for s in sentences]
+    res = m.predict(predict_sentences)
+    for s, i in zip(sentences, res):
+        print('input:', s, '\noutput:', i)
+        print()
+
+    res_dict = {'input': sentences, 'output': res}
+    df = pd.DataFrame.from_dict(res_dict)
+    df.to_json(os.path.join(pwd_path, 'llama_7b_plus_lora_llm_benchmark_test_result.json'), force_ascii=False,
+               orient='records', lines=True)
+
+
 def test_llama_7b_lora():
     m = LlamaModel('llama', "decapoda-research/llama-7b-hf", lora_name='ziqingyang/chinese-alpaca-lora-7b',
                    args={'use_lora': True}, )
