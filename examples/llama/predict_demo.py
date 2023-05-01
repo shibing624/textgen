@@ -13,7 +13,7 @@ def generate_prompt(instruction):
     return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:"""
 
 
-model = LlamaModel("llama", "decapoda-research/llama-7b-hf", lora_name="ziqingyang/chinese-alpaca-lora-7b")
+model = LlamaModel("llama", "shibing624/chinese-alpaca-plus-7b")
 # model = LlamaModel("llama", "decapoda-research/llama-13b-hf", lora_name="shibing624/llama-13b-belle-zh-lora")
 predict_sentence = generate_prompt("失眠怎么办？")
 r = model.predict([predict_sentence])

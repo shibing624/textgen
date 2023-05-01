@@ -91,7 +91,10 @@ class LlamaModel:
                     "Make sure CUDA is available or set `use_cuda=False`."
                 )
         else:
-            self.device = "cpu"
+            if torch.backends.mps.is_available():
+                self.device = torch.device("mps")
+            else:
+                self.device = "cpu"
         logger.debug(f"Device: {self.device}")
         if not use_cuda:
             self.args.fp16 = False
@@ -126,6 +129,7 @@ class LlamaModel:
         else:
             self.args.model_name = model_name
 
+        self.resize_model_embeddings(len(self.tokenizer))
         self.lora_name = lora_name
         if self.args.use_lora:
             self.load_lora()
@@ -135,6 +139,19 @@ class LlamaModel:
         self.model.config.pad_token_id = 0  # unk
         self.model.config.bos_token_id = 1
         self.model.config.eos_token_id = 2
+
+    def resize_model_embeddings(self, tokenizer_vocab_size):
+        """Resizes model embeddings to match the tokenizer vocab size."""
+        model_vocab_size = self.model.get_input_embeddings().weight.size(0)
+        if model_vocab_size != tokenizer_vocab_size:
+            logger.debug(
+                f"Resize model embeddings to fit tokenizer, "
+                f"Vocab of the base model: {model_vocab_size}, "
+                f"Vocab of the tokenizer: {tokenizer_vocab_size}"
+            )
+            self.model.resize_token_embeddings(tokenizer_vocab_size)
+            assert self.model.get_input_embeddings().weight.size(0) == len(self.tokenizer)
+            logger.debug(f"Model token embeddings updated, size: {len(self.tokenizer)}")
 
     def train_model(
             self,
@@ -339,16 +356,8 @@ class LlamaModel:
     def load_lora(self):
         """Load lora model"""
         if self.lora_name:
-            if os.path.isdir(self.lora_name) and os.path.exists(
-                    os.path.join(self.lora_name, "tokenizer_config.json")):
-                update_tokenizer = True
-            else:
-                update_tokenizer = False
-            if "ziqingyang/chinese" in self.lora_name or update_tokenizer:
-                self.tokenizer = LlamaTokenizer.from_pretrained(self.lora_name)
-                self.model.resize_token_embeddings(len(self.tokenizer))
-                assert self.model.get_input_embeddings().weight.size(0) == len(self.tokenizer)
-                logger.debug(f"Tokenizer updated, vocabulary size: {len(self.tokenizer)}")
+            self.tokenizer = LlamaTokenizer.from_pretrained(self.lora_name)
+            self.resize_model_embeddings(len(self.tokenizer))
             self.model = PeftModel.from_pretrained(
                 self.model,
                 self.lora_name,

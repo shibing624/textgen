@@ -149,7 +149,10 @@ class LanguageModelingModel:
                     " Make sure CUDA is available or set use_cuda=False."
                 )
         else:
-            self.device = "cpu"
+            if torch.backends.mps.is_available():
+                self.device = torch.device("mps")
+            else:
+                self.device = "cpu"
         logger.debug(f"Device: {self.device}")
         self.results = {}
 

@@ -18,7 +18,6 @@ def main():
                              'Chinese-Vicuna/guanaco_belle_merge_v1.0)')
     parser.add_argument('--model_type', default='chatglm', type=str, help='Transformers model type')
     parser.add_argument('--model_name', default='THUDM/chatglm-6b', type=str, help='Transformers model or path')
-    parser.add_argument('--lora_name', default=None, type=str, help='Peft lora model name or dir')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs-alpaca/', type=str, help='Model output directory')
@@ -42,7 +41,7 @@ def main():
             "output_dir": args.output_dir,
             "use_hf_datasets": True,
         }
-        model = ChatGlmModel(args.model_type, args.model_name, lora_name=args.lora_name, args=model_args)
+        model = ChatGlmModel(args.model_type, args.model_name,  args=model_args)
 
         model.train_model(args.train_file)
     if args.do_predict:
@@ -56,6 +55,16 @@ def main():
             '问：用一句话描述地球为什么是独一无二的。\n答：',
             '问：给定两个数字，计算它们的平均值。 数字: 25, 36\n答：',
             '问：基于以下提示填写以下句子的空格。 空格应填写一个形容词 句子: ______出去享受户外活动，包括在公园里散步，穿过树林或在海岸边散步。\n答：',
+            '我能用lightning数据线给安卓手机充电吗？',
+            '为什么天空是蓝色的？',
+            '如何做披萨？',
+            '为什么冥王星被踢出太阳系？',
+            '列举太阳系的全部行星',
+            '详细说明DNA和RNA的区别',
+            '中国的“东北三省”指的是哪里？',
+            '经常吃烫的东西会罹患什么病？',
+            '盐酸莫西沙星能否用于治疗肺炎？',
+            '机场代码KIX代表的是哪个机场？',
         ]
         response = model.predict(sents)
         print(response)
