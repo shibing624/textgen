@@ -343,7 +343,6 @@ class ChatGlmModel:
                 torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
             )
             logger.info(f"Loaded lora model from {self.lora_name}")
-            # self.model = self.model.merge_and_unload()
         else:
             lora_path = os.path.join(self.args.output_dir, self.args.lora_bin_name)
             if lora_path and os.path.exists(lora_path):
@@ -353,7 +352,6 @@ class ChatGlmModel:
                     torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
                 )
                 logger.info(f"Loaded lora model from {lora_path}")
-                # self.model = self.model.merge_and_unload()
 
     def process_response(self, response):
         """Process response text."""
