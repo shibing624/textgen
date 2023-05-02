@@ -29,8 +29,8 @@ def test_csc():
     print(response)
 
     eval.eval_sighan2015_by_model_batch(batch_correct)
-    # Sentence Level: acc:0.3864, precision:0.3263, recall:0.2284, f1:0.2687, cost time:288.23 s, total num: 1100
-    # 虽然F1值远低于macbert4csc(f1:0.7742)等模型，但这个纠错结果带句子润色的效果，看结果case大多数是比ground truth结果句子更通顺流畅，
+    # Sentence Level: acc:0.5264, precision:0.5263, recall:0.4052, f1:0.4579, cost time:253.49 s, total num: 1100
+    # 虽然F1值低于macbert4csc(f1:0.7742)等模型，但这个纠错结果带句子润色的效果，看结果case大多数是比ground truth结果句子更通顺流畅，
     # 我觉得是当前效果最好的纠错模型之一，比较像ChatGPT效果。
 
 
