@@ -75,14 +75,15 @@ def main():
                           'output_dir': args.output_dir, "max_length": args.max_length, }
                 )
             else:
-                lora_model = LlamaModel(
+                model = LlamaModel(
                     args.model_type, args.model_name,
                     lora_name=args.lora_name,
                     args={'use_lora': True, 'eval_batch_size': args.batch_size,
                           "max_length": args.max_length, }
                 )
-                base_model = lora_model.model.merge_and_unload()
-                model = PeftModel.from_pretrained(base_model, args.output_dir)
+                base_model = model.model.merge_and_unload()
+                merged_model = PeftModel.from_pretrained(base_model, args.output_dir)
+                model.model = merged_model
         test_data = load_data(args.test_file)[:10]
         test_df = pd.DataFrame(test_data, columns=["instruction", "input", "output"])
         logger.debug('test_df: {}'.format(test_df))
