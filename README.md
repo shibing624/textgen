@@ -50,10 +50,10 @@ release基于`textgen`训练的中文模型，模型已经release到HuggingFace 
 | [ChatGLM-6B](https://huggingface.co/THUDM/chatglm-6b)                                                                                       |ChatGLM-6B| 基于原生`THUDM/chatglm-6b`评估测试集得分                                                                                        | **7.08** |
 | [shibing624/chatglm-6b-belle-zh-lora](https://huggingface.co/shibing624/chatglm-6b-belle-zh-lora)                                           |ChatGLM-6B| 基于`THUDM/chatglm-6b`加载`shibing624/chatglm-6b-belle-zh-lora`LoRA模型后评估测试集得分                                            | 6.97     |
 
-- 评估case，详见在线文档：中文LLM-benchmark多任务评估集(腾讯文档) https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=l6a7nk  感谢韩俊明、[杨家铭](https://github.com/yangjiam)等同学的标注
+- 评估case，详见在线文档：中文LLM-benchmark多任务评估集(腾讯文档) https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=BB08J2  感谢韩俊明、[杨家铭](https://github.com/yangjiam)等同学的标注
 - 评估任务类型包括：知识问答，开放式问答，数值计算，诗词、音乐、体育，娱乐，写文章，文本翻译，代码编程，伦理、拒答类，多轮问答，Score 评分是前100条（10分制）的平均分数，越高越好
 - 评估脚本：[tests/test_benchmark.py](https://github.com/shibing624/textgen/blob/main/tests/test_benchmark.py)
-- 结论：当前在[中文LLM-benchmark多任务评估集](https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=l6a7nk)上，ChatGLM-6B的表现最好，LLAMA-13B-Chinese-Aplaca的表现次之，LLAMA-7B的表现整体都差些，说明ChatGLM这种原生的中文预训练模型更理解中文语义，LLAMA-13B-Chinese-Aplaca是在原版LLaMA上扩充了中文词表，并融入了约20G的通用中文语料后的指令微调模型，表明了LLAMA-13B的底座优秀，具有强大的迁移能力
+- 结论：当前在[中文LLM-benchmark多任务评估集](https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=BB08J2)上，ChatGLM-6B的表现最好，LLAMA-13B-Chinese-Aplaca的表现次之，LLAMA-7B的表现整体都差些，说明ChatGLM这种原生的中文预训练模型更理解中文语义，LLAMA-13B-Chinese-Aplaca是在原版LLaMA上扩充了中文词表，并融入了约20G的通用中文语料后的指令微调模型，表明了LLAMA-13B的底座优秀，具有强大的迁移能力
 
 ## 🚀 Demo
 
@@ -85,7 +85,7 @@ cd textgen
 python setup.py install
 ```
 
-## 😎 Usage
+## ▶️ Usage
 
 ### ChatGLM-6B LoRA 模型
 
