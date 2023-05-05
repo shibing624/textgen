@@ -42,6 +42,7 @@ def preprocess_data(data):
         truncation=True,
         max_length=args.max_seq_length + args.max_length,
         padding=False,
+        add_special_tokens=False
     )
     if (
             example["input_ids"][-1] != tokenizer.eos_token_id
@@ -53,12 +54,13 @@ def preprocess_data(data):
     if args.is_chat_task:
         user_example = tokenizer(
             prompt,
-            truncation=True,
-            max_length=args.max_seq_length,
-            padding=False,
+            padding=False
         )
         user_prompt_len = len(user_example["input_ids"])
-        example["labels"] = [-100] * user_prompt_len + example["labels"][user_prompt_len:]
+        len_label_pad = args.max_seq_length + args.max_length - len(example['labels'])
+        example["labels"] = [-100] * len_label_pad + \
+                            [-100] * min(user_prompt_len, len(example['labels'])) + \
+                            example["labels"][user_prompt_len:]
 
     return example
 

@@ -293,7 +293,12 @@ class LlamaModel:
         )
         logger.info(f"Training/evaluation parameters {training_args}")
 
-        data_collator = DataCollatorForSeq2Seq(self.tokenizer, return_tensors="pt", padding=True)
+        data_collator = DataCollatorForSeq2Seq(
+            self.tokenizer,
+            return_tensors="pt",
+            padding='max_length',
+            max_length=self.args.max_seq_length + self.args.max_length
+        )
         trainer = FinetuneTrainer(
             model=self.model,
             train_dataset=train_dataset,
