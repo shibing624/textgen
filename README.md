@@ -10,12 +10,12 @@
 
 🌈 Implementation of Text Generation models.
 
-**textgen**实现了多种文本生成模型，包括：LLAMA、ChatGLM、UDA、GPT2、Seq2Seq、BART、T5、SongNet等模型，开箱即用。
+**textgen**实现了多种文本生成模型，包括：LLaMA、ChatGLM、UDA、GPT2、Seq2Seq、BART、T5、SongNet等模型，开箱即用。
 
 ## 😊 Feature
 
 - [ChatGLM](textgen/chatglm)：本项目基于PyTorch实现了ChatGLM-6B模型LoRA微调训练和预测，可以用于句子纠错、对话等文本生成任务
-- [LLAMA](textgen/llama)：本项目基于PyTorch实现了LLAMA模型LoRA微调训练和预测，可以用于多轮对话生成任务
+- [LLaMA](textgen/llama)：本项目基于PyTorch实现了LLaMA模型LoRA微调训练和预测，可以用于多轮对话生成任务
 - [UDA/EDA](textgen/augment/word_level_augment.py)：本项目实现了UDA(非核心词替换)、EDA和Back Translation(回译)算法，基于TF-IDF将句子中部分不重要词替换为同义词，随机词插入、删除、替换等方法，产生新的文本，实现了文本扩增
 - [Seq2Seq](textgen/seq2seq)：本项目基于PyTorch实现了Seq2Seq、ConvSeq2Seq、BART模型的训练和预测，可以用于文本翻译、对话生成、摘要生成等文本生成任务
 - [T5](textgen/t5)：本项目基于PyTorch实现了T5和CopyT5模型训练和预测，可以用于文本翻译、对话生成、对联生成、文案撰写等文本生成任务
@@ -37,24 +37,24 @@ release基于`textgen`训练的中文模型，模型已经release到HuggingFace 
 |[shibing624/songnet-base-chinese-couplet](https://huggingface.co/shibing624/songnet-base-chinese-couplet)| SongNet       | fine-tuned对联后的模型                                                                                                                                                 | [training script](https://github.com/shibing624/textgen/blob/main/examples/songnet/training_zh_songnet_demo.py)                                 | [predict script](https://github.com/shibing624/textgen/blob/main/examples/songnet/songnet_couplet_demo.py)            |
 |[shibing624/chatglm-6b-csc-zh-lora](https://huggingface.co/shibing624/chatglm-6b-csc-zh-lora)| ChatGLM-6B    | 在27万中文拼写纠错数据[shibing624/CSC](https://huggingface.co/datasets/shibing624/CSC)上微调了一版ChatGLM-6B，纠错效果有提升，发布微调后的LoRA权重                                                | [training script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_csc_demo.py)                             | [predict script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/csc_demo.py)                        |
 |[shibing624/chatglm-6b-belle-zh-lora](https://huggingface.co/shibing624/chatglm-6b-belle-zh-lora)| ChatGLM-6B    | 在100万条中文ChatGPT指令Belle数据集[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)上微调了一版ChatGLM-6B，问答效果有提升，发布微调后的LoRA权重                   | [training script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_hfdataset_demo.py)                       | [predict script](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_hfdataset_demo.py) |
-|[shibing624/llama-13b-belle-zh-lora](https://huggingface.co/shibing624/llama-13b-belle-zh-lora)| LLAMA-13B     | 在100万条中文ChatGPT指令Belle数据集[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)上微调了一版Llama-13B，问答效果有提升，发布微调后的LoRA权重                    | [training script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_hfdataset_demo.py)                           | [predict script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_hfdataset_demo.py)     |
-|[shibing624/chinese-alpaca-plus-7b](https://huggingface.co/shibing624/chinese-alpaca-plus-7b)| LLAMA-7B-plus | [中文LLaMA, Alpaca Plus版（7B）](https://github.com/ymcui/Chinese-LLaMA-Alpaca/releases/tag/v3.0)，在LLaMA-7B上扩充了中文词表并继续预训练120G文本（通用领域），在4M指令数据集上微调后得到的中文Alpaca-plus模型  | [training script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)                           | [predict script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)     |
+|[shibing624/llama-13b-belle-zh-lora](https://huggingface.co/shibing624/llama-13b-belle-zh-lora)| LLaMA-13B     | 在100万条中文ChatGPT指令Belle数据集[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)上微调了一版Llama-13B，问答效果有提升，发布微调后的LoRA权重                    | [training script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_hfdataset_demo.py)                           | [predict script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_hfdataset_demo.py)     |
+|[shibing624/chinese-alpaca-plus-7b](https://huggingface.co/shibing624/chinese-alpaca-plus-7b)| LLaMA-7B-plus | [中文LLaMA, Alpaca Plus版（7B）](https://github.com/ymcui/Chinese-LLaMA-Alpaca/releases/tag/v3.0)，在LLaMA-7B上扩充了中文词表并继续预训练120G文本（通用领域），在4M指令数据集上微调后得到的中文Alpaca-plus模型  | [training script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)                           | [predict script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)     |
 
 ### Evaluation
 
 | Model                                                                                                                                       |Arch| Introduce                                                                                                            | Score    |
 |:--------------------------------------------------------------------------------------------------------------------------------------------|:---|:---------------------------------------------------------------------------------------------------------------------|:---------|
-| [LLAMA-7B-Chinese-Aplaca](https://huggingface.co/ziqingyang/chinese-alpaca-lora-7b)                                                         |LLAMA-7B| 复用[ymcui/Chinese-LLaMA-Alpaca](https://github.com/ymcui/Chinese-LLaMA-Alpaca/blob/main/examples/README.md)的评估case和得分 | 4.82     |
-| [LLAMA-13B-Chinese-Aplaca](https://huggingface.co/ziqingyang/chinese-alpaca-lora-13b)                                                       |LLAMA-13B| 复用[ymcui/Chinese-LLaMA-Alpaca](https://github.com/ymcui/Chinese-LLaMA-Alpaca/blob/main/examples/README.md)的评估case和得分 | 7.03     |
-| [facat/alpaca-lora-cn-13b](https://huggingface.co/facat/alpaca-lora-cn-13b)	                                                                |LLAMA-13B| 基于`decapoda-research/llama-13b-hf`加载`facat/alpaca-lora-cn-13b`LoRA模型后评估测试集并标注得分                                      | 4.07     |  
-| [Chinese-Vicuna/Chinese-Vicuna-lora-13b-belle-and-guanaco](https://huggingface.co/Chinese-Vicuna/Chinese-Vicuna-lora-13b-belle-and-guanaco) |LLAMA-13B| 基于`decapoda-research/llama-13b-hf`加载`Chinese-Vicuna/Chinese-Vicuna-lora-13b-belle-and-guanaco`LoRA模型后评估测试集并标注得分      | 3.92     |
+| [LLaMA-7B-Chinese-Alpaca](https://huggingface.co/ziqingyang/chinese-alpaca-lora-7b)                                                         |LLaMA-7B| 复用[ymcui/Chinese-LLaMA-Alpaca](https://github.com/ymcui/Chinese-LLaMA-Alpaca/blob/main/examples/README.md)的评估case和得分 | 4.82     |
+| [LLaMA-13B-Chinese-Alpaca](https://huggingface.co/ziqingyang/chinese-alpaca-lora-13b)                                                       |LLaMA-13B| 复用[ymcui/Chinese-LLaMA-Alpaca](https://github.com/ymcui/Chinese-LLaMA-Alpaca/blob/main/examples/README.md)的评估case和得分 | 7.03     |
+| [facat/alpaca-lora-cn-13b](https://huggingface.co/facat/alpaca-lora-cn-13b)	                                                                |LLaMA-13B| 基于`decapoda-research/llama-13b-hf`加载`facat/alpaca-lora-cn-13b`LoRA模型后评估测试集并标注得分                                      | 4.07     |  
+| [Chinese-Vicuna/Chinese-Vicuna-lora-13b-belle-and-guanaco](https://huggingface.co/Chinese-Vicuna/Chinese-Vicuna-lora-13b-belle-and-guanaco) |LLaMA-13B| 基于`decapoda-research/llama-13b-hf`加载`Chinese-Vicuna/Chinese-Vicuna-lora-13b-belle-and-guanaco`LoRA模型后评估测试集并标注得分      | 3.92     |
 | [ChatGLM-6B](https://huggingface.co/THUDM/chatglm-6b)                                                                                       |ChatGLM-6B| 基于原生`THUDM/chatglm-6b`评估测试集得分                                                                                        | **7.08** |
 | [shibing624/chatglm-6b-belle-zh-lora](https://huggingface.co/shibing624/chatglm-6b-belle-zh-lora)                                           |ChatGLM-6B| 基于`THUDM/chatglm-6b`加载`shibing624/chatglm-6b-belle-zh-lora`LoRA模型后评估测试集得分                                            | 6.97     |
 
 - 评估case，详见在线文档：中文LLM-benchmark多任务评估集(腾讯文档) https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=BB08J2  感谢韩俊明、[杨家铭](https://github.com/yangjiam)等同学的标注
 - 评估任务类型包括：知识问答，开放式问答，数值计算，诗词、音乐、体育，娱乐，写文章，文本翻译，代码编程，伦理、拒答类，多轮问答，Score 评分是前100条（10分制）的平均分数，越高越好
 - 评估脚本：[tests/test_benchmark.py](https://github.com/shibing624/textgen/blob/main/tests/test_benchmark.py)
-- 结论：当前在[中文LLM-benchmark多任务评估集](https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=BB08J2)上，ChatGLM-6B的表现最好，LLAMA-13B-Chinese-Aplaca的表现次之，LLAMA-7B的表现整体都差些，说明ChatGLM这种原生的中文预训练模型更理解中文语义，LLAMA-13B-Chinese-Aplaca是在原版LLaMA上扩充了中文词表，并融入了约20G的通用中文语料后的指令微调模型，表明了LLAMA-13B的底座优秀，具有强大的迁移能力
+- 结论：当前在[中文LLM-benchmark多任务评估集](https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=BB08J2)上，ChatGLM-6B的表现最好，LLaMA-13B-Chinese-Alpaca的表现次之，LLaMA-7B的表现整体都差些，说明ChatGLM这种原生的中文预训练模型更理解中文语义，LLaMA-13B-Chinese-Aplaca是在原版LLaMA上扩充了中文词表，并融入了约20G的通用中文语料后的指令微调模型，表明了LLaMA-13B的底座优秀，具有强大的迁移能力
 
 ## 🚀 Demo
 
@@ -115,16 +115,16 @@ PS：由于使用了开发中的peft库，可能由于版本更新，导致LoRA�
 
 example: [examples/chatglm/training_chatglm_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_demo.py)
 
-### LLAMA LoRA 模型
+### LLaMA LoRA 模型
 
-安装最新开发版的transformers和peft库，支持LLAMA、LoRA模型
+安装最新开发版的transformers和peft库，支持LLaMA、LoRA模型
 
 ```shell
 pip install transformers>=4.28.1
 pip install git+https://github.com/huggingface/peft
 ```
 
-#### 使用LLAMA LoRA微调后的模型
+#### 使用LLaMA LoRA微调后的模型
 
 example: [examples/llama/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/predict_demo.py)
 
@@ -150,7 +150,7 @@ print(r)  # ['地球是唯一一颗拥有生命的行星。']
 
 </details>
 
-#### 训练LLAMA LoRA模型
+#### 训练LLaMA LoRA模型
 
 example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)
 
@@ -499,7 +499,7 @@ output:
 ### 文本生成方法
 
 1. seq2seq: Seq2Seq、ConvSeq2Seq、BART
-2. language_modeling: GPT2、SongNet、ChatGLM、LLAMA
+2. language_modeling: GPT2、SongNet、ChatGLM、LLaMA
 3. t5: T5、CopyT5
 
 ### 文本扩增方法

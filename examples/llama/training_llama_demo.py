@@ -68,22 +68,12 @@ def main():
         model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:
-            if args.lora_name is None:
-                model = LlamaModel(
-                    args.model_type, args.model_name,
-                    args={'use_lora': True, 'eval_batch_size': args.batch_size,
-                          'output_dir': args.output_dir, "max_length": args.max_length, }
-                )
-            else:
-                model = LlamaModel(
-                    args.model_type, args.model_name,
-                    lora_name=args.lora_name,
-                    args={'use_lora': True, 'eval_batch_size': args.batch_size,
-                          "max_length": args.max_length, }
-                )
-                base_model = model.model.merge_and_unload()
-                merged_model = PeftModel.from_pretrained(base_model, args.output_dir)
-                model.model = merged_model
+            model = LlamaModel(
+                args.model_type, args.model_name,
+                lora_name=args.lora_name,
+                args={'use_lora': True, 'eval_batch_size': args.batch_size,
+                      'output_dir': args.output_dir, "max_length": args.max_length, }
+            )
         test_data = load_data(args.test_file)[:10]
         test_df = pd.DataFrame(test_data, columns=["instruction", "input", "output"])
         logger.debug('test_df: {}'.format(test_df))

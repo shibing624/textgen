@@ -293,10 +293,7 @@ class LlamaModel:
         )
         logger.info(f"Training/evaluation parameters {training_args}")
 
-        data_collator = DataCollatorForSeq2Seq(
-            self.tokenizer, pad_to_multiple_of=self.args.pad_to_multiple_of,
-            return_tensors="pt", padding=True
-        )
+        data_collator = DataCollatorForSeq2Seq(self.tokenizer, return_tensors="pt", padding=True)
         trainer = FinetuneTrainer(
             model=self.model,
             train_dataset=train_dataset,
@@ -356,23 +353,29 @@ class LlamaModel:
     def load_lora(self):
         """Load lora model"""
         if self.lora_name:
-            self.tokenizer = LlamaTokenizer.from_pretrained(self.lora_name)
-            self.resize_model_embeddings(len(self.tokenizer))
+            if os.path.isdir(self.lora_name) and os.path.exists(
+                    os.path.join(self.lora_name, "tokenizer_config.json")):
+                update_tokenizer = True
+            else:
+                update_tokenizer = False
+            if "ziqingyang/chinese" in self.lora_name or update_tokenizer:
+                self.tokenizer = LlamaTokenizer.from_pretrained(self.lora_name)
+                self.resize_model_embeddings(len(self.tokenizer))
             self.model = PeftModel.from_pretrained(
                 self.model,
                 self.lora_name,
                 torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
             )
             logger.info(f"Loaded lora model from {self.lora_name}")
-        else:
-            lora_path = os.path.join(self.args.output_dir, self.args.lora_bin_name)
-            if lora_path and os.path.exists(lora_path):
-                self.model = PeftModel.from_pretrained(
-                    self.model,
-                    self.args.output_dir,
-                    torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
-                )
-                logger.info(f"Loaded lora model from {lora_path}")
+        # Load from local
+        lora_path = os.path.join(self.args.output_dir, self.args.lora_bin_name)
+        if lora_path and os.path.exists(lora_path):
+            self.model = PeftModel.from_pretrained(
+                self.model,
+                self.args.output_dir,
+                torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+            )
+            logger.info(f"Loaded lora model from {lora_path}")
 
     @torch.no_grad()
     def predict(self, sentences: List[str], keep_prompt: bool = False, max_length: int = None, **kwargs):
