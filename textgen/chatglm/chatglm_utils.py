@@ -62,7 +62,7 @@ def load_hf_dataset(data, tokenizer, args, mode):
     else:
         dataset = HFDataset.from_pandas(data)
 
-    dataset = dataset.map(
+    dataset = dataset.shuffle().map(
         lambda x: preprocess_batch_for_hf_dataset(x, tokenizer=tokenizer, args=args),
         batched=False, remove_columns=dataset.column_names
     ).filter(lambda x: tokenizer.gmask_token_id in list(x['input_ids']))  # exclude samples without gmask

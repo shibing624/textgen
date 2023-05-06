@@ -37,29 +37,25 @@ def preprocess_data(data):
         prompt = PROMPT_DICT["prompt_no_input"].format(instruction=instruction)
 
     full_prompt = prompt + target_text + tokenizer.eos_token
+    full_max_length = args.max_seq_length + args.max_length
     example = tokenizer(
         full_prompt,
         truncation=True,
-        max_length=args.max_seq_length + args.max_length,
+        max_length=full_max_length,
         padding=False,
         add_special_tokens=False
     )
-    if (
-            example["input_ids"][-1] != tokenizer.eos_token_id
-            and len(example["input_ids"]) < args.max_seq_length + args.max_length
-    ):
-        example["input_ids"].append(tokenizer.eos_token_id)
-        example["attention_mask"].append(1)
-    example["labels"] = copy.deepcopy(example["input_ids"])
+    example["labels"] = example["input_ids"].copy()
     if args.is_chat_task:
         user_example = tokenizer(
             prompt,
-            padding=False
+            truncation=True,
+            max_length=args.max_seq_length,
+            padding=False,
+            add_special_tokens=False
         )
         user_prompt_len = len(user_example["input_ids"])
-        len_label_pad = args.max_seq_length + args.max_length - len(example['labels'])
-        example["labels"] = [-100] * len_label_pad + \
-                            [-100] * min(user_prompt_len, len(example['labels'])) + \
+        example["labels"] = [-100] * (full_max_length - len(example['labels']) + user_prompt_len) + \
                             example["labels"][user_prompt_len:]
 
     return example
@@ -92,7 +88,7 @@ def load_hf_dataset(data, tokenizer, args, mode):
     else:
         dataset = HFDataset.from_pandas(data)
 
-    dataset = dataset.map(
+    dataset = dataset.shuffle().map(
         lambda x: preprocess_batch_for_hf_dataset(x, tokenizer=tokenizer, args=args),
         batched=False, remove_columns=dataset.column_names
     ).filter(lambda x: len(x['input_ids']) > 0)
