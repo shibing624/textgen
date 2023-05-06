@@ -6,8 +6,8 @@
 import sys
 import argparse
 from loguru import logger
+import os
 import pandas as pd
-from peft import PeftModel
 
 sys.path.append('../..')
 from textgen import ChatGlmModel

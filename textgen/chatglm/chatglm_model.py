@@ -199,7 +199,8 @@ class ChatGlmModel:
                 " Set args.overwrite_output_dir = True to overcome.".format(output_dir)
             )
         # update model train config
-        self.model.gradient_checkpointing_enable()
+        if self.device != 'cpu':
+            self.model.gradient_checkpointing_enable()
         self.model.enable_input_require_grads()
         if torch.cuda.device_count() > 1:
             self.model.is_parallelizable = True
