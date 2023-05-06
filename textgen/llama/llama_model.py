@@ -203,7 +203,8 @@ class LlamaModel:
                 " Set args.overwrite_output_dir = True to overcome.".format(output_dir)
             )
         # update model train config
-        self.model.gradient_checkpointing_enable()
+        if self.device != 'cpu':
+            self.model.gradient_checkpointing_enable()
         self.model.enable_input_require_grads()
         if not self.ddp and torch.cuda.device_count() > 1:
             # keeps Trainer from trying its own DataParallelism when more than 1 gpu is available
