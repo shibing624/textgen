@@ -155,6 +155,7 @@ print(r)  # ['地球是唯一一颗拥有生命的行星。']
 
 example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)
 
+#### 基于LoRA模型继续训练
 如果需要基于Lora模型继续训练，可以使用下面的脚本合并模型为新的base model，再微调训练即可。
 
 单LoRA权重合并（适用于 Chinese-LLaMA, Chinese-LLaMA-Plus, Chinese-Alpaca）
@@ -168,13 +169,13 @@ python -m textgen/llama/merge_llama_with_chinese_lora.py \
     --output_dir path_to_output_dir 
 ```
 参数说明：
-
+```markdown
 --base_model：存放HF格式的LLaMA模型权重和配置文件的目录
 --lora_model：中文LLaMA/Alpaca LoRA解压后文件所在目录，也可使用[🤗Model Hub Lora模型调用名称](https://github.com/ymcui/Chinese-LLaMA-Alpaca/tree/main#model-hub)
 -output_type: 指定输出格式，可为pth或huggingface。若不指定，默认为pth
 --output_dir：指定保存全量模型权重的目录，默认为./
 （可选）--offload_dir：对于低内存用户需要指定一个offload缓存路径
-
+```
 
 ### ConvSeq2Seq 模型
 
