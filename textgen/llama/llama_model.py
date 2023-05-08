@@ -75,14 +75,13 @@ class LlamaModel:
             random.seed(self.args.manual_seed)
             np.random.seed(self.args.manual_seed)
             torch.manual_seed(self.args.manual_seed)
-            if self.args.n_gpu > 0:
+            if torch.cuda.is_available() > 0:
                 torch.cuda.manual_seed_all(self.args.manual_seed)
 
         if use_cuda:
             if torch.cuda.is_available():
                 if cuda_device == -1:
                     self.device = torch.device("cuda")
-                    cuda_device = 0
                 else:
                     self.device = torch.device(f"cuda:{cuda_device}")
             else:

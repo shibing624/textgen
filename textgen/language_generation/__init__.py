@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author:XuMing(xuming624@qq.com)
-@description: refer https://github.com/ThilinaRajapakse/simpletransformers
+@description:
 """
 
 from textgen.config.model_args import LanguageGenerationArgs
