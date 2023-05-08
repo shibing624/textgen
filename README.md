@@ -88,15 +88,15 @@ python setup.py install
 
 ## ▶️ Usage
 
-### ChatGLM-6B LoRA 模型
+### ChatGLM-6B 模型
 
-安装最新开发版的peft库，支持LoRA模型
+安装最新开发版的peft库，支持AdaLoRA、LoRA、P_Tuning、Prefix_Tuning等微调方法
 
 ```shell
 pip install git+https://github.com/huggingface/peft
 ```
 
-#### 使用ChatGLM-6B LoRA微调后的模型
+#### 使用 ChatGLM-6B 微调后的模型
 
 example: [examples/chatglm/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/predict_demo.py)
 
@@ -110,22 +110,21 @@ print(r)  # ['少先队员应该为老人让座。\n错误字：因，坐']
 
 PS：由于使用了开发中的peft库，可能由于版本更新，导致LoRA模型加载失败，建议使用下面的训练方法，自己训练LoRA模型。
 
-#### 训练ChatGLM-6B LoRA模型
+#### 训练 ChatGLM-6B 微调模型
 
 支持自定义数据集，数据集格式参考[examples/data/zh_csc_test.tsv](https://github.com/shibing624/textgen/blob/main/examples/data/zh_csc_test.tsv)。
 
 example: [examples/chatglm/training_chatglm_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_demo.py)
 
-### LLaMA LoRA 模型
+### LLaMA 模型
 
-安装最新开发版的transformers和peft库，支持LLaMA、LoRA模型
+安装最新开发版的peft库，支持AdaLoRA、LoRA、P_Tuning、Prefix_Tuning等微调方法
 
 ```shell
-pip install transformers>=4.28.1
 pip install git+https://github.com/huggingface/peft
 ```
 
-#### 使用LLaMA LoRA微调后的模型
+#### 使用 LLaMA 微调后的模型
 
 example: [examples/llama/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/predict_demo.py)
 
@@ -151,11 +150,11 @@ print(r)  # ['地球是唯一一颗拥有生命的行星。']
 
 </details>
 
-#### 训练LLaMA LoRA模型
+#### 训练 LLaMA 微调模型
 
 example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)
 
-#### 基于LoRA模型继续训练
+#### 基于微调(LoRA)模型继续训练
 如果需要基于Lora模型继续训练，可以使用下面的脚本合并模型为新的base model，再微调训练即可。
 
 单LoRA权重合并（适用于 Chinese-LLaMA, Chinese-LLaMA-Plus, Chinese-Alpaca）
