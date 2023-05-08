@@ -7,7 +7,6 @@
 import os
 import pickle
 from multiprocessing import Pool
-import copy
 
 import datasets
 from datasets import Dataset as HFDataset
@@ -55,6 +54,7 @@ def preprocess_data(data):
             add_special_tokens=False
         )
         user_prompt_len = len(user_example["input_ids"])
+        # set labels to full max length to adjust for DataCollatorForSeq2Seq padding
         example["labels"] = [-100] * (full_max_length - len(example['labels']) + user_prompt_len) + \
                             example["labels"][user_prompt_len:]
 

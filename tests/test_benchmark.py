@@ -43,7 +43,7 @@ def test_llama_7b_plus_lora():
 
 
 def test_llama_7b_lora():
-    m = LlamaModel('llama', "decapoda-research/llama-7b-hf", lora_name='ziqingyang/chinese-alpaca-lora-7b',
+    m = LlamaModel('llama', "decapoda-research/llama-7b-hf", peft_name='ziqingyang/chinese-alpaca-lora-7b',
                    args={'use_lora': True}, )
 
     predict_sentences = [llama_generate_prompt(s) for s in sentences]
@@ -59,7 +59,7 @@ def test_llama_7b_lora():
 
 
 def test_llama_13b_lora():
-    m = LlamaModel('llama', "decapoda-research/llama-13b-hf", lora_name='ziqingyang/chinese-alpaca-lora-13b',
+    m = LlamaModel('llama', "decapoda-research/llama-13b-hf", peft_name='ziqingyang/chinese-alpaca-lora-13b',
                    args={'use_lora': True}, )
     predict_sentences = [llama_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
@@ -73,7 +73,7 @@ def test_llama_13b_lora():
 
 
 def test_chatglm_6b():
-    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b", lora_name=None, args={'use_lora': False}, )
+    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b", peft_name=None, args={'use_lora': False}, )
     predict_sentences = [chatglm_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
@@ -87,7 +87,7 @@ def test_chatglm_6b():
 
 
 def test_chatglm_6b_lora():
-    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b", lora_name='shibing624/chatglm-6b-belle-zh-lora',
+    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b", peft_name='shibing624/chatglm-6b-belle-zh-lora',
                      args={'use_lora': True}, )
     predict_sentences = [chatglm_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)

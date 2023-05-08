@@ -366,13 +366,21 @@ class ChatGlmArgs(ModelArgs):
     top_p: float = 0.7
     model_name_or_path: Optional[str] = field(default="THUDM/chatglm-6b")
     dataset_name_or_path: Optional[str] = field(default="shibing624/alpaca-zh")
-    use_lora: bool = True
-    lora_bin_name: str = field(default="adapter_model.bin")
+    use_peft: bool = True
+    peft_name: str = "LORA"
+    peft_bin_name: str = "adapter_model.bin"
     lora_r: int = 8
     lora_alpha = 16
     lora_dropout = 0.05
     lora_target_modules = ["query_key_value"]
     lora_bias = "none"
+    adalora_init_r: int = 12
+    adalora_tinit: int = 200
+    adalora_tfinal: int = 1000
+    adalora_delta_t: int = 10
+    lora_beta: float = 0.85
+    num_virtual_tokens: int = 20
+    prompt_encoder_hidden_size: int = 128
     num_train_epochs = 1
     max_steps = -1
     per_device_train_batch_size = 2
@@ -421,13 +429,22 @@ class LlamaArgs(ModelArgs):
     top_k: float = 40
     top_p: float = 0.9
     model_name_or_path: Optional[str] = field(default="decapoda-research/llama-7b-hf")
-    use_lora: bool = True
-    lora_bin_name: str = field(default="adapter_model.bin")
+
+    use_peft: bool = True
+    peft_name: str = "LORA"
+    peft_bin_name: str = "adapter_model.bin"
     lora_r: int = 8
-    lora_alpha = 32
+    lora_alpha = 16
     lora_dropout = 0.05
     lora_target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
     lora_bias = "none"
+    adalora_init_r: int = 12
+    adalora_tinit: int = 200
+    adalora_tfinal: int = 1000
+    adalora_delta_t: int = 10
+    lora_beta: float = 0.85
+    num_virtual_tokens: int = 20
+    prompt_encoder_hidden_size: int = 128
     num_train_epochs = 3
     max_steps = -1
     per_device_train_batch_size = 2

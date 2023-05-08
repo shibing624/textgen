@@ -40,9 +40,9 @@ MODEL_CLASSES = {
 class ChatGlmModel:
     def __init__(
             self,
-            model_type,
-            model_name,
-            lora_name=None,
+            model_type="chatglm",
+            model_name="THUDM/chatglm-6b",
+            peft_name=None,
             args=None,
             use_cuda=has_cuda,
             cuda_device=-1,
@@ -55,7 +55,7 @@ class ChatGlmModel:
         Args:
             model_type: The type of model (chatglm)
             model_name: The exact architecture and trained weights to use. This may be a Hugging Face Transformers compatible pre-trained model, a community model, or the path to a directory containing model files.
-            lora_name (optional): Lora name
+            peft_name (optional): Lora name
             args (optional): Default args will be used if this parameter is not provided. If provided, it should be a dict containing the args that should be changed in the default args.
             use_cuda (optional): Use GPU if available. Setting to False will force model to use CPU only.
             cuda_device (int, optional): Specific GPU that should be used. Will use the first available GPU by default.
@@ -127,9 +127,9 @@ class ChatGlmModel:
         else:
             self.args.model_name = model_name
 
-        self.lora_name = lora_name
-        if self.args.use_lora:
-            self.load_lora()
+        self.peft_name = peft_name.upper() if peft_name else None
+        if self.args.use_peft:
+            self.load_peft_model()
 
     def data_collator(self, batch):
         """Data collator that will dynamically pad the inputs received."""
@@ -199,8 +199,7 @@ class ChatGlmModel:
                 " Set args.overwrite_output_dir = True to overcome.".format(output_dir)
             )
         # update model train config
-        if self.device != 'cpu':
-            self.model.gradient_checkpointing_enable()
+        self.model.gradient_checkpointing_enable()
         self.model.enable_input_require_grads()
         if torch.cuda.device_count() > 1:
             self.model.is_parallelizable = True
@@ -209,17 +208,73 @@ class ChatGlmModel:
         self.model.config.use_cache = False
         resume_from_checkpoint = self.args.resume_from_checkpoint
 
-        # setup peft, add lora config
-        if self.args.use_lora:
-            peft_config = LoraConfig(
-                task_type=TaskType.CAUSAL_LM,
-                inference_mode=False,
-                r=self.args.lora_r,
-                lora_alpha=self.args.lora_alpha,
-                lora_dropout=self.args.lora_dropout,
-                target_modules=self.args.lora_target_modules,
-                bias=self.args.lora_bias,
-            )
+        # setup peft
+        if self.args.use_peft:
+            # add peft config
+            if self.args.peft_name == 'LORA':
+                peft_config = LoraConfig(
+                    task_type=TaskType.CAUSAL_LM,
+                    inference_mode=False,
+                    r=self.args.lora_r,
+                    lora_alpha=self.args.lora_alpha,
+                    lora_dropout=self.args.lora_dropout,
+                    target_modules=self.args.lora_target_modules,
+                    bias=self.args.lora_bias,
+                )
+            elif self.args.peft_name == 'ADALORA':
+                from peft import AdaLoraConfig
+
+                peft_config = AdaLoraConfig(
+                    init_r=self.args.adalora_init_r,
+                    r=self.args.lora_r,
+                    beta1=self.args.lora_beta,
+                    beta2=self.args.lora_beta,
+                    tinit=self.args.adalora_tinit,
+                    tfinal=self.args.adalora_tfinal,
+                    deltaT=self.args.adalora_delta_t,
+                    lora_alpha=self.args.lora_alpha,
+                    lora_dropout=self.args.lora_dropout,
+                    target_modules=self.args.lora_target_modules,
+                    task_type=TaskType.CAUSAL_LM,
+                    inference_mode=False,
+                )
+            elif self.args.peft_name == 'PROMPT_TUNING':
+                from peft import PromptTuningConfig
+
+                peft_config = PromptTuningConfig(
+                    task_type=TaskType.CAUSAL_LM,
+                    num_virtual_tokens=self.args.num_virtual_tokens,
+                )
+            elif self.args.peft_name == 'P_TUNING':
+                from peft import PromptEncoderConfig
+
+                peft_config = PromptEncoderConfig(
+                    task_type=TaskType.CAUSAL_LM,
+                    num_virtual_tokens=self.args.num_virtual_tokens,
+                    encoder_hidden_size=self.args.prompt_encoder_hidden_size
+                )
+            elif self.args.peft_name == 'PREFIX_TUNING':
+                from peft import PrefixTuningConfig
+
+                peft_config = PrefixTuningConfig(
+                    task_type=TaskType.CAUSAL_LM,
+                    num_virtual_tokens=self.args.num_virtual_tokens,
+                    encoder_hidden_size=self.args.prompt_encoder_hidden_size,
+                    prefix_projection=True,
+                )
+                self.model.gradient_checkpointing_disable()
+            else:
+                logger.warning(f"Wrong type of peft. Set to default lora")
+                peft_config = LoraConfig(
+                    task_type=TaskType.CAUSAL_LM,
+                    inference_mode=False,
+                    r=self.args.lora_r,
+                    lora_alpha=self.args.lora_alpha,
+                    lora_dropout=self.args.lora_dropout,
+                    target_modules=self.args.lora_target_modules,
+                    bias=self.args.lora_bias,
+                )
+
             if self.args.int8:
                 self.model = prepare_model_for_int8_training(self.model)
             self.model = get_peft_model(self.model, peft_config)
@@ -335,24 +390,24 @@ class ChatGlmModel:
             for key in sorted(metrics.keys()):
                 writer.write("{} = {}\n".format(key, str(metrics[key])))
 
-    def load_lora(self):
-        """Load lora model."""
-        if self.lora_name:
+    def load_peft_model(self):
+        """Load peft model."""
+        if self.peft_name:
             self.model = PeftModel.from_pretrained(
                 self.model,
-                self.lora_name,
+                self.peft_name,
                 torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
             )
-            logger.info(f"Loaded lora model from {self.lora_name}")
-        # load lora model from local
-        lora_path = os.path.join(self.args.output_dir, self.args.lora_bin_name)
-        if lora_path and os.path.exists(lora_path):
+            logger.info(f"Loaded peft model from {self.peft_name}")
+        # load peft model from local
+        peft_path = os.path.join(self.args.output_dir, self.args.peft_bin_name)
+        if peft_path and os.path.exists(peft_path):
             self.model = PeftModel.from_pretrained(
                 self.model,
                 self.args.output_dir,
                 torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
             )
-            logger.info(f"Loaded lora model from {lora_path}")
+            logger.info(f"Loaded peft model from {peft_path}")
 
     def process_response(self, response):
         """Process response text."""

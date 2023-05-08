@@ -14,7 +14,7 @@ from textgen import ChatGlmArgs, ChatGlmModel
 def test_csc():
     from pycorrector.utils import eval
     model = ChatGlmModel(
-        'chatglm', "THUDM/chatglm-6b", lora_name="shibing624/chatglm-6b-csc-zh-lora",
+        'chatglm', "THUDM/chatglm-6b", peft_name="shibing624/chatglm-6b-csc-zh-lora",
         args={'use_lora': True, 'eval_batch_size': 8, "max_length": 128}
     )
     sents = ['问：对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答：',

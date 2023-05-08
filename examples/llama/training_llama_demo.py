@@ -7,7 +7,6 @@ import sys
 import argparse
 from loguru import logger
 import pandas as pd
-from peft import PeftModel
 
 sys.path.append('../..')
 from textgen import LlamaModel
@@ -34,7 +33,6 @@ def main():
     parser.add_argument('--model_type', default='llama', type=str, help='Transformers model type')
     parser.add_argument('--model_name', default='shibing624/chinese-alpaca-plus-7b', type=str,
                         help='Transformers model or path')
-    parser.add_argument('--lora_name', default=None, type=str, help='Peft lora model name or dir')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs/', type=str, help='Model output directory')
@@ -60,7 +58,7 @@ def main():
             "output_dir": args.output_dir,
             "resume_from_checkpoint": args.output_dir,
         }
-        model = LlamaModel(args.model_type, args.model_name, lora_name=args.lora_name, args=model_args)
+        model = LlamaModel(args.model_type, args.model_name, args=model_args)
         train_data = load_data(args.train_file)
         logger.debug('train_data: {}'.format(train_data[:10]))
         train_df = pd.DataFrame(train_data, columns=["instruction", "input", "output"])
@@ -70,7 +68,6 @@ def main():
         if model is None:
             model = LlamaModel(
                 args.model_type, args.model_name,
-                lora_name=args.lora_name,
                 args={'use_lora': True, 'eval_batch_size': args.batch_size,
                       'output_dir': args.output_dir, "max_length": args.max_length, }
             )

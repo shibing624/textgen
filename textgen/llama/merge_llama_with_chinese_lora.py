@@ -199,7 +199,6 @@ def save_shards(model_sd, num_shards: int):
 
 
 if __name__ == '__main__':
-
     args = parser.parse_args()
     base_model_path = args.base_model
     lora_model_paths = [s.strip() for s in args.lora_model.split(',') if len(s.strip()) != 0]
@@ -239,6 +238,7 @@ if __name__ == '__main__':
 
     lora_model = None
     lora_model_sd = None
+    tokenizer = None
     for lora_index, lora_model_path in enumerate(lora_model_paths):
         print(f"Loading LoRA {lora_model_path}")
         tokenizer = LlamaTokenizer.from_pretrained(lora_model_path)

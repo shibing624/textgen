@@ -102,7 +102,8 @@ example: [examples/chatglm/predict_demo.py](https://github.com/shibing624/textge
 
 ```python
 from textgen import ChatGlmModel
-model = ChatGlmModel("chatglm", "THUDM/chatglm-6b", lora_name="shibing624/chatglm-6b-csc-zh-lora")
+
+model = ChatGlmModel("chatglm", "THUDM/chatglm-6b", peft_name="shibing624/chatglm-6b-csc-zh-lora")
 r = model.predict(["对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答："])
 print(r)  # ['少先队员应该为老人让座。\n错误字：因，坐']
 ```
@@ -139,10 +140,10 @@ from textgen import LlamaModel
 
 
 def generate_prompt(instruction):
-    return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:"""
+  return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:"""
 
 
-model = LlamaModel("llama", "decapoda-research/llama-7b-hf", lora_name="ziqingyang/chinese-alpaca-lora-7b")
+model = LlamaModel("llama", "decapoda-research/llama-7b-hf", peft_name="ziqingyang/chinese-alpaca-lora-7b")
 predict_sentence = generate_prompt("问：用一句话描述地球为什么是独一无二的。\n答：")
 r = model.predict([predict_sentence])
 print(r)  # ['地球是唯一一颗拥有生命的行星。']
@@ -153,6 +154,27 @@ print(r)  # ['地球是唯一一颗拥有生命的行星。']
 #### 训练LLaMA LoRA模型
 
 example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)
+
+如果需要基于Lora模型继续训练，可以使用下面的脚本合并模型为新的base model，再微调训练即可。
+
+单LoRA权重合并（适用于 Chinese-LLaMA, Chinese-LLaMA-Plus, Chinese-Alpaca）
+
+执行以下命令：
+```shell
+python -m textgen/llama/merge_llama_with_chinese_lora.py \
+    --base_model path_to_original_llama_hf_dir \
+    --lora_model path_to_chinese_llama_or_alpaca_lora \
+    --output_type [pth|huggingface]
+    --output_dir path_to_output_dir 
+```
+参数说明：
+
+--base_model：存放HF格式的LLaMA模型权重和配置文件的目录
+--lora_model：中文LLaMA/Alpaca LoRA解压后文件所在目录，也可使用[🤗Model Hub Lora模型调用名称](https://github.com/ymcui/Chinese-LLaMA-Alpaca/tree/main#model-hub)
+-output_type: 指定输出格式，可为pth或huggingface。若不指定，默认为pth
+--output_dir：指定保存全量模型权重的目录，默认为./
+（可选）--offload_dir：对于低内存用户需要指定一个offload缓存路径
+
 
 ### ConvSeq2Seq 模型
 

@@ -54,7 +54,7 @@ def test_origin_7b():
 
 
 def test_lora_7b():
-    m = LlamaModel('llama', "decapoda-research/llama-7b-hf", lora_name='ziqingyang/chinese-alpaca-lora-7b',
+    m = LlamaModel('llama', "decapoda-research/llama-7b-hf", peft_name='ziqingyang/chinese-alpaca-lora-7b',
                    args={'use_lora': True}, )
     predict_sentence = generate_prompt("失眠怎么办？")
     r = m.predict([predict_sentence])
@@ -95,7 +95,7 @@ def test_origin_13b():
 
 
 def test_lora_13b():
-    m = LlamaModel('llama', "decapoda-research/llama-13b-hf", lora_name='ziqingyang/chinese-alpaca-lora-13b',
+    m = LlamaModel('llama', "decapoda-research/llama-13b-hf", peft_name='ziqingyang/chinese-alpaca-lora-13b',
                    args={'use_lora': True}, )
     predict_sentence = generate_prompt("失眠怎么办？")
     r = m.predict([predict_sentence])
