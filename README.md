@@ -169,12 +169,12 @@ python -m textgen/llama/merge_llama_with_chinese_lora.py \
     --output_dir path_to_output_dir 
 ```
 参数说明：
-```markdown
+```
 --base_model：存放HF格式的LLaMA模型权重和配置文件的目录
---lora_model：中文LLaMA/Alpaca LoRA解压后文件所在目录，也可使用[🤗Model Hub Lora模型调用名称](https://github.com/ymcui/Chinese-LLaMA-Alpaca/tree/main#model-hub)
--output_type: 指定输出格式，可为pth或huggingface。若不指定，默认为pth
+--lora_model：中文LLaMA/Alpaca LoRA解压后文件所在目录，也可使用HF上的Lora模型名称，如`ziqingyang/chinese-alpaca-lora-7b`会自动下载对应模型
+--output_type: 指定输出格式，可为pth或huggingface。若不指定，默认为pth
 --output_dir：指定保存全量模型权重的目录，默认为./
-（可选）--offload_dir：对于低内存用户需要指定一个offload缓存路径
+--offload_dir（可选）：对于低内存用户需要指定一个offload缓存路径
 ```
 
 ### ConvSeq2Seq 模型
