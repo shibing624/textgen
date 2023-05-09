@@ -6,7 +6,7 @@
 
 -----------------
 
-# TextGen: 🌈 Implementation of Text Generation models
+# TextGen: Implementation of Text Generation models
 [![PyPI version](https://badge.fury.io/py/textgen.svg)](https://badge.fury.io/py/textgen)
 [![Downloads](https://pepy.tech/badge/textgen)](https://pepy.tech/project/textgen)
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
