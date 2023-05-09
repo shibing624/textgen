@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://github.com/shibing624/textgen">
-    <img src="https://github.com/shibing624/textgen/blob/main/docs/logo.svg" alt="Logo" height="100">
+    <img src="https://github.com/shibing624/textgen/blob/main/docs/logo.svg" alt="Logo">
   </a>
 </div>
 
