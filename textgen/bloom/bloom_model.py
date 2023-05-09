@@ -206,8 +206,10 @@ class BloomModel:
 
         # setup peft
         if self.args.use_peft:
+            peft_type = self.args.peft_type.upper()
+            logger.info(f"Using PEFT type: {peft_type}")
             # add peft config
-            if self.args.peft_type == 'LORA':
+            if peft_type == 'LORA':
                 peft_config = LoraConfig(
                     task_type=TaskType.CAUSAL_LM,
                     inference_mode=False,
@@ -217,7 +219,7 @@ class BloomModel:
                     target_modules=self.args.lora_target_modules,
                     bias=self.args.lora_bias,
                 )
-            elif self.args.peft_type == 'ADALORA':
+            elif peft_type == 'ADALORA':
                 from peft import AdaLoraConfig
 
                 peft_config = AdaLoraConfig(
@@ -234,14 +236,14 @@ class BloomModel:
                     task_type=TaskType.CAUSAL_LM,
                     inference_mode=False,
                 )
-            elif self.args.peft_type == 'PROMPT_TUNING':
+            elif peft_type == 'PROMPT_TUNING':
                 from peft import PromptTuningConfig
 
                 peft_config = PromptTuningConfig(
                     task_type=TaskType.CAUSAL_LM,
                     num_virtual_tokens=self.args.num_virtual_tokens,
                 )
-            elif self.args.peft_type == 'P_TUNING':
+            elif peft_type == 'P_TUNING':
                 from peft import PromptEncoderConfig
 
                 peft_config = PromptEncoderConfig(
@@ -249,7 +251,7 @@ class BloomModel:
                     num_virtual_tokens=self.args.num_virtual_tokens,
                     encoder_hidden_size=self.args.prompt_encoder_hidden_size
                 )
-            elif self.args.peft_type == 'PREFIX_TUNING':
+            elif peft_type == 'PREFIX_TUNING':
                 from peft import PrefixTuningConfig
 
                 peft_config = PrefixTuningConfig(
