@@ -1,3 +1,12 @@
+<div align="center">
+  <a href="https://github.com/shibing624/textgen">
+    <img src="https://github.com/shibing624/textgen/blob/main/docs/logo.png" alt="Logo" height="156">
+  </a>
+</div>
+
+-----------------
+
+# TextGen: 🌈 Implementation of Text Generation models
 [![PyPI version](https://badge.fury.io/py/textgen.svg)](https://badge.fury.io/py/textgen)
 [![Downloads](https://pepy.tech/badge/textgen)](https://pepy.tech/project/textgen)
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
@@ -6,11 +15,10 @@
 [![GitHub issues](https://img.shields.io/github/issues/shibing624/textgen.svg)](https://github.com/shibing624/textgen/issues)
 [![Wechat Group](http://vlog.sfyc.ltd/wechat_everyday/wxgroup_logo.png?imageView2/0/w/60/h/20)](#Contact)
 
-# TextGen
 
-🌈 Implementation of Text Generation models.
+## 📖 Introduction
 
-**textgen**实现了多种文本生成模型，包括：LLaMA、ChatGLM、UDA、GPT2、Seq2Seq、BART、T5、SongNet等模型，开箱即用。
+TextGen: **textgen**实现了多种文本生成模型，包括：LLaMA、ChatGLM、UDA、GPT2、Seq2Seq、BART、T5、SongNet等模型，开箱即用。
 
 ## 😊 Feature
 
