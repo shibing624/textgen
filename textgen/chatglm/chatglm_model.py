@@ -96,6 +96,11 @@ class ChatGlmModel:
             self.args.fp16 = False
             self.args.int8 = False
 
+        world_size = int(os.environ.get("WORLD_SIZE", 1))
+        self.ddp = world_size != 1
+        if self.ddp:
+            device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)}
+
         self.results = {}
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
         if model_name is None:
