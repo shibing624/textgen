@@ -367,7 +367,7 @@ class ChatGlmArgs(ModelArgs):
     model_name_or_path: Optional[str] = field(default="THUDM/chatglm-6b")
     dataset_name_or_path: Optional[str] = field(default="shibing624/alpaca-zh")
     use_peft: bool = True
-    peft_name: str = "LORA"
+    peft_type: str = "LORA"
     peft_bin_name: str = "adapter_model.bin"
     lora_r: int = 8
     lora_alpha = 16
@@ -430,7 +430,7 @@ class LlamaArgs(ModelArgs):
     top_p: float = 0.9
     model_name_or_path: Optional[str] = field(default="decapoda-research/llama-7b-hf")
     use_peft: bool = True
-    peft_name: str = "LORA"
+    peft_type: str = "LORA"
     peft_bin_name: str = "adapter_model.bin"
     lora_r: int = 8
     lora_alpha = 16
@@ -492,7 +492,7 @@ class BloomArgs(ModelArgs):
     top_p: float = 0.9
     model_name_or_path: Optional[str] = field(default="bigscience/bloomz-7b1-mt")
     use_peft: bool = True
-    peft_name: str = "LORA"
+    peft_type: str = "LORA"
     peft_bin_name: str = "adapter_model.bin"
     lora_r: int = 8
     lora_alpha = 16

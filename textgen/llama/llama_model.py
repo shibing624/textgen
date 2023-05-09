@@ -129,7 +129,7 @@ class LlamaModel:
             self.args.model_name = model_name
 
         self.resize_model_embeddings(len(self.tokenizer))
-        self.peft_name = peft_name.upper() if peft_name else None
+        self.peft_name = peft_name
         if self.args.use_peft:
             self.load_peft_model()
 
@@ -211,7 +211,7 @@ class LlamaModel:
         # setup peft
         if self.args.use_peft:
             # add peft config
-            if self.args.peft_name == 'LORA':
+            if self.args.peft_type == 'LORA':
                 peft_config = LoraConfig(
                     task_type=TaskType.CAUSAL_LM,
                     inference_mode=False,
@@ -221,7 +221,7 @@ class LlamaModel:
                     target_modules=self.args.lora_target_modules,
                     bias=self.args.lora_bias,
                 )
-            elif self.args.peft_name == 'ADALORA':
+            elif self.args.peft_type == 'ADALORA':
                 from peft import AdaLoraConfig
 
                 peft_config = AdaLoraConfig(
@@ -238,14 +238,14 @@ class LlamaModel:
                     task_type=TaskType.CAUSAL_LM,
                     inference_mode=False,
                 )
-            elif self.args.peft_name == 'PROMPT_TUNING':
+            elif self.args.peft_type == 'PROMPT_TUNING':
                 from peft import PromptTuningConfig
 
                 peft_config = PromptTuningConfig(
                     task_type=TaskType.CAUSAL_LM,
                     num_virtual_tokens=self.args.num_virtual_tokens,
                 )
-            elif self.args.peft_name == 'P_TUNING':
+            elif self.args.peft_type == 'P_TUNING':
                 from peft import PromptEncoderConfig
 
                 peft_config = PromptEncoderConfig(
@@ -253,7 +253,7 @@ class LlamaModel:
                     num_virtual_tokens=self.args.num_virtual_tokens,
                     encoder_hidden_size=self.args.prompt_encoder_hidden_size
                 )
-            elif self.args.peft_name == 'PREFIX_TUNING':
+            elif self.args.peft_type == 'PREFIX_TUNING':
                 from peft import PrefixTuningConfig
 
                 peft_config = PrefixTuningConfig(
