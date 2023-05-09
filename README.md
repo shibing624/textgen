@@ -90,12 +90,6 @@ python setup.py install
 
 ### ChatGLM-6B 模型
 
-安装最新开发版的peft库，支持AdaLoRA、LoRA、P_Tuning、Prefix_Tuning等微调方法
-
-```shell
-pip install git+https://github.com/huggingface/peft
-```
-
 #### 使用 ChatGLM-6B 微调后的模型
 
 example: [examples/chatglm/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/predict_demo.py)
@@ -112,17 +106,13 @@ PS：由于使用了开发中的peft库，可能由于版本更新，导致LoRA�
 
 #### 训练 ChatGLM-6B 微调模型
 
-支持自定义数据集，数据集格式参考[examples/data/zh_csc_test.tsv](https://github.com/shibing624/textgen/blob/main/examples/data/zh_csc_test.tsv)。
+1. 支持自定义训练数据集和训练参数，数据集格式参考[examples/data/zh_csc_test.tsv](https://github.com/shibing624/textgen/blob/main/examples/data/zh_csc_test.tsv)或者[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
+2. 支持AdaLoRA、LoRA、P_Tuning、Prefix_Tuning等部分参数微调方法，也支持全参微调
+3. 支持多卡训练，支持混合精度训练
 
 example: [examples/chatglm/training_chatglm_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_demo.py)
 
 ### LLaMA 模型
-
-安装最新开发版的peft库，支持AdaLoRA、LoRA、P_Tuning、Prefix_Tuning等微调方法
-
-```shell
-pip install git+https://github.com/huggingface/peft
-```
 
 #### 使用 LLaMA 微调后的模型
 
@@ -151,6 +141,9 @@ print(r)  # ['地球是唯一一颗拥有生命的行星。']
 </details>
 
 #### 训练 LLaMA 微调模型
+1. 支持自定义训练数据集和训练参数，数据集格式参考[examples/data/zh_csc_test.tsv](https://github.com/shibing624/textgen/blob/main/examples/data/zh_csc_test.tsv)或者[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
+2. 支持AdaLoRA、LoRA、P_Tuning、Prefix_Tuning等部分参数微调方法，也支持全参微调
+3. 支持多卡训练，支持混合精度训练
 
 example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)
 

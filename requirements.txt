@@ -13,4 +13,4 @@ wandb>=0.10.32
 sacremoses
 Rouge
 cpm_kernels
-git+https://github.com/huggingface/peft
+peft>=0.3.0
