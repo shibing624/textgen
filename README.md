@@ -119,6 +119,23 @@ PS：由于使用了开发中的peft库，可能由于版本更新，导致LoRA�
 
 example: [examples/chatglm/training_chatglm_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_demo.py)
 
+#### 基于微调(LoRA)模型继续训练
+如果需要基于Lora模型继续训练，可以使用下面的脚本合并模型为新的base model，再微调训练即可。
+
+执行以下命令：
+```shell
+python -m textgen/chatglm/merge_peft_adapter.py \
+    --base_model_name_or_path path_to_original_llama_hf_dir \
+    --peft_model_path path_to_peft_model_dir \
+    --output_dir path_to_output_dir 
+```
+参数说明：
+```
+--base_model_name_or_path：存放HF格式的LLaMA模型权重和配置文件的目录
+--peft_model_path：存放PEFT格式的微调模型权重和配置文件的目录
+--output_dir：指定保存全量模型权重的目录，默认为./
+```
+
 ### LLaMA 模型
 
 #### 使用 LLaMA 微调后的模型
@@ -161,7 +178,7 @@ example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/t
 
 执行以下命令：
 ```shell
-python -m textgen/llama/merge_llama_with_chinese_lora.py \
+python -m textgen/llama/merge_peft_adapter.py \
     --base_model path_to_original_llama_hf_dir \
     --lora_model path_to_chinese_llama_or_alpaca_lora \
     --output_type [pth|huggingface]

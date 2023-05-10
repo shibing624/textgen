@@ -3,7 +3,7 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer
 from peft import PeftModel
 import torch
 
@@ -14,14 +14,14 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base_model_name_or_path", type=str, default="THUDM/chatglm-6b")
     parser.add_argument("--peft_model_path", type=str, default="/")
-
+    parser.add_argument('--output_dir', default='./', type=str)
     return parser.parse_args()
 
 
 def main():
     args = get_args()
-
-    base_model = AutoModelForCausalLM.from_pretrained(
+    print(args)
+    base_model = AutoModel.from_pretrained(
         args.base_model_name_or_path,
         return_dict=True,
         trust_remote_code=True,
@@ -32,11 +32,10 @@ def main():
     model = model.merge_and_unload()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    tokenizer = AutoTokenizer.from_pretrained(args.base_model_name_or_path)
-
-    model.save_pretrained(f"{args.base_model_name_or_path}-merged")
-    tokenizer.save_pretrained(f"{args.base_model_name_or_path}-merged")
-    print(f"Model saved to {args.base_model_name_or_path}-merged")
+    tokenizer = AutoTokenizer.from_pretrained(args.base_model_name_or_path, trust_remote_code=True)
+    model.save_pretrained(args.output_dir)
+    tokenizer.save_pretrained(args.output_dir)
+    print(f"Model saved to {args.output_dir}")
 
 
 if __name__ == "__main__":

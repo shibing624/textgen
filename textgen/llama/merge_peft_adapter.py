@@ -6,7 +6,7 @@
 modified from https://github.com/ymcui/Chinese-LLaMA-Alpaca/blob/main/scripts/merge_llama_with_chinese_lora.py
 
 Usage:
-python merge_llama_with_chinese_lora.py \
+python merge_peft_adapter.py \
     --base_model path/to/llama/model \
     --lora_model path/to/first/lora/model [path/to/second/lora/model] \
     --output_type [pth|huggingface] \

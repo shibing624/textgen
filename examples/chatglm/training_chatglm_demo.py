@@ -37,7 +37,7 @@ def main():
     parser.add_argument('--output_dir', default='./outputs/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
-    parser.add_argument('--num_epochs', default=0.2, type=float, help='Number of training epochs')
+    parser.add_argument('--num_epochs', default=0.5, type=float, help='Number of training epochs')
     parser.add_argument('--batch_size', default=2, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
@@ -61,7 +61,8 @@ def main():
         train_data = load_data(args.train_file)
         logger.debug('train_data: {}'.format(train_data[:10]))
         train_df = pd.DataFrame(train_data, columns=["instruction", "input", "output"])
-        model.train_model(train_df)
+        eval_df = train_df[:10]
+        model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:
             model = ChatGlmModel(
