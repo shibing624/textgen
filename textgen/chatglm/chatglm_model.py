@@ -3,11 +3,11 @@
 @author:XuMing(xuming624@qq.com)
 @description:
 """
+from typing import List, Tuple
 import os
+import sys
 import random
 import re
-import sys
-from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -320,10 +320,10 @@ class ChatGlmModel:
 
         # start train
         training_args = TrainingArguments(
-            output_dir=self.args.output_dir,
+            output_dir=output_dir,
             learning_rate=self.args.learning_rate,
             num_train_epochs=self.args.num_train_epochs,
-            logging_dir=f"{self.args.output_dir}/logs",
+            logging_dir=f"{output_dir}/logs",
             logging_steps=self.args.logging_steps,
             max_steps=self.args.max_steps,
             per_device_train_batch_size=self.args.per_device_train_batch_size,
@@ -333,8 +333,10 @@ class ChatGlmModel:
             save_steps=self.args.save_steps,
             optim=self.args.optimizer,
             save_strategy=self.args.save_strategy,
-            evaluation_strategy=self.args.evaluation_strategy,
-            eval_steps=self.args.eval_steps,
+            evaluation_strategy='steps' if eval_data is not None else 'no',
+            eval_steps=self.args.eval_steps if eval_data is not None else None,
+            load_best_model_at_end=True if eval_data is not None else False,
+            ddp_find_unused_parameters=False if self.ddp else None,
             save_total_limit=self.args.save_total_limit,
             fp16=self.args.fp16,
             remove_unused_columns=self.args.remove_unused_columns,
@@ -365,9 +367,18 @@ class ChatGlmModel:
 
         logger.info("*** Train ***")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
-        self.handle_metrics("train", metrics, self.args.output_dir)
+        self.handle_metrics("train", metrics, output_dir)
         self.results.update(metrics)
         self.save_model(model=self.model)
+
+        if eval_data is not None:
+            logger.info("*** Evaluate ***")
+            if self.args.fp16:
+                self.model.half()
+            metrics = trainer.evaluate(metric_key_prefix="eval")
+            logger.debug(f"eval metrics: {metrics}")
+            self.handle_metrics("eval", metrics, output_dir)
+            self.results.update(metrics)
 
         if verbose:
             logger.debug(f"metrics: {self.results}")
@@ -581,13 +592,6 @@ class ChatGlmModel:
 
 class FinetuneTrainer(Trainer):
     """Finetune trainer for ChatGlmModel"""
-
-    def compute_loss(self, model, inputs, return_outputs=False):
-        """Computes the loss."""
-        return model(
-            input_ids=inputs["input_ids"],
-            labels=inputs["labels"],
-        ).loss
 
     def save_model(self, output_dir=None, _internal_call=False):
         """Save the LoRA model"""

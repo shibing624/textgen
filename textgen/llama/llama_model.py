@@ -317,10 +317,10 @@ class LlamaModel:
 
         # start train
         training_args = TrainingArguments(
-            output_dir=self.args.output_dir,
+            output_dir=output_dir,
             learning_rate=self.args.learning_rate,
             num_train_epochs=self.args.num_train_epochs,
-            logging_dir=f"{self.args.output_dir}/logs",
+            logging_dir=f"{output_dir}/logs",
             logging_steps=self.args.logging_steps,
             max_steps=self.args.max_steps,
             per_device_train_batch_size=self.args.per_device_train_batch_size,
@@ -370,17 +370,17 @@ class LlamaModel:
 
         logger.info("*** Train ***")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
-        self.handle_metrics("train", metrics, self.args.output_dir)
+        self.handle_metrics("train", metrics, output_dir)
         self.results.update(metrics)
         self.save_model(model=self.model)
 
         if eval_data is not None:
             logger.info("*** Evaluate ***")
-            if torch.cuda.is_available() and self.args.fp16:
-                self.model = self.model.half().cuda()
+            if self.args.fp16:
+                self.model.half()
             metrics = trainer.evaluate(metric_key_prefix="eval")
             logger.debug(f"eval metrics: {metrics}")
-            self.handle_metrics("eval", metrics, self.args.output_dir)
+            self.handle_metrics("eval", metrics, output_dir)
             self.results.update(metrics)
 
         if verbose:

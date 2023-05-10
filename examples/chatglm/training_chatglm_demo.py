@@ -42,7 +42,7 @@ def main():
     args = parser.parse_args()
     logger.info(args)
     model = None
-    # fine-tune chatGLM model
+    # fine-tune ChatGlmModel
     if args.do_train:
         logger.info('Loading data...')
         model_args = {
@@ -67,7 +67,7 @@ def main():
             model = ChatGlmModel(
                 args.model_type, args.model_name,
                 args={'use_lora': True, 'eval_batch_size': args.batch_size,
-                      "max_length": args.max_length, }
+                      'output_dir': args.output_dir, "max_length": args.max_length, }
             )
         test_data = load_data(args.test_file)[:10]
         test_df = pd.DataFrame(test_data, columns=["instruction", "input", "output"])
