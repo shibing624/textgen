@@ -76,12 +76,14 @@ class BloomModel:
             if torch.cuda.is_available():
                 torch.cuda.manual_seed_all(self.args.manual_seed)
 
+        self.device_map = "auto"
         if use_cuda:
             if torch.cuda.is_available():
                 if cuda_device == -1:
                     self.device = torch.device("cuda")
                 else:
                     self.device = torch.device(f"cuda:{cuda_device}")
+                    self.device_map = {"": int(cuda_device)}
             else:
                 raise ValueError(
                     "'use_cuda' set to True when cuda is unavailable."
@@ -92,6 +94,7 @@ class BloomModel:
                 self.device = torch.device("mps")
             else:
                 self.device = "cpu"
+                self.device_map = {"": "cpu"}
         logger.debug(f"Device: {self.device}")
         if not use_cuda:
             self.args.fp16 = False
@@ -99,7 +102,7 @@ class BloomModel:
         world_size = int(os.environ.get("WORLD_SIZE", 1))
         self.ddp = world_size != 1
         if self.ddp:
-            device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)}
+            self.device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)}
 
         self.results = {}
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
@@ -112,8 +115,8 @@ class BloomModel:
             config=config,
             load_in_8bit=self.args.int8,
             torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+            device_map=self.device_map,
         )
-        self.model.to(self.device)
 
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
@@ -421,6 +424,7 @@ class BloomModel:
                 self.model,
                 self.peft_name,
                 torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+                device_map=self.device_map,
             )
             logger.info(f"Loaded peft model from {self.peft_name}")
         else:
@@ -431,6 +435,7 @@ class BloomModel:
                     self.model,
                     self.args.output_dir,
                     torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+                    device_map=self.device_map,
                 )
                 logger.info(f"Loaded peft model from {peft_path}")
 
