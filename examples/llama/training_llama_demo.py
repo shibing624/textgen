@@ -39,7 +39,9 @@ def main():
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=0.2, type=float, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=2, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=4, type=int, help='Batch size')
+    parser.add_argument('--eval_steps', default=50, type=int, help='Eval every X steps')
+    parser.add_argument('--save_steps', default=50, type=int, help='Save checkpoint every X steps')
     args = parser.parse_args()
     logger.info(args)
     model = None
@@ -57,6 +59,8 @@ def main():
             "num_train_epochs": args.num_epochs,
             "output_dir": args.output_dir,
             "resume_from_checkpoint": args.output_dir,
+            "eval_steps": args.eval_steps,
+            "save_steps": args.save_steps,
         }
         model = LlamaModel(args.model_type, args.model_name, args=model_args)
         train_data = load_data(args.train_file)

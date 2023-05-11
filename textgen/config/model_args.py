@@ -353,7 +353,7 @@ class ChatGlmArgs(ModelArgs):
     optimizer: str = "adamw_torch"
     save_strategy: str = "steps"
     evaluation_strategy: str = "no"
-    eval_steps: int = None
+    eval_steps: int = 50
     save_steps: int = 400
     max_eval_samples: int = 20
     length_penalty: float = 2.0
