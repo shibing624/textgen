@@ -34,6 +34,7 @@ def main():
     parser.add_argument('--model_name', default='THUDM/chatglm-6b', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
+    parser.add_argument('--is_lm_task', action='store_true', help='Whether to run language model task')
     parser.add_argument('--output_dir', default='./outputs/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
@@ -56,6 +57,7 @@ def main():
             "per_device_train_batch_size": args.batch_size,
             "eval_batch_size": args.batch_size,
             "num_train_epochs": args.num_epochs,
+            "is_chat_task": not args.is_lm_task,
             "output_dir": args.output_dir,
             "resume_from_checkpoint": args.output_dir,
             "eval_steps": args.eval_steps,

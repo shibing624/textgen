@@ -348,6 +348,7 @@ class ChatGlmArgs(ModelArgs):
     max_length = 384  # max length of the sequence to be generated
     do_sample: bool = True
     early_stopping: bool = True
+    is_chat_task: bool = True
     evaluate_generated_text: bool = True
     report_to = "tensorboard"
     optimizer: str = "adamw_torch"
