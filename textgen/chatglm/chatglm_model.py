@@ -150,15 +150,16 @@ class ChatGlmModel:
         for ids_l, example in sorted(zip(len_ids, batch), key=lambda x: -x[0]):
             ids = list(example)
             seq_len = ids.index(self.tokenizer.bos_token_id) + 1  # is equal to prompt length
-            ids = ids + [self.tokenizer.pad_token_id] * (longest - ids_l)
-            _ids = torch.LongTensor(ids)
+            pad_ids = ids + [self.tokenizer.pad_token_id] * (longest - ids_l)
+            tensor_ids = torch.LongTensor(pad_ids)
             if self.args.is_chat_task:
                 labels = ([-100] * (seq_len - 1) + ids[(seq_len - 1):] + [-100] * (longest - ids_l))
                 labels = torch.LongTensor(labels)
             else:
-                labels = _ids
+                labels = tensor_ids
+
+            input_ids.append(tensor_ids)
             labels_list.append(labels)
-            input_ids.append(_ids)
         input_ids = torch.stack(input_ids)
         labels = torch.stack(labels_list)
         return {"input_ids": input_ids, "labels": labels}
