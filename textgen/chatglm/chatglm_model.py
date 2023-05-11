@@ -137,7 +137,12 @@ class ChatGlmModel:
             self.load_peft_model()
 
     def data_collator(self, batch):
-        """Data collator that will dynamically pad the inputs received."""
+        """
+        Data collator that will dynamically pad the inputs received.
+            set padding side = left, pad on the left side of the sequences
+            if chat task, set prompt ids to -100 of the labels
+            if not, set labels = input_ids
+        """
         len_ids = [len(example) for example in batch]
         longest = max(len_ids)
         input_ids = []
@@ -145,10 +150,14 @@ class ChatGlmModel:
         for ids_l, example in sorted(zip(len_ids, batch), key=lambda x: -x[0]):
             ids = list(example)
             seq_len = ids.index(self.tokenizer.bos_token_id) + 1  # is equal to prompt length
-            labels = ([-100] * (seq_len - 1) + ids[(seq_len - 1):] + [-100] * (longest - ids_l))
             ids = ids + [self.tokenizer.pad_token_id] * (longest - ids_l)
             _ids = torch.LongTensor(ids)
-            labels_list.append(torch.LongTensor(labels))
+            if self.args.is_chat_task:
+                labels = ([-100] * (seq_len - 1) + ids[(seq_len - 1):] + [-100] * (longest - ids_l))
+                labels = torch.LongTensor(labels)
+            else:
+                labels = _ids
+            labels_list.append(labels)
             input_ids.append(_ids)
         input_ids = torch.stack(input_ids)
         labels = torch.stack(labels_list)
