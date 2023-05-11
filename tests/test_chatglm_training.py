@@ -7,6 +7,7 @@ import sys
 import pytest
 from torch.utils.data import Dataset
 from datasets import load_dataset, load_from_disk
+
 sys.path.append('..')
 from textgen import ChatGlmModel
 
@@ -51,20 +52,17 @@ class MyDataset(Dataset):
 
 def test_train_name():
     model = ChatGlmModel(
-        'chatglm', "THUDM/chatglm-6b",
+        "chatglm", "THUDM/chatglm-6b",
         args={
             "dataset_class": MyDataset,
-            'use_lora': True,
-            "reprocess_input_data": True,
-            "overwrite_output_dir": True,
+            "use_lora": True,
             "max_seq_length": 128,
             "max_length": 128,
             "per_device_train_batch_size": 8,
             "eval_batch_size": 8,
-            "num_train_epochs": 10,
-            "output_dir": "tmp_outputs",
-            "eval_steps": 50,
+            "num_train_epochs": 20,
             "save_steps": 50,
+            "output_dir": "tmp_outputs",
         }
     )
     model.train_model('instruction_name.json', eval_data='instruction_name.json')
@@ -76,8 +74,8 @@ def test_train_name():
 
 
 def test_second_predict():
-    model = ChatGlmModel('chatglm', "THUDM/chatglm-6b", 
-        args={'use_lora': True}, peft_name='tmp_outputs')
+    model = ChatGlmModel("chatglm", "THUDM/chatglm-6b",
+                         args={"use_lora": True}, peft_name='tmp_outputs')
     # load model from peft_name is equal to load model from output_dir
     sents = ['我要开一家美妆店，帮我起一个店铺名\n答：']
     response = model.predict(sents)
