@@ -131,9 +131,9 @@ python -m textgen/chatglm/merge_peft_adapter.py \
 ```
 参数说明：
 ```
---base_model_name_or_path：存放HF格式的LLaMA模型权重和配置文件的目录
+--base_model_name_or_path：存放HF格式的底座模型权重和配置文件的目录
 --peft_model_path：存放PEFT格式的微调模型权重和配置文件的目录
---output_dir：指定保存全量模型权重的目录，默认为./
+--output_dir：指定保存全量模型权重的目录，默认为./merged
 ```
 
 ### LLaMA 模型
@@ -179,17 +179,17 @@ example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/t
 执行以下命令：
 ```shell
 python -m textgen/llama/merge_peft_adapter.py \
-    --base_model path_to_original_llama_hf_dir \
-    --lora_model path_to_chinese_llama_or_alpaca_lora \
+    --base_model_name_or_path path_to_original_llama_hf_dir \
+    --peft_model_path path_to_chinese_llama_or_alpaca_lora \
     --output_type [pth|huggingface]
     --output_dir path_to_output_dir 
 ```
 参数说明：
 ```
---base_model：存放HF格式的LLaMA模型权重和配置文件的目录
---lora_model：中文LLaMA/Alpaca LoRA解压后文件所在目录，也可使用HF上的Lora模型名称，如`ziqingyang/chinese-alpaca-lora-7b`会自动下载对应模型
+--base_model_name_or_path：存放HF格式的底座模型权重和配置文件的目录
+--peft_model_path：中文LLaMA/Alpaca LoRA解压后文件所在目录，也可使用HF上的Lora模型名称，如`ziqingyang/chinese-alpaca-lora-7b`会自动下载对应模型
 --output_type: 指定输出格式，可为pth或huggingface。若不指定，默认为pth
---output_dir：指定保存全量模型权重的目录，默认为./
+--output_dir：指定保存全量模型权重的目录，默认为./merged
 --offload_dir（可选）：对于低内存用户需要指定一个offload缓存路径
 ```
 

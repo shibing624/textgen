@@ -12,9 +12,9 @@ import argparse
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base_model_name_or_path", type=str, default="THUDM/chatglm-6b")
-    parser.add_argument("--peft_model_path", type=str, default="/")
-    parser.add_argument('--output_dir', default='./', type=str)
+    parser.add_argument("--base_model_name_or_path", type=str, default="THUDM/chatglm-6b", help="base model name")
+    parser.add_argument("--peft_model_path", type=str, default="/", help="peft model path")
+    parser.add_argument('--output_dir', type=str, default='./merged', help='output dir')
     return parser.parse_args()
 
 

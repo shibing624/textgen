@@ -417,15 +417,16 @@ class ChatGlmModel:
                 torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
             )
             logger.info(f"Loaded peft model from {self.peft_name}")
-        # load peft model from local
-        peft_path = os.path.join(self.args.output_dir, self.args.peft_bin_name)
-        if peft_path and os.path.exists(peft_path):
-            self.model = PeftModel.from_pretrained(
-                self.model,
-                self.args.output_dir,
-                torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
-            )
-            logger.info(f"Loaded peft model from {peft_path}")
+        else:
+            # Load peft model from output_dir
+            peft_path = os.path.join(self.args.output_dir, self.args.peft_bin_name)
+            if peft_path and os.path.exists(peft_path):
+                self.model = PeftModel.from_pretrained(
+                    self.model,
+                    self.args.output_dir,
+                    torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+                )
+                logger.info(f"Loaded peft model from {peft_path}")
 
     def process_response(self, response):
         """Process response text."""

@@ -428,15 +428,16 @@ class LlamaModel:
                 torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
             )
             logger.info(f"Loaded peft model from {self.peft_name}")
-        # Load from local
-        peft_path = os.path.join(self.args.output_dir, self.args.peft_bin_name)
-        if peft_path and os.path.exists(peft_path):
-            self.model = PeftModel.from_pretrained(
-                self.model,
-                self.args.output_dir,
-                torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
-            )
-            logger.info(f"Loaded peft model from {peft_path}")
+        else:
+            # Load peft model from output_dir
+            peft_path = os.path.join(self.args.output_dir, self.args.peft_bin_name)
+            if peft_path and os.path.exists(peft_path):
+                self.model = PeftModel.from_pretrained(
+                    self.model,
+                    self.args.output_dir,
+                    torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+                )
+                logger.info(f"Loaded peft model from {peft_path}")
 
     @torch.no_grad()
     def predict(self, sentences: List[str], keep_prompt: bool = False, max_length: int = None, **kwargs):
