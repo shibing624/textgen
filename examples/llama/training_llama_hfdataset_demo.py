@@ -17,7 +17,7 @@ def main():
                         help='Dataset name (e.g. tatsu-lab/alpaca, shibing624/alpaca-zh, BelleGroup/train_1M_CN, '
                              'Chinese-Vicuna/guanaco_belle_merge_v1.0)')
     parser.add_argument('--model_type', default='llama', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='shibing624/chinese-alpaca-plus-7b', type=str,
+    parser.add_argument('--model_name', default='shibing624/chinese-alpaca-plus-7b-hf', type=str,
                         help='model name or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')

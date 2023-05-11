@@ -43,7 +43,7 @@ class LlamaModel:
     def __init__(
             self,
             model_type="llama",
-            model_name="shibing624/chinese-alpaca-plus-7b",
+            model_name="shibing624/chinese-alpaca-plus-7b-hf",
             peft_name=None,
             args=None,
             use_cuda=has_cuda,

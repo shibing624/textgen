@@ -231,7 +231,7 @@ if __name__ == '__main__':
             base_model_path,
             load_in_8bit=False,
             torch_dtype=torch.float16,
-            device_map={"": "cpu"},
+            device_map="auto",
         )
 
     ## infer the model size from the checkpoint
@@ -257,7 +257,7 @@ if __name__ == '__main__':
             lora_model = PeftModel.from_pretrained(
                 base_model,
                 lora_model_path,
-                device_map={"": "cpu"},
+                device_map="auto",
                 torch_dtype=torch.float16,
             )
             assert torch.allclose(first_weight_old, first_weight)
@@ -303,7 +303,7 @@ if __name__ == '__main__':
     if output_type == 'huggingface':
         print("Saving to Hugging Face format...")
         LlamaForCausalLM.save_pretrained(base_model, output_dir)
-    else:  # output_type=='pth
+    else:  # output_type=='pth'
         print("Saving to pth format...")
 
         base_model_sd = base_model.state_dict()
@@ -319,3 +319,4 @@ if __name__ == '__main__':
         inv_freq = 1.0 / (base ** (torch.arange(0, dims_per_head, 2).float() / dims_per_head))
 
         save_shards(model_sd=base_model_sd, num_shards=num_shards)
+    print(f"Done! model saved to {output_dir}")

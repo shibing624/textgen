@@ -31,7 +31,7 @@ def main():
     parser.add_argument('--train_file', default='../data/zh_csc_train.tsv', type=str, help='Training data file')
     parser.add_argument('--test_file', default='../data/zh_csc_test.tsv', type=str, help='Test data file')
     parser.add_argument('--model_type', default='llama', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='shibing624/chinese-alpaca-plus-7b', type=str,
+    parser.add_argument('--model_name', default='shibing624/chinese-alpaca-plus-7b-hf', type=str,
                         help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
