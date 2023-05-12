@@ -74,7 +74,7 @@ def main():
         logger.info('Loading data...')
         model_args = {
             "dataset_class": AdgDataset,
-            'use_lora': True,
+            'use_peft': True,
             "reprocess_input_data": True,
             "overwrite_output_dir": True,
             "max_seq_length": args.max_seq_length,
@@ -92,7 +92,7 @@ def main():
         if model is None:
             model = ChatGlmModel(
                 args.model_type, args.model_name,
-                args={'use_lora': True, 'eval_batch_size': args.batch_size,
+                args={'use_peft': True, 'eval_batch_size': args.batch_size,
                       'output_dir': args.output_dir, "max_length": args.max_length, }
             )
         sents = ['改写为电商广告文案：\n类型#上衣*材质#牛仔布*颜色#白色*风格#简约*图案#刺绣*衣样式#外套*衣款式#破洞\n答：', ]

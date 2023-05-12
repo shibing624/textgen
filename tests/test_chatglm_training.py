@@ -55,7 +55,7 @@ def test_train_name():
         "chatglm", "THUDM/chatglm-6b",
         args={
             "dataset_class": MyDataset,
-            "use_lora": True,
+            "use_peft": True,
             "max_seq_length": 128,
             "max_length": 128,
             "per_device_train_batch_size": 8,
@@ -75,7 +75,7 @@ def test_train_name():
 
 def test_second_predict():
     model = ChatGlmModel("chatglm", "THUDM/chatglm-6b",
-                         args={"use_lora": True}, peft_name='tmp_outputs')
+                         args={"use_peft": True}, peft_name='tmp_outputs')
     # load model from peft_name is equal to load model from output_dir
     sents = ['我要开一家美妆店，帮我起一个店铺名\n答：']
     response = model.predict(sents)

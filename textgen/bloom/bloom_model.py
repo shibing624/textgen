@@ -300,7 +300,7 @@ class BloomModel:
 
             self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
         else:
-            logger.warning("Now full model params fine-tune, which is slow, set `use_lora=True` for lora fine-tune.")
+            logger.warning("Now full model params fine-tune, which is slow, set `use_peft=True` for lora fine-tune.")
         os.makedirs(output_dir, exist_ok=True)
 
         # load dataset

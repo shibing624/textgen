@@ -14,7 +14,7 @@ def generate_prompt(instruction):
 
 
 model = LlamaModel("llama", "shibing624/chinese-alpaca-plus-7b-hf")
-# model = LlamaModel("llama", "decapoda-research/llama-13b-hf", lora_name="shibing624/llama-13b-belle-zh-lora")
+# model = LlamaModel("llama", "decapoda-research/llama-13b-hf", peft_name="shibing624/llama-13b-belle-zh-lora")
 predict_sentence = generate_prompt("失眠怎么办？")
 r = model.predict([predict_sentence])
 print(r)
