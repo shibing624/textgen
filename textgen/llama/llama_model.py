@@ -140,8 +140,6 @@ class LlamaModel:
 
         self.tokenizer.padding_side = "left"
         self.tokenizer.pad_token_id = 0  # unk. we want this to be different from the eos token
-        self.tokenizer.bos_token_id = 1
-        self.tokenizer.eos_token_id = 2
 
     def resize_model_embeddings(self, tokenizer_vocab_size):
         """Resizes model embeddings to match the tokenizer vocab size."""
