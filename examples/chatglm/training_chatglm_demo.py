@@ -39,7 +39,7 @@ def main():
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=0.5, type=float, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=4, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     parser.add_argument('--eval_steps', default=50, type=int, help='Eval every X steps')
     parser.add_argument('--save_steps', default=50, type=int, help='Save checkpoint every X steps')
     args = parser.parse_args()

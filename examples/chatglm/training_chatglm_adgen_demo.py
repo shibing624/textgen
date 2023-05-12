@@ -65,7 +65,7 @@ def main():
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=0.2, type=float, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=3, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
     model = None

@@ -6,10 +6,11 @@
 import json
 import os
 import sys
-from loguru import logger
 from dataclasses import asdict, dataclass, field
 from multiprocessing import cpu_count
 from typing import Optional
+
+from loguru import logger
 from torch.utils.data import Dataset
 
 
@@ -391,7 +392,7 @@ class ChatGlmArgs(ModelArgs):
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
-    enable_torch_compile: bool = False
+    enable_torch_compile: bool = True
 
 
 @dataclass
@@ -454,7 +455,8 @@ class LlamaArgs(ModelArgs):
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
-    enable_torch_compile: bool = False
+    enable_torch_compile: bool = True
+
 
 @dataclass
 class BloomArgs(ModelArgs):
@@ -516,4 +518,4 @@ class BloomArgs(ModelArgs):
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
-    enable_torch_compile: bool = False
+    enable_torch_compile: bool = True
