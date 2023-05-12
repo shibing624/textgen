@@ -14,14 +14,15 @@ python merge_peft_adapter.py \
 """
 
 import argparse
+import gc
 import json
 import os
-import gc
-import torch
+
 import peft
+import torch
+from huggingface_hub import hf_hub_download
 from peft import PeftModel
 from transformers import LlamaForCausalLM, LlamaTokenizer
-from huggingface_hub import hf_hub_download
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--base_model_name_or_path', default=None, required=True, type=str, help="Base model name or path")

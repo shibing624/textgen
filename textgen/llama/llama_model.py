@@ -5,6 +5,7 @@
 
 modified from https://github.com/tloen/alpaca-lora/blob/main/finetune.py
 """
+import math
 import os
 import random
 import sys
@@ -382,6 +383,11 @@ class LlamaModel:
             if self.args.fp16:
                 self.model.half()
             metrics = trainer.evaluate(metric_key_prefix="eval")
+            try:
+                perplexity = math.exp(metrics["eval_loss"])
+            except OverflowError:
+                perplexity = float("inf")
+            metrics["perplexity"] = perplexity
             logger.debug(f"eval metrics: {metrics}")
             self.handle_metrics("eval", metrics, output_dir)
             self.results.update(metrics)

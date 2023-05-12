@@ -4,16 +4,15 @@
 @description: 
 """
 import os
-import sys
+import traceback
+from queue import Queue
+from threading import Thread
+
 import gradio as gr
 import torch
 import transformers
 from peft import PeftModel
 from transformers import GenerationConfig, LlamaForCausalLM, LlamaTokenizer
-
-import traceback
-from queue import Queue
-from threading import Thread
 
 if torch.cuda.is_available():
     device = "cuda"

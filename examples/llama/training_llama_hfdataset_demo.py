@@ -3,8 +3,9 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-import sys
 import argparse
+import sys
+
 from loguru import logger
 
 sys.path.append('../..')
@@ -54,7 +55,7 @@ def main():
             )
 
         def generate_prompt(instruction):
-            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:"""
+            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:\n\n"""
 
         sents = [
             '用一句话描述地球为什么是独一无二的。',

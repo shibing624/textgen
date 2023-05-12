@@ -3,10 +3,11 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-import sys
 import argparse
-from loguru import logger
+import sys
+
 import pandas as pd
+from loguru import logger
 
 sys.path.append('../..')
 from textgen import LlamaModel
@@ -83,9 +84,9 @@ def main():
 
         def get_prompt(arr):
             if arr['input'].strip():
-                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n### Input:\n{arr['input']}\n\n### Response:"""
+                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n### Input:\n{arr['input']}\n\n### Response:\n\n"""
             else:
-                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n\n### Response:"""
+                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n\n### Response:\n\n"""
 
         test_df['prompt'] = test_df.apply(get_prompt, axis=1)
         test_df['predict_after'] = model.predict(test_df['prompt'].tolist())

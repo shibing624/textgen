@@ -3,10 +3,11 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-import sys
 import argparse
-from loguru import logger
+import sys
+
 import pandas as pd
+from loguru import logger
 
 sys.path.append('../..')
 from textgen import BloomModel

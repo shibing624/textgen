@@ -3,11 +3,11 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-from transformers import AutoModel, AutoTokenizer
-from peft import PeftModel
-import torch
-
 import argparse
+
+import torch
+from peft import PeftModel
+from transformers import AutoModel, AutoTokenizer
 
 
 def get_args():

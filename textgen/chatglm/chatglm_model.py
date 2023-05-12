@@ -3,11 +3,12 @@
 @author:XuMing(xuming624@qq.com)
 @description:
 """
-from typing import List, Tuple
+import math
 import os
-import sys
 import random
 import re
+import sys
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -389,6 +390,11 @@ class ChatGlmModel:
             if self.args.fp16:
                 self.model.half()
             metrics = trainer.evaluate(metric_key_prefix="eval")
+            try:
+                perplexity = math.exp(metrics["eval_loss"])
+            except OverflowError:
+                perplexity = float("inf")
+            metrics["perplexity"] = perplexity
             logger.debug(f"eval metrics: {metrics}")
             self.handle_metrics("eval", metrics, output_dir)
             self.results.update(metrics)

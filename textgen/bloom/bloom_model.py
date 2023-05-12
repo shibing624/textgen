@@ -3,6 +3,7 @@
 @author:XuMing(xuming624@qq.com)
 @description:
 """
+import math
 import os
 import random
 import sys
@@ -20,13 +21,13 @@ from peft import (
     set_peft_model_state_dict,
 )
 from tqdm.auto import tqdm
-from transformers import GenerationConfig, DataCollatorForSeq2Seq
 from transformers import BloomForCausalLM, BloomTokenizerFast
+from transformers import GenerationConfig, DataCollatorForSeq2Seq
 from transformers import Trainer, TrainingArguments, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
 
-from textgen.config.model_args import BloomArgs
 from textgen.bloom.bloom_utils import load_hf_dataset, BloomDataset
+from textgen.config.model_args import BloomArgs
 
 has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
@@ -377,6 +378,11 @@ class BloomModel:
             if self.args.fp16:
                 self.model.half()
             metrics = trainer.evaluate(metric_key_prefix="eval")
+            try:
+                perplexity = math.exp(metrics["eval_loss"])
+            except OverflowError:
+                perplexity = float("inf")
+            metrics["perplexity"] = perplexity
             logger.debug(f"eval metrics: {metrics}")
             self.handle_metrics("eval", metrics, output_dir)
             self.results.update(metrics)
