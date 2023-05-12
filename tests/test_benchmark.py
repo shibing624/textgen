@@ -4,9 +4,9 @@
 @description: 
 """
 
-import sys
-import pytest
 import os
+import sys
+
 import pandas as pd
 
 sys.path.append('..')
@@ -39,14 +39,12 @@ def test_llama_13b_lora():
     res_dict = {'input': sentences, 'output': res}
     df = pd.DataFrame.from_dict(res_dict)
     json_file = os.path.join(pwd_path, 'llama_13b_lora_llm_benchmark_test_result.json')
-    df.to_json(os.path.join(pwd_path, json_file), force_ascii=False,
-               orient='records', lines=True)
+    df.to_json(json_file, force_ascii=False, orient='records', lines=True)
     df.to_excel(json_file + '.xlsx', index=False)
 
 
 def test_llama_7b_alpaca_plus():
-    m = LlamaModel('llama', "/apdcephfs_cq3/share_2973545/data/models/shibing624/chinese-alpaca-plus-7b-hf",
-                   args={'use_peft': False})
+    m = LlamaModel('llama', "shibing624/chinese-alpaca-plus-7b-hf", args={'use_peft': False})
     predict_sentences = [llama_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
@@ -55,14 +53,12 @@ def test_llama_7b_alpaca_plus():
     res_dict = {'input': sentences, 'output': res}
     df = pd.DataFrame.from_dict(res_dict)
     json_file = os.path.join(pwd_path, 'llama_7b_alpaca_plus_llm_benchmark_test_result.json')
-    df.to_json(json_file, force_ascii=False,
-               orient='records', lines=True)
+    df.to_json(json_file, force_ascii=False, orient='records', lines=True)
     df.to_excel(json_file + '.xlsx', index=False)
 
 
 def test_llama_13b_alpaca_plus():
-    m = LlamaModel('llama', "/apdcephfs_cq3/share_2973545/data/models/shibing624/chinese-alpaca-plus-13b-hf",
-                   args={'use_peft': False})
+    m = LlamaModel('llama', "shibing624/chinese-alpaca-plus-13b-hf", args={'use_peft': False})
     predict_sentences = [llama_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
@@ -71,8 +67,7 @@ def test_llama_13b_alpaca_plus():
     res_dict = {'input': sentences, 'output': res}
     df = pd.DataFrame.from_dict(res_dict)
     json_file = os.path.join(pwd_path, 'llama_13b_alpaca_plus_llm_benchmark_test_result.json')
-    df.to_json(json_file, force_ascii=False,
-               orient='records', lines=True)
+    df.to_json(json_file, force_ascii=False, orient='records', lines=True)
     df.to_excel(json_file + '.xlsx', index=False)
 
 
@@ -86,8 +81,9 @@ def test_chatglm_6b():
 
     res_dict = {'input': sentences, 'output': res}
     df = pd.DataFrame.from_dict(res_dict)
-    df.to_json(os.path.join(pwd_path, 'chatglm_6b_llm_benchmark_test_result.json'), force_ascii=False,
-               orient='records', lines=True)
+    json_file = os.path.join(pwd_path, 'chatglm_6b_llm_benchmark_test_result.json')
+    df.to_json(json_file, force_ascii=False, orient='records', lines=True)
+    df.to_excel(json_file + '.xlsx', index=False)
 
 
 def test_chatglm_6b_lora():
@@ -101,5 +97,6 @@ def test_chatglm_6b_lora():
 
     res_dict = {'input': sentences, 'output': res}
     df = pd.DataFrame.from_dict(res_dict)
-    df.to_json(os.path.join(pwd_path, 'chatglm_6b_lora_llm_benchmark_test_result.json'), force_ascii=False,
-               orient='records', lines=True)
+    json_file = os.path.join(pwd_path, 'chatglm_6b_lora_llm_benchmark_test_result.json')
+    df.to_json(json_file, force_ascii=False, orient='records', lines=True)
+    df.to_excel(json_file + '.xlsx', index=False)
