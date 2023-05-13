@@ -61,10 +61,15 @@ release基于`textgen`训练的中文模型，模型已经release到HuggingFace 
 | [shibing624/chinese-alpaca-plus-7b-hf](https://huggingface.co/shibing624/chinese-alpaca-plus-7b-hf)                                         | LLaMA-7B   | 使用[ymcui/Chinese-LLaMA-Alpaca 合并模型方法](https://github.com/ymcui/Chinese-LLaMA-Alpaca/wiki/%E6%89%8B%E5%8A%A8%E6%A8%A1%E5%9E%8B%E5%90%88%E5%B9%B6%E4%B8%8E%E8%BD%AC%E6%8D%A2#%E5%A4%9Alora%E6%9D%83%E9%87%8D%E5%90%88%E5%B9%B6%E9%80%82%E7%94%A8%E4%BA%8Echinese-alpaca-plus)合并HF权重后，评估测试集并标注得分 | 6.93     |
 | [shibing624/chinese-alpaca-plus-13b-hf](https://huggingface.co/shibing624/chinese-alpaca-plus-13b-hf)                                       | LLaMA-13B  | 使用[ymcui/Chinese-LLaMA-Alpaca 合并模型方法](https://github.com/ymcui/Chinese-LLaMA-Alpaca/wiki/%E6%89%8B%E5%8A%A8%E6%A8%A1%E5%9E%8B%E5%90%88%E5%B9%B6%E4%B8%8E%E8%BD%AC%E6%8D%A2#%E5%A4%9Alora%E6%9D%83%E9%87%8D%E5%90%88%E5%B9%B6%E9%80%82%E7%94%A8%E4%BA%8Echinese-alpaca-plus)合并HF权重后，评估测试集并标注得分     | 7.07     |
 
+说明：
 - 评估case，详见在线文档：中文LLM-benchmark多任务评估集(腾讯文档) https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=BB08J2  感谢韩俊明、[杨家铭](https://github.com/yangjiam)等同学的标注
-- 评估任务类型包括：知识问答，开放式问答，数值计算，诗词、音乐、体育，娱乐，写文章，文本翻译，代码编程，伦理、拒答类，多轮问答，Score 评分是前100条（10分制）的平均分数，越高越好
-- 评估脚本：[tests/test_benchmark.py](https://github.com/shibing624/textgen/blob/main/tests/test_benchmark.py)
-- 结论：当前在[中文LLM-benchmark多任务评估集](https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=BB08J2)上，ChatGLM-6B的表现最好，LLaMA-13B-Chinese-Alpaca的表现次之，原版LLaMA-7B的表现整体都差些，说明ChatGLM这种原生的中文预训练模型更理解中文语义，LLaMA-13B-Chinese-Aplaca是在原版LLaMA上扩充了中文词表，并融入了约20G的通用中文语料后的指令微调模型，表明了LLaMA-13B的底座优秀，具有强大的迁移能力
+- 评估任务类型包括：知识问答，开放式问答，数值计算，诗词、音乐、体育，娱乐，写文章，文本翻译，代码编程，伦理、拒答类，多轮问答，Score 评分是前100条（10分制）的平均分数，人工打分，越高越好
+- 评估数量少，任务类型不够全面，评分之间的大小关系有一些参考价值，分数的绝对值没太大参考价值
+- 评估脚本：[tests/test_benchmark.py](https://github.com/shibing624/textgen/blob/main/tests/test_benchmark.py) ，可以运行脚本复现评估结果，但生成结果具有随机性，受解码超参、随机种子等因素影响。评测并非绝对严谨，测试结果仅供晾晒参考
+- 结论：ChatGLM-6B、Chinese-Alpaca-Plus-13B、Chinese-Alpaca-Plus-7B、LLaMA-13B-Chinese-Alpaca的表现属于第一梯队，原版LLaMA-7B的表现整体稍差些
+- ChatGLM这种原生的中文预训练模型更理解中文语义，且ChatGLM模型在原生中文知识问答、开放式问答得分高
+- LLaMA-13B-Chinese-Aplaca是在原版LLaMA上扩充了中文词表，并融入了约20G的通用中文语料后的指令微调模型，表明了LLaMA的底座优秀，具有强大的语言迁移能力
+- LLaMA系列模型数值计算、中英翻译、代码编程类得分高；经过中文预训练和SFT微调后的Chinese-LLaMA模型在中文诗词、娱乐、伦理类得分有提升；
 
 ## 🚀 Demo
 
