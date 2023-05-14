@@ -25,7 +25,7 @@ def main():
     parser.add_argument('--output_dir', default='./outputs-alpaca/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=256, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=256, type=int, help='Output max sequence length')
-    parser.add_argument('--num_epochs', default=1.0, type=float, help='Number of training epochs')
+    parser.add_argument('--num_epochs', default=20, type=float, help='Number of training epochs')
     parser.add_argument('--batch_size', default=4, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)

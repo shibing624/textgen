@@ -3,8 +3,9 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-import sys
 import argparse
+import sys
+
 from loguru import logger
 
 sys.path.append('../..')
@@ -23,7 +24,7 @@ def main():
     parser.add_argument('--output_dir', default='./outputs-alpaca/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=256, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=256, type=int, help='Output max sequence length')
-    parser.add_argument('--num_epochs', default=1.0, type=float, help='Number of training epochs')
+    parser.add_argument('--num_epochs', default=20, type=float, help='Number of training epochs')
     parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
@@ -41,7 +42,7 @@ def main():
             "output_dir": args.output_dir,
             "use_hf_datasets": True,
         }
-        model = ChatGlmModel(args.model_type, args.model_name,  args=model_args)
+        model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
 
         model.train_model(args.train_file)
     if args.do_predict:

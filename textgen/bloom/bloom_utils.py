@@ -50,7 +50,7 @@ def preprocess_data(data):
         add_special_tokens=False
     )
     example["labels"] = example["input_ids"].copy()
-    if args.is_chat_task:
+    if not args.is_train_on_prompt:
         user_example = tokenizer(
             prompt,
             truncation=True,
