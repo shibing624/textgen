@@ -148,7 +148,7 @@ python -m torch.distributed.launch --nproc_per_node 4 --nnodes=1 --node_rank=0 t
 执行以下命令：
 ```shell
 python -m textgen/chatglm/merge_peft_adapter.py \
-    --base_model_name_or_path path_to_original_llama_hf_dir \
+    --base_model_name_or_path path_to_original_base_model_dir \
     --peft_model_path path_to_peft_model_dir \
     --output_dir path_to_output_dir 
 ```
@@ -193,6 +193,29 @@ print(r)  # ['地球是唯一一颗拥有生命的行星。']
 3. 支持多卡训练，支持混合精度训练，使用方法同上（ChatGLM多卡训练）
 
 example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)
+
+
+#### 基于微调(LoRA)模型继续训练
+如果需要基于Lora模型继续训练，可以使用下面的脚本合并模型为新的base model，再微调训练即可。
+
+单LoRA权重合并（适用于 Chinese-LLaMA, Chinese-LLaMA-Plus, Chinese-Alpaca）
+
+执行以下命令：
+```shell
+python -m textgen/llama/merge_peft_adapter.py \
+    --base_model_name_or_path path_to_original_base_model_dir \
+    --peft_model_path path_to_chinese_llama_or_alpaca_lora \
+    --output_type [pth|huggingface]
+    --output_dir path_to_output_dir 
+```
+参数说明：
+```
+--base_model_name_or_path：存放HF格式的底座模型权重和配置文件的目录
+--peft_model_path：中文LLaMA/Alpaca LoRA解压后文件所在目录，也可使用HF上的Lora模型名称，如`ziqingyang/chinese-alpaca-lora-7b`会自动下载对应模型
+--output_type: 指定输出格式，可为pth或huggingface。若不指定，默认为pth
+--output_dir：指定保存全量模型权重的目录，默认为./merged
+--offload_dir（可选）：对于低内存用户需要指定一个offload缓存路径
+```
 
 
 ### BLOOM 模型
