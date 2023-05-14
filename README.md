@@ -65,11 +65,12 @@ release基于`textgen`训练的中文模型，模型已经release到HuggingFace 
 - 评估case，详见在线文档：中文LLM-benchmark多任务评估集(腾讯文档) https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=BB08J2  感谢韩俊明、[杨家铭](https://github.com/yangjiam)等同学的标注
 - 评估任务类型包括：知识问答，开放式问答，数值计算，诗词、音乐、体育，娱乐，写文章，文本翻译，代码编程，伦理、拒答类，多轮问答，Score 评分是前100条（10分制）的平均分数，人工打分，越高越好
 - 评估数量少，任务类型不够全面，评分之间的大小关系有一些参考价值，分数的绝对值没太大参考价值
-- 评估脚本：[tests/test_benchmark.py](https://github.com/shibing624/textgen/blob/main/tests/test_benchmark.py) ，可以运行脚本复现评估结果，但生成结果具有随机性，受解码超参、随机种子等因素影响。评测并非绝对严谨，测试结果仅供晾晒参考
+- 评估脚本：[tests/test_benchmark.py](https://github.com/shibing624/textgen/blob/main/tests/test_benchmark.py) ，使用fp16预测，无int量化处理，运行脚本可复现评估结果，但生成结果具有随机性，受解码超参、随机种子等因素影响。评测并非绝对严谨，测试结果仅供晾晒参考
 - 结论：ChatGLM-6B、Chinese-Alpaca-Plus-13B、Chinese-Alpaca-Plus-7B、LLaMA-13B-Chinese-Alpaca的表现属于第一梯队，原版LLaMA-7B的表现整体稍差些
-- ChatGLM这种原生的中文预训练模型更理解中文语义，且ChatGLM模型在原生中文知识问答、开放式问答得分高
-- LLaMA-13B-Chinese-Aplaca是在原版LLaMA上扩充了中文词表，并融入了约20G的通用中文语料后的指令微调模型，表明了LLaMA的底座优秀，具有强大的语言迁移能力
-- LLaMA系列模型数值计算、中英翻译、代码编程类得分高；经过中文预训练和SFT微调后的Chinese-LLaMA模型在中文诗词、娱乐、伦理类得分有提升；
+- LLaMA-13B-Chinese-Alpaca是在原版LLaMA上扩充了中文词表，并融入了约20G的通用中文语料后的指令微调模型，表明了LLaMA的底座优秀，具有强大的语言迁移能力
+- ChatGLM这种原生的中文预训练模型更理解中文语义，且在中文知识问答、开放式问答得分高
+- LLaMA系列模型数值计算、中英翻译、代码编程类得分高
+- 经过中文预训练和SFT微调后的Chinese-LLaMA模型在中文诗词、娱乐、伦理类得分相较原版LLaMA有提升
 
 ## 🚀 Demo
 
@@ -127,6 +128,19 @@ PS：由于使用了开发中的peft库，可能由于版本更新，导致LoRA�
 
 example: [examples/chatglm/training_chatglm_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_demo.py)
 
+单卡训练：
+```shell
+cd examples/chatglm
+python training_chatglm_demo.py --do_train --do_predict --num_epochs 1 --output_dir outputs_chatglm
+```
+
+多卡训练：
+```shell
+cd examples/chatglm
+python -m torch.distributed.launch --nproc_per_node 4 --nnodes=1 --node_rank=0 training_chatglm_demo.py  --do_train --do_predict
+```
+
+
 #### 基于微调(LoRA)模型继续训练
 如果需要基于Lora模型继续训练，可以使用下面的脚本合并模型为新的base model，再微调训练即可。
 
@@ -175,31 +189,16 @@ print(r)  # ['地球是唯一一颗拥有生命的行星。']
 #### 训练 LLaMA 微调模型
 1. 支持自定义训练数据集和训练参数，数据集格式参考[examples/data/zh_csc_test.tsv](https://github.com/shibing624/textgen/blob/main/examples/data/zh_csc_test.tsv)或者[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
 2. 支持AdaLoRA、LoRA、P_Tuning、Prefix_Tuning等部分参数微调方法，也支持全参微调
-3. 支持多卡训练，支持混合精度训练
+3. 支持多卡训练，支持混合精度训练，使用方法同上（ChatGLM多卡训练）
 
 example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)
 
-#### 基于微调(LoRA)模型继续训练
-如果需要基于Lora模型继续训练，可以使用下面的脚本合并模型为新的base model，再微调训练即可。
 
-单LoRA权重合并（适用于 Chinese-LLaMA, Chinese-LLaMA-Plus, Chinese-Alpaca）
+### BLOOM 模型
 
-执行以下命令：
-```shell
-python -m textgen/llama/merge_peft_adapter.py \
-    --base_model_name_or_path path_to_original_llama_hf_dir \
-    --peft_model_path path_to_chinese_llama_or_alpaca_lora \
-    --output_type [pth|huggingface]
-    --output_dir path_to_output_dir 
-```
-参数说明：
-```
---base_model_name_or_path：存放HF格式的底座模型权重和配置文件的目录
---peft_model_path：中文LLaMA/Alpaca LoRA解压后文件所在目录，也可使用HF上的Lora模型名称，如`ziqingyang/chinese-alpaca-lora-7b`会自动下载对应模型
---output_type: 指定输出格式，可为pth或huggingface。若不指定，默认为pth
---output_dir：指定保存全量模型权重的目录，默认为./merged
---offload_dir（可选）：对于低内存用户需要指定一个offload缓存路径
-```
+#### 训练 BLOOM 微调模型
+
+example: [examples/bloom/training_bloom_demo.py](https://github.com/shibing624/textgen/blob/main/examples/bloom/training_bloom_demo.py)
 
 ### ConvSeq2Seq 模型
 
