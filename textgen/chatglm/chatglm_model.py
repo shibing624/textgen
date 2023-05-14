@@ -482,7 +482,6 @@ class ChatGlmModel:
             self.model.float()
         if self.args.fp16:
             self.model.half()
-        self.model.to(self.device)
         self.model.eval()
 
         all_outputs = []
