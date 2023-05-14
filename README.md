@@ -90,12 +90,12 @@ model trained by [examples/t5/T5_Finetune_Chinese_Couplet.ipynb](https://github.
 ## 💾 Install
 
 ```shell
-pip install git+https://github.com/huggingface/peft
 pip install -U textgen
 ```
 
 or
 
+install develop version:
 ```shell
 pip install torch # conda install pytorch
 git clone https://github.com/shibing624/textgen.git
