@@ -340,7 +340,7 @@ class ChatGlmArgs(ModelArgs):
 
     model_class: str = "ChatGlmArgs"
     dataset_class: Dataset = None
-    learning_rate: float = 2e-4
+    learning_rate: float = 2e-5
     fp16: bool = True
     int8: bool = False
     quantization_bit: int = None  # if use quantization bit, set 4, else None
@@ -403,7 +403,7 @@ class LlamaArgs(ModelArgs):
 
     model_class: str = "LlamaArgs"
     dataset_class: Dataset = None
-    learning_rate: float = 3e-4
+    learning_rate: float = 5e-6
     fp16: bool = True
     int8: bool = False
     quantization_bit: int = None  # if use quantization bit, set 4, else None
@@ -466,7 +466,7 @@ class BloomArgs(ModelArgs):
 
     model_class: str = "BloomArgs"
     dataset_class: Dataset = None
-    learning_rate: float = 3e-4
+    learning_rate: float = 2e-5
     fp16: bool = True
     int8: bool = False
     quantization_bit: int = None  # if use quantization bit, set 4, else None
