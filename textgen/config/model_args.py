@@ -403,7 +403,7 @@ class LlamaArgs(ModelArgs):
 
     model_class: str = "LlamaArgs"
     dataset_class: Dataset = None
-    learning_rate: float = 5e-6
+    learning_rate: float = 2e-5
     fp16: bool = True
     int8: bool = False
     quantization_bit: int = None  # if use quantization bit, set 4, else None

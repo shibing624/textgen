@@ -138,7 +138,7 @@ python training_chatglm_demo.py --do_train --do_predict --num_epochs 1 --output_
 多卡训练：
 ```shell
 cd examples/chatglm
-python -m torch.distributed.launch --nproc_per_node 4 --nnodes=1 --node_rank=0 training_chatglm_demo.py  --do_train --do_predict
+CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node 2 training_chatglm_demo.py --do_train --do_predict --num_epochs 20
 ```
 
 
