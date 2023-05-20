@@ -29,7 +29,12 @@ from transformers import Trainer, TrainingArguments, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
 
 from textgen.config.model_args import LlamaArgs
-from textgen.llama.llama_utils import load_hf_dataset, LlamaDataset
+from textgen.llama.llama_utils import (
+    load_hf_instruction_dataset,
+    LlamaInstructionDataset,
+    LlamaPretrainingDataset,
+    load_hf_pretraining_dataset,
+)
 
 has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
@@ -551,20 +556,34 @@ class LlamaModel:
             os.makedirs(self.args.cache_dir, exist_ok=True)
 
         mode = "dev" if evaluate else "train"
-
-        if self.args.use_hf_datasets:
-            dataset = load_hf_dataset(data, tokenizer, self.args, mode)
-            return dataset
-        elif args.dataset_class:
-            CustomDataset = args.dataset_class
-            return CustomDataset(tokenizer, args, data, mode)
+        if self.args.is_pretraining:
+            if self.args.use_hf_datasets:
+                dataset = load_hf_pretraining_dataset(data, tokenizer, self.args, mode)
+                return dataset
+            elif args.dataset_class:
+                CustomDataset = args.dataset_class
+                return CustomDataset(tokenizer, args, data, mode)
+            else:
+                return LlamaPretrainingDataset(
+                    tokenizer,
+                    self.args,
+                    data,
+                    mode,
+                )
         else:
-            return LlamaDataset(
-                tokenizer,
-                self.args,
-                data,
-                mode,
-            )
+            if self.args.use_hf_datasets:
+                dataset = load_hf_instruction_dataset(data, tokenizer, self.args, mode)
+                return dataset
+            elif args.dataset_class:
+                CustomDataset = args.dataset_class
+                return CustomDataset(tokenizer, args, data, mode)
+            else:
+                return LlamaInstructionDataset(
+                    tokenizer,
+                    self.args,
+                    data,
+                    mode,
+                )
 
     def save_model(
             self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None

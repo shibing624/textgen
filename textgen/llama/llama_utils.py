@@ -6,6 +6,7 @@
 
 import os
 import pickle
+from itertools import chain
 from multiprocessing import Pool
 
 import datasets
@@ -27,7 +28,7 @@ PROMPT_DICT = {
 }
 
 
-def preprocess_data(data):
+def preprocess_instruction_data(data):
     instruction, input_text, target_text, tokenizer, args = data
 
     if input_text:
@@ -61,13 +62,13 @@ def preprocess_data(data):
     return example
 
 
-def preprocess_batch_for_hf_dataset(example, tokenizer, args):
+def preprocess_batch_for_hf_instruction_dataset(example, tokenizer, args):
     data = (example["instruction"], example["input"], example["output"], tokenizer, args)
-    example = preprocess_data(data)
+    example = preprocess_instruction_data(data)
     return example
 
 
-def load_hf_dataset(data, tokenizer, args, mode):
+def load_hf_instruction_dataset(data, tokenizer, args, mode):
     if isinstance(data, str):
         if data.endswith('.json') or data.endswith('.jsonl'):
             dataset = load_dataset("json", data_files=data)
@@ -89,14 +90,14 @@ def load_hf_dataset(data, tokenizer, args, mode):
         dataset = HFDataset.from_pandas(data)
 
     dataset = dataset.shuffle().map(
-        lambda x: preprocess_batch_for_hf_dataset(x, tokenizer=tokenizer, args=args),
+        lambda x: preprocess_batch_for_hf_instruction_dataset(x, tokenizer=tokenizer, args=args),
         batched=False, remove_columns=dataset.column_names
     ).filter(lambda x: len(x['input_ids']) > 0)
 
     return dataset
 
 
-class LlamaDataset(Dataset):
+class LlamaInstructionDataset(Dataset):
     def __init__(self, tokenizer, args, data, mode):
         cached_features_file = os.path.join(
             args.cache_dir,
@@ -114,7 +115,7 @@ class LlamaDataset(Dataset):
             with open(cached_features_file, "rb") as handle:
                 self.examples = pickle.load(handle)
         else:
-            logger.info(" Creating features from dataset file at %s" % args.cache_dir)
+            logger.debug(" Creating features from dataset file at %s" % args.cache_dir)
 
             data = [
                 (instruction, input_text, target_text, tokenizer, args)
@@ -134,13 +135,106 @@ class LlamaDataset(Dataset):
                 with Pool(args.process_count) as p:
                     self.examples = list(
                         tqdm(
-                            p.imap(preprocess_data, data, chunksize=chunksize),
+                            p.imap(preprocess_instruction_data, data, chunksize=chunksize),
                             total=len(data),
                             disable=args.silent,
                         )
                     )
             else:
-                self.examples = [preprocess_data(d) for d in tqdm(data, disable=args.silent)]
+                self.examples = [preprocess_instruction_data(d) for d in tqdm(data, disable=args.silent)]
+            if not args.no_cache:
+                logger.info(" Saving features into cached file %s" % cached_features_file)
+                with open(cached_features_file, "wb") as handle:
+                    pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def __len__(self):
+        return len(self.examples)
+
+    def __getitem__(self, index):
+        return self.examples[index]
+
+
+def tokenize_function(examples, tokenizer):
+    return tokenizer(examples["text"])
+
+
+def group_texts(examples, block_size: int = 1024):
+    # Concatenate all texts.
+    concatenated_examples = {k: list(chain(*examples[k])) for k in examples.keys()}
+    total_length = len(concatenated_examples[list(examples.keys())[0]])
+    # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
+    # customize this part to your needs.
+    if total_length >= block_size:
+        total_length = (total_length // block_size) * block_size
+    # Split by chunks of max_len.
+    result = {
+        k: [t[i: i + block_size] for i in range(0, total_length, block_size)]
+        for k, t in concatenated_examples.items()
+    }
+    result["labels"] = result["input_ids"].copy()
+    return result
+
+
+def load_hf_pretraining_dataset(data, tokenizer, args, mode):
+    if isinstance(data, str):
+        if data.endswith('.json') or data.endswith('.jsonl'):
+            dataset = load_dataset("json", data_files=data)
+        elif data.endswith('.txt'):
+            dataset = load_dataset("text", data_files=data)
+        elif os.path.isdir(data):
+            dataset = datasets.load_from_disk(data)
+        else:
+            dataset = load_dataset(
+                data,
+                download_mode="force_redownload"
+                if args.reprocess_input_data
+                else "reuse_dataset_if_exists",
+            )
+        # This is not necessarily a train dataset. The datasets library insists on calling it train.
+        dataset = dataset['train']
+        if mode == 'dev' and args.max_eval_samples is not None:
+            max_eval_samples = min(len(dataset), args.max_eval_samples)
+            dataset = dataset.select(range(max_eval_samples))
+    else:
+        dataset = HFDataset.from_pandas(data)
+
+    tokenized_dataset = dataset.map(
+        lambda x: tokenize_function(x, tokenizer=tokenizer),
+        batched=True,
+        remove_columns=dataset.column_names,
+        desc="Running tokenizer on dataset",
+    )
+    grouped_datasets = tokenized_dataset.map(
+        lambda x: group_texts(x, block_size=args.block_size),
+        batched=True,
+        desc=f"Grouping texts in chunks of {args.block_size}",
+    ).filter(lambda x: len(x['input_ids']) > 0)
+    dataset = grouped_datasets
+
+    return dataset
+
+
+class LlamaPretrainingDataset(Dataset):
+    def __init__(self, tokenizer, args, data, mode):
+        cached_features_file = os.path.join(
+            args.cache_dir,
+            args.model_name.replace("/", "_")
+            + "_cached_"
+            + str(args.max_seq_length)
+            + str(len(data)),
+        )
+
+        if os.path.exists(cached_features_file) and (
+                (not args.reprocess_input_data and not args.no_cache)
+                or (mode == "dev" and args.use_cached_eval_features and not args.no_cache)
+        ):
+            logger.info(" Loading features from cached file %s" % cached_features_file)
+            with open(cached_features_file, "rb") as handle:
+                self.examples = pickle.load(handle)
+        else:
+            logger.debug(" Creating features from dataset file at %s" % args.cache_dir)
+
+            self.examples = load_hf_pretraining_dataset(data, tokenizer, args, mode)
             if not args.no_cache:
                 logger.info(" Saving features into cached file %s" % cached_features_file)
                 with open(cached_features_file, "wb") as handle:

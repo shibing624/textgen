@@ -456,6 +456,8 @@ class LlamaArgs(ModelArgs):
     logging_steps = 50
     resume_from_checkpoint: str = None
     enable_torch_compile: bool = True
+    is_pretraining: bool = False
+    block_size: int = 1024
 
 
 @dataclass
