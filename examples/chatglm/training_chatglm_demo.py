@@ -35,7 +35,7 @@ def main():
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--is_train_on_prompt', action='store_true', help='Whether to compute loss on prompt')
-    parser.add_argument('--output_dir', default='./outputs/', type=str, help='Model output directory')
+    parser.add_argument('--output_dir', default='./outputs-demo/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=0.5, type=float, help='Number of training epochs')
