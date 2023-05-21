@@ -233,8 +233,8 @@ class LlamaPretrainingDataset(Dataset):
                 self.examples = pickle.load(handle)
         else:
             logger.debug(" Creating features from dataset file at %s" % args.cache_dir)
-
-            self.examples = load_hf_pretraining_dataset(data, tokenizer, args, mode)
+            dataset = load_hf_pretraining_dataset(data, tokenizer, args, mode)
+            self.examples = list(dataset)
             if not args.no_cache:
                 logger.info(" Saving features into cached file %s" % cached_features_file)
                 with open(cached_features_file, "wb") as handle:

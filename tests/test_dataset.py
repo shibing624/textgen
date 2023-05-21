@@ -35,5 +35,12 @@ def test_data():
         train_df,
         mode="train",
     )
-    print(ds)
+    print(ds, len(ds))
+    a = list(ds)
+    b = [i for i in ds]
+    assert a == b
+    for i in list(ds)[:3]:
+        print(type(i), i)
+        for k, v in i.items():
+            print(k, v)
     assert ds is not None
