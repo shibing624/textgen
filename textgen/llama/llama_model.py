@@ -360,6 +360,7 @@ class LlamaModel:
 
         # Initialize our Trainer
         if self.args.is_pretraining:
+            # For pretraining, we use a special data collator that simply regroups
             data_collator = DataCollatorForSeq2Seq(
                 self.tokenizer,
                 pad_to_multiple_of=self.args.pad_to_multiple_of,
@@ -367,6 +368,7 @@ class LlamaModel:
                 padding=True
             )
         else:
+            # For fine-tuning, padding to max length
             data_collator = DataCollatorForSeq2Seq(
                 self.tokenizer,
                 return_tensors="pt",
