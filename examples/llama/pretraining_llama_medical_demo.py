@@ -51,7 +51,7 @@ def main():
                         help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--output_dir', default='./outputs-pretraining/', type=str, help='Model output directory')
+    parser.add_argument('--output_dir', default='./outputs-pretraining-medical/', type=str, help='Model output directory')
     parser.add_argument('--block_size', default=1024, type=int, help='Block size for training')
     parser.add_argument('--num_epochs', default=2, type=float, help='Number of training epochs')
     parser.add_argument('--batch_size', default=2, type=int, help='Batch size')
