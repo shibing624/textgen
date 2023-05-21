@@ -358,13 +358,22 @@ class LlamaModel:
         )
         logger.info(f"Training/evaluation parameters {training_args}")
 
-        data_collator = DataCollatorForSeq2Seq(
-            self.tokenizer,
-            return_tensors="pt",
-            padding="max_length",
-            max_length=self.args.max_seq_length + self.args.max_length
-        )
-        trainer = FinetuneTrainer(
+        # Initialize our Trainer
+        if self.args.is_pretraining:
+            data_collator = DataCollatorForSeq2Seq(
+                self.tokenizer,
+                pad_to_multiple_of=self.args.pad_to_multiple_of,
+                return_tensors="pt",
+                padding=True
+            )
+        else:
+            data_collator = DataCollatorForSeq2Seq(
+                self.tokenizer,
+                return_tensors="pt",
+                padding="max_length",
+                max_length=self.args.max_seq_length + self.args.max_length
+            )
+        trainer = ModelSaveTrainer(
             model=self.model,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset if eval_data is not None else None,
@@ -619,9 +628,9 @@ class LlamaModel:
         return args
 
 
-class FinetuneTrainer(Trainer):
+class ModelSaveTrainer(Trainer):
     """
-    Trainer for finetuning models
+    Trainer for lora models
     """
 
     def save_model(self, output_dir=None, _internal_call=False):
