@@ -94,11 +94,12 @@ def main():
         out_df = test_df[['instruction', 'input', 'output', 'predict_after']]
         out_df.to_json('test_result.json', force_ascii=False, orient='records', lines=True)
 
-        response, history = model.chat("给出三个保持健康的秘诀。", history=[])
+        def generate_prompt(instruction):
+            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{instruction}\n\n### Response:\n\n"""
+
+        response = model.predict([generate_prompt("给出三个保持健康的秘诀。")])
         print(response)
-        response, history = model.chat(
-            "给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。\n",
-            history=history)
+        response = model.predict([generate_prompt("给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。")])
         print(response)
 
 

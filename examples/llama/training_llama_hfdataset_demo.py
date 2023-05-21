@@ -71,15 +71,11 @@ def main():
             '经常吃烫的东西会罹患什么病？',
             '盐酸莫西沙星能否用于治疗肺炎？',
             '机场代码KIX代表的是哪个机场？',
+            '给出三个保持健康的秘诀',
+            '给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。',
         ]
         prompt_sents = [generate_prompt(sent) for sent in sents]
         response = model.predict(prompt_sents)
-        print(response)
-        response, history = model.chat("给出三个保持健康的秘诀。", history=[])
-        print(response)
-        response, history = model.chat(
-            "给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。\n",
-            history=history)
         print(response)
 
 
