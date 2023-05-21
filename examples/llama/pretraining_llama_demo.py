@@ -29,7 +29,7 @@ def main():
     parser.add_argument('--output_dir', default='./outputs/', type=str, help='Model output directory')
     parser.add_argument('--block_size', default=1024, type=int, help='Block size for training')
     parser.add_argument('--num_epochs', default=0.2, type=float, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=2, type=int, help='Batch size')
     parser.add_argument('--eval_steps', default=50, type=int, help='Eval every X steps')
     parser.add_argument('--save_steps', default=50, type=int, help='Save checkpoint every X steps')
     args = parser.parse_args()
@@ -43,8 +43,6 @@ def main():
             "use_peft": True,
             "reprocess_input_data": True,
             "overwrite_output_dir": True,
-            "max_seq_length": args.max_seq_length,
-            "max_length": args.max_length,
             "per_device_train_batch_size": args.batch_size,
             "eval_batch_size": args.batch_size,
             "num_train_epochs": args.num_epochs,
@@ -55,7 +53,7 @@ def main():
         }
         model = LlamaModel(args.model_type, args.model_name, args=model_args)
         train_data = load_data(args.train_file)
-        logger.debug('train_data: {}'.format(train_data[:10]))
+        logger.debug(f'train_data, size: {len(train_data)}, head top3: {train_data[:3]}')
         train_df = pd.DataFrame(train_data, columns=["text"])
         eval_df = train_df[:10]
         model.train_model(train_df, eval_data=eval_df)
