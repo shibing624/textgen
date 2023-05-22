@@ -497,11 +497,16 @@ class ChatGlmModel:
             inputs = self.tokenizer(batch, padding=True, return_tensors='pt').to(self.device)
             gen_kwargs = {
                 "max_new_tokens": max_length if max_length else self.args.max_length,
-                "num_beams": self.args.num_beams,
-                "do_sample": self.args.do_sample,
-                "top_p": self.args.top_p,
                 "temperature": self.args.temperature,
+                "top_p": self.args.top_p,
+                "top_k": self.args.top_k,
+                "do_sample": self.args.do_sample,
+                "repetition_penalty": self.args.repetition_penalty,
+                "length_penalty": self.args.length_penalty,
+                "num_beams": self.args.num_beams,
                 "eos_token_id": self.tokenizer.eos_token_id,
+                "pad_token_id": self.tokenizer.pad_token_id,
+                "num_return_sequences": self.args.num_return_sequences,
                 **kwargs
             }
             outputs = self.model.generate(**inputs, **gen_kwargs)
