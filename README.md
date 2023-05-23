@@ -215,10 +215,16 @@ python -m textgen/llama/merge_peft_adapter.py \
 ```
 --base_model_name_or_path：存放HF格式的底座模型权重和配置文件的目录
 --peft_model_path：中文LLaMA/Alpaca LoRA解压后文件所在目录，也可使用HF上的Lora模型名称，如`ziqingyang/chinese-alpaca-lora-7b`会自动下载对应模型
---output_type: 指定输出格式，可为pth或huggingface。若不指定，默认为pth
+--output_type: 指定输出格式，可为pth或huggingface。若不指定，默认为huggingface
 --output_dir：指定保存全量模型权重的目录，默认为./merged
 --offload_dir（可选）：对于低内存用户需要指定一个offload缓存路径
 ```
+
+#### 训练领域模型
+
+| Notebook     | Description |    |
+|:----------|:------------|------:|
+| [training_medical_model.ipynb](https://github.com/shibing624/textgen/blob/main/examples/llama/training_medical_model.ipynb)  | 训练医疗大模型     |[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shibing624/textgen/blob/main/examples/llama/training_medical_model.ipynb) |
 
 
 ### BLOOM 模型
@@ -565,6 +571,7 @@ output:
 3. 5万条英文ChatGPT指令Alpaca数据集：[50k English Stanford Alpaca dataset](https://github.com/tatsu-lab/stanford_alpaca#data-release)
 4. 2万条中文ChatGPT指令Alpaca数据集：[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
 5. 69万条中文指令Guanaco数据集(Belle50万条+Guanaco19万条)：[Chinese-Vicuna/guanaco_belle_merge_v1.0](https://huggingface.co/datasets/Chinese-Vicuna/guanaco_belle_merge_v1.0)
+6. 240万条中文医疗数据集(包括预训练数据和指令微调数据集)：[shibing624/medical](https://huggingface.co/datasets/shibing624/medical)
 
 <details>
 <summary>文本生成方法介绍</summary>
