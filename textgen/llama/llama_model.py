@@ -5,6 +5,7 @@
 
 modified from https://github.com/tloen/alpaca-lora/blob/main/finetune.py
 """
+import math
 import os
 import random
 import sys
@@ -28,7 +29,12 @@ from transformers import Trainer, TrainingArguments, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
 
 from textgen.config.model_args import LlamaArgs
-from textgen.llama.llama_utils import load_hf_dataset, LlamaDataset
+from textgen.llama.llama_utils import (
+    load_hf_instruction_dataset,
+    LlamaInstructionDataset,
+    LlamaPretrainingDataset,
+    load_hf_pretraining_dataset,
+)
 
 has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
@@ -42,9 +48,9 @@ MODEL_CLASSES = {
 class LlamaModel:
     def __init__(
             self,
-            model_type,
-            model_name,
-            lora_name=None,
+            model_type="llama",
+            model_name="shibing624/chinese-alpaca-plus-7b-hf",
+            peft_name=None,
             args=None,
             use_cuda=has_cuda,
             cuda_device=-1,
@@ -57,7 +63,7 @@ class LlamaModel:
         Args:
             model_type: The type of model (llama)
             model_name: The exact architecture and trained weights to use. This may be a Hugging Face Transformers compatible pre-trained model, a community model, or the path to a directory containing model files.
-            lora_name (optional): Lora name
+            peft_name (optional): Peft model name
             args (optional): Default args will be used if this parameter is not provided. If provided, it should be a dict containing the args that should be changed in the default args.
             use_cuda (optional): Use GPU if available. Setting to False will force model to use CPU only.
             cuda_device (int, optional): Specific GPU that should be used. Will use the first available GPU by default.
@@ -75,16 +81,17 @@ class LlamaModel:
             random.seed(self.args.manual_seed)
             np.random.seed(self.args.manual_seed)
             torch.manual_seed(self.args.manual_seed)
-            if self.args.n_gpu > 0:
+            if torch.cuda.is_available() > 0:
                 torch.cuda.manual_seed_all(self.args.manual_seed)
 
+        self.device_map = "auto"
         if use_cuda:
             if torch.cuda.is_available():
                 if cuda_device == -1:
                     self.device = torch.device("cuda")
-                    cuda_device = 0
                 else:
                     self.device = torch.device(f"cuda:{cuda_device}")
+                    self.device_map = {"": int(cuda_device)}
             else:
                 raise ValueError(
                     "'use_cuda' set to True when cuda is unavailable."
@@ -95,12 +102,15 @@ class LlamaModel:
                 self.device = torch.device("mps")
             else:
                 self.device = "cpu"
+                self.device_map = {"": "cpu"}
         logger.debug(f"Device: {self.device}")
         if not use_cuda:
             self.args.fp16 = False
             self.args.int8 = False
         world_size = int(os.environ.get("WORLD_SIZE", 1))
         self.ddp = world_size != 1
+        if self.ddp:
+            self.device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)}
 
         self.results = {}
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
@@ -113,8 +123,8 @@ class LlamaModel:
             config=config,
             load_in_8bit=self.args.int8,
             torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+            device_map=self.device_map,
         )
-        self.model.to(self.device)
 
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
@@ -130,15 +140,12 @@ class LlamaModel:
             self.args.model_name = model_name
 
         self.resize_model_embeddings(len(self.tokenizer))
-        self.lora_name = lora_name
-        if self.args.use_lora:
-            self.load_lora()
+        self.peft_name = peft_name
+        if self.args.use_peft:
+            self.load_peft_model()
 
         self.tokenizer.padding_side = "left"
         self.tokenizer.pad_token_id = 0  # unk. we want this to be different from the eos token
-        self.model.config.pad_token_id = 0  # unk
-        self.model.config.bos_token_id = 1
-        self.model.config.eos_token_id = 2
 
     def resize_model_embeddings(self, tokenizer_vocab_size):
         """Resizes model embeddings to match the tokenizer vocab size."""
@@ -203,8 +210,7 @@ class LlamaModel:
                 " Set args.overwrite_output_dir = True to overcome.".format(output_dir)
             )
         # update model train config
-        if self.device != 'cpu':
-            self.model.gradient_checkpointing_enable()
+        self.model.gradient_checkpointing_enable()
         self.model.enable_input_require_grads()
         if not self.ddp and torch.cuda.device_count() > 1:
             # keeps Trainer from trying its own DataParallelism when more than 1 gpu is available
@@ -213,17 +219,75 @@ class LlamaModel:
         self.model.config.use_cache = False
         resume_from_checkpoint = self.args.resume_from_checkpoint
 
-        # setup peft, add lora config
-        if self.args.use_lora:
-            peft_config = LoraConfig(
-                task_type=TaskType.CAUSAL_LM,
-                inference_mode=False,
-                r=self.args.lora_r,
-                lora_alpha=self.args.lora_alpha,
-                lora_dropout=self.args.lora_dropout,
-                target_modules=self.args.lora_target_modules,
-                bias=self.args.lora_bias,
-            )
+        # setup peft
+        if self.args.use_peft:
+            peft_type = self.args.peft_type.upper()
+            logger.info(f"Using PEFT type: {peft_type}")
+            # add peft config
+            if peft_type == 'LORA':
+                peft_config = LoraConfig(
+                    task_type=TaskType.CAUSAL_LM,
+                    inference_mode=False,
+                    r=self.args.lora_r,
+                    lora_alpha=self.args.lora_alpha,
+                    lora_dropout=self.args.lora_dropout,
+                    target_modules=self.args.lora_target_modules,
+                    bias=self.args.lora_bias,
+                )
+            elif peft_type == 'ADALORA':
+                from peft import AdaLoraConfig
+
+                peft_config = AdaLoraConfig(
+                    init_r=self.args.adalora_init_r,
+                    r=self.args.lora_r,
+                    beta1=self.args.lora_beta,
+                    beta2=self.args.lora_beta,
+                    tinit=self.args.adalora_tinit,
+                    tfinal=self.args.adalora_tfinal,
+                    deltaT=self.args.adalora_delta_t,
+                    lora_alpha=self.args.lora_alpha,
+                    lora_dropout=self.args.lora_dropout,
+                    target_modules=self.args.lora_target_modules,
+                    task_type=TaskType.CAUSAL_LM,
+                    inference_mode=False,
+                )
+            elif peft_type == 'PROMPT_TUNING':
+                from peft import PromptTuningConfig
+
+                peft_config = PromptTuningConfig(
+                    task_type=TaskType.CAUSAL_LM,
+                    num_virtual_tokens=self.args.num_virtual_tokens,
+                )
+            elif peft_type == 'P_TUNING':
+                from peft import PromptEncoderConfig
+
+                peft_config = PromptEncoderConfig(
+                    task_type=TaskType.CAUSAL_LM,
+                    num_virtual_tokens=self.args.num_virtual_tokens,
+                    encoder_hidden_size=self.args.prompt_encoder_hidden_size
+                )
+            elif peft_type == 'PREFIX_TUNING':
+                from peft import PrefixTuningConfig
+
+                peft_config = PrefixTuningConfig(
+                    task_type=TaskType.CAUSAL_LM,
+                    num_virtual_tokens=self.args.num_virtual_tokens,
+                    encoder_hidden_size=self.args.prompt_encoder_hidden_size,
+                    prefix_projection=True,
+                )
+                self.model.gradient_checkpointing_disable()
+            else:
+                logger.warning(f"Wrong type of peft. Set to default lora")
+                peft_config = LoraConfig(
+                    task_type=TaskType.CAUSAL_LM,
+                    inference_mode=False,
+                    r=self.args.lora_r,
+                    lora_alpha=self.args.lora_alpha,
+                    lora_dropout=self.args.lora_dropout,
+                    target_modules=self.args.lora_target_modules,
+                    bias=self.args.lora_bias,
+                )
+
             if self.args.int8:
                 self.model = prepare_model_for_int8_training(self.model)
             self.model = get_peft_model(self.model, peft_config)
@@ -247,7 +311,7 @@ class LlamaModel:
 
             self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
         else:
-            logger.warning("Now full model params fine-tune, which is slow, set `use_lora=True` for lora fine-tune.")
+            logger.warning("Now full model params fine-tune, which is slow, set `use_peft=True` for lora fine-tune.")
         os.makedirs(output_dir, exist_ok=True)
 
         # load dataset
@@ -262,10 +326,10 @@ class LlamaModel:
 
         # start train
         training_args = TrainingArguments(
-            output_dir=self.args.output_dir,
+            output_dir=output_dir,
             learning_rate=self.args.learning_rate,
             num_train_epochs=self.args.num_train_epochs,
-            logging_dir=f"{self.args.output_dir}/logs",
+            logging_dir=f"{output_dir}/logs",
             logging_steps=self.args.logging_steps,
             max_steps=self.args.max_steps,
             per_device_train_batch_size=self.args.per_device_train_batch_size,
@@ -294,13 +358,24 @@ class LlamaModel:
         )
         logger.info(f"Training/evaluation parameters {training_args}")
 
-        data_collator = DataCollatorForSeq2Seq(
-            self.tokenizer,
-            return_tensors="pt",
-            padding='max_length',
-            max_length=self.args.max_seq_length + self.args.max_length
-        )
-        trainer = FinetuneTrainer(
+        # Initialize our Trainer
+        if self.args.is_pretraining:
+            # For pretraining, we use a special data collator that simply regroups
+            data_collator = DataCollatorForSeq2Seq(
+                self.tokenizer,
+                pad_to_multiple_of=self.args.pad_to_multiple_of,
+                return_tensors="pt",
+                padding=True
+            )
+        else:
+            # For fine-tuning, padding to max length
+            data_collator = DataCollatorForSeq2Seq(
+                self.tokenizer,
+                return_tensors="pt",
+                padding="max_length",
+                max_length=self.args.max_seq_length + self.args.max_length
+            )
+        trainer = ModelSaveTrainer(
             model=self.model,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset if eval_data is not None else None,
@@ -315,17 +390,22 @@ class LlamaModel:
 
         logger.info("*** Train ***")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
-        self.handle_metrics("train", metrics, self.args.output_dir)
+        self.handle_metrics("train", metrics, output_dir)
         self.results.update(metrics)
         self.save_model(model=self.model)
 
         if eval_data is not None:
             logger.info("*** Evaluate ***")
-            if torch.cuda.is_available() and self.args.fp16:
-                self.model = self.model.half().cuda()
+            if self.args.fp16:
+                self.model.half()
             metrics = trainer.evaluate(metric_key_prefix="eval")
+            try:
+                perplexity = math.exp(metrics["eval_loss"])
+            except OverflowError:
+                perplexity = float("inf")
+            metrics["perplexity"] = perplexity
             logger.debug(f"eval metrics: {metrics}")
-            self.handle_metrics("eval", metrics, self.args.output_dir)
+            self.handle_metrics("eval", metrics, output_dir)
             self.results.update(metrics)
 
         if verbose:
@@ -356,32 +436,35 @@ class LlamaModel:
             for key in sorted(metrics.keys()):
                 writer.write("{} = {}\n".format(key, str(metrics[key])))
 
-    def load_lora(self):
-        """Load lora model"""
-        if self.lora_name:
-            if os.path.isdir(self.lora_name) and os.path.exists(
-                    os.path.join(self.lora_name, "tokenizer_config.json")):
+    def load_peft_model(self):
+        """Load peft model"""
+        if self.peft_name:
+            if os.path.isdir(self.peft_name) and os.path.exists(
+                    os.path.join(self.peft_name, "tokenizer_config.json")):
                 update_tokenizer = True
             else:
                 update_tokenizer = False
-            if "ziqingyang/chinese" in self.lora_name or update_tokenizer:
-                self.tokenizer = LlamaTokenizer.from_pretrained(self.lora_name)
+            if "ziqingyang/chinese" in self.peft_name or update_tokenizer:
+                self.tokenizer = LlamaTokenizer.from_pretrained(self.peft_name)
                 self.resize_model_embeddings(len(self.tokenizer))
             self.model = PeftModel.from_pretrained(
                 self.model,
-                self.lora_name,
+                self.peft_name,
                 torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+                device_map=self.device_map,
             )
-            logger.info(f"Loaded lora model from {self.lora_name}")
-        # Load from local
-        lora_path = os.path.join(self.args.output_dir, self.args.lora_bin_name)
-        if lora_path and os.path.exists(lora_path):
-            self.model = PeftModel.from_pretrained(
-                self.model,
-                self.args.output_dir,
-                torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
-            )
-            logger.info(f"Loaded lora model from {lora_path}")
+            logger.info(f"Loaded peft model from {self.peft_name}")
+        else:
+            # Load peft model from output_dir
+            peft_path = os.path.join(self.args.output_dir, self.args.peft_bin_name)
+            if peft_path and os.path.exists(peft_path):
+                self.model = PeftModel.from_pretrained(
+                    self.model,
+                    self.args.output_dir,
+                    torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+                    device_map=self.device_map,
+                )
+                logger.info(f"Loaded peft model from {peft_path}")
 
     @torch.no_grad()
     def predict(self, sentences: List[str], keep_prompt: bool = False, max_length: int = None, **kwargs):
@@ -419,6 +502,9 @@ class LlamaModel:
                 temperature=self.args.temperature,
                 top_p=self.args.top_p,
                 top_k=self.args.top_k,
+                do_sample=self.args.do_sample,
+                repetition_penalty=self.args.repetition_penalty,
+                length_penalty=self.args.length_penalty,
                 num_beams=self.args.num_beams,
                 eos_token_id=self.tokenizer.eos_token_id,
                 pad_token_id=self.tokenizer.pad_token_id,
@@ -484,20 +570,34 @@ class LlamaModel:
             os.makedirs(self.args.cache_dir, exist_ok=True)
 
         mode = "dev" if evaluate else "train"
-
-        if self.args.use_hf_datasets:
-            dataset = load_hf_dataset(data, tokenizer, self.args, mode)
-            return dataset
-        elif args.dataset_class:
-            CustomDataset = args.dataset_class
-            return CustomDataset(tokenizer, args, data, mode)
+        if self.args.is_pretraining:
+            if self.args.use_hf_datasets:
+                dataset = load_hf_pretraining_dataset(data, tokenizer, self.args, mode)
+                return dataset
+            elif args.dataset_class:
+                CustomDataset = args.dataset_class
+                return CustomDataset(tokenizer, args, data, mode)
+            else:
+                return LlamaPretrainingDataset(
+                    tokenizer,
+                    self.args,
+                    data,
+                    mode,
+                )
         else:
-            return LlamaDataset(
-                tokenizer,
-                self.args,
-                data,
-                mode,
-            )
+            if self.args.use_hf_datasets:
+                dataset = load_hf_instruction_dataset(data, tokenizer, self.args, mode)
+                return dataset
+            elif args.dataset_class:
+                CustomDataset = args.dataset_class
+                return CustomDataset(tokenizer, args, data, mode)
+            else:
+                return LlamaInstructionDataset(
+                    tokenizer,
+                    self.args,
+                    data,
+                    mode,
+                )
 
     def save_model(
             self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
@@ -533,9 +633,9 @@ class LlamaModel:
         return args
 
 
-class FinetuneTrainer(Trainer):
+class ModelSaveTrainer(Trainer):
     """
-    Trainer for finetuning models
+    Trainer for lora models
     """
 
     def save_model(self, output_dir=None, _internal_call=False):

@@ -3,8 +3,9 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-import sys
 import argparse
+import sys
+
 from loguru import logger
 
 sys.path.append('../..')
@@ -23,8 +24,8 @@ def main():
     parser.add_argument('--output_dir', default='./outputs-alpaca/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=256, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=256, type=int, help='Output max sequence length')
-    parser.add_argument('--num_epochs', default=1.0, type=float, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=3, type=int, help='Batch size')
+    parser.add_argument('--num_epochs', default=20, type=float, help='Number of training epochs')
+    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
     model = None
@@ -32,7 +33,7 @@ def main():
     if args.do_train:
         logger.info('Loading data...')
         model_args = {
-            'use_lora': True,
+            'use_peft': True,
             "overwrite_output_dir": True,
             "max_seq_length": args.max_seq_length,
             "max_length": args.max_length,
@@ -41,14 +42,14 @@ def main():
             "output_dir": args.output_dir,
             "use_hf_datasets": True,
         }
-        model = ChatGlmModel(args.model_type, args.model_name,  args=model_args)
+        model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
 
         model.train_model(args.train_file)
     if args.do_predict:
         if model is None:
             model = ChatGlmModel(
                 args.model_type, args.model_name,
-                args={'use_lora': True, 'eval_batch_size': args.batch_size,
+                args={'use_peft': True, 'eval_batch_size': args.batch_size,
                       'output_dir': args.output_dir, "max_length": args.max_length, }
             )
         sents = [
@@ -77,7 +78,7 @@ def main():
         del model
 
         ref_model = ChatGlmModel(args.model_type, args.model_name,
-                                 args={'use_lora': False, 'eval_batch_size': args.batch_size})
+                                 args={'use_peft': False, 'eval_batch_size': args.batch_size})
         response = ref_model.predict(sents)
         print(response)
         response, history = ref_model.chat("给出三个保持健康的秘诀。", history=[])

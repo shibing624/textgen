@@ -4,16 +4,15 @@
 @description: 
 """
 import os
-import sys
+import traceback
+from queue import Queue
+from threading import Thread
+
 import gradio as gr
 import torch
 import transformers
 from peft import PeftModel
 from transformers import GenerationConfig, LlamaForCausalLM, LlamaTokenizer
-
-import traceback
-from queue import Queue
-from threading import Thread
 
 if torch.cuda.is_available():
     device = "cuda"
@@ -29,11 +28,11 @@ except:  # noqa: E722
 PROMPT_DICT = {
     "prompt_input": (
         "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n### Input:\n{input_text}\n\n### Response:"
+        "### Instruction:\n{instruction}\n### Input:\n{input_text}\n\n### Response:\n\n"
     ),
     "prompt_no_input": (
         "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n\n### Response:"
+        "### Instruction:\n{instruction}\n\n### Response:\n\n"
     ),
 }
 

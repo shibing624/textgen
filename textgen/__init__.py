@@ -4,7 +4,7 @@
 @description: 
 """
 
-__version__ = '0.2.4'
+__version__ = '0.2.6'
 
 from textgen.augment.text_augment import TextAugment
 
@@ -32,8 +32,11 @@ from textgen.t5.copyt5_utils import ZHTokenizer
 
 from textgen.unsup_generation.tgls_model import TglsModel
 
-from textgen.chatglm.chatglm_model import ChatGlmModel
 from textgen.config.model_args import ChatGlmArgs
+from textgen.chatglm.chatglm_model import ChatGlmModel
 
-from textgen.llama.llama_model import LlamaModel
 from textgen.config.model_args import LlamaArgs
+from textgen.llama.llama_model import LlamaModel
+
+from textgen.config.model_args import BloomArgs
+from textgen.bloom.bloom_model import BloomModel

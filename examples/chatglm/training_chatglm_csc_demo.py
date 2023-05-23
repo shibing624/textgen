@@ -65,7 +65,7 @@ def main():
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=1.0, type=float, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=2, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
     model = None
@@ -74,7 +74,7 @@ def main():
         logger.info('Loading data...')
         model_args = {
             "dataset_class": CscDataset,
-            'use_lora': True,
+            'use_peft': True,
             "overwrite_output_dir": True,
             "max_seq_length": args.max_seq_length,
             "max_length": args.max_length,
@@ -89,7 +89,7 @@ def main():
         if model is None:
             model = ChatGlmModel(
                 args.model_type, args.model_name,
-                args={'use_lora': True, 'eval_batch_size': args.batch_size,
+                args={'use_peft': True, 'eval_batch_size': args.batch_size,
                       'output_dir': args.output_dir, "max_length": args.max_length, }
             )
         sents = ['对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答：',

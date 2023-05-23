@@ -6,34 +6,34 @@
 modified from https://github.com/ymcui/Chinese-LLaMA-Alpaca/blob/main/scripts/merge_llama_with_chinese_lora.py
 
 Usage:
-python merge_llama_with_chinese_lora.py \
-    --base_model path/to/llama/model \
-    --lora_model path/to/first/lora/model [path/to/second/lora/model] \
+python merge_peft_adapter.py \
+    --base_model_name_or_path path/to/llama/model \
+    --peft_model_path path/to/first/lora/model [path/to/second/lora/model] \
     --output_type [pth|huggingface] \
     --output_dir path/to/output/dir
 """
 
 import argparse
+import gc
 import json
 import os
-import gc
-import torch
+
 import peft
+import torch
+from huggingface_hub import hf_hub_download
 from peft import PeftModel
 from transformers import LlamaForCausalLM, LlamaTokenizer
-from huggingface_hub import hf_hub_download
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--base_model', default=None, required=True,
-                    type=str, help="Please specify a base_model")
-parser.add_argument('--lora_model', default=None, required=True,
+parser.add_argument('--base_model_name_or_path', default=None, required=True, type=str, help="Base model name or path")
+parser.add_argument('--peft_model_path', default=None, required=True,
                     type=str,
                     help="Please specify LoRA models to be merged (ordered); use commas to separate multiple LoRA models.")
 parser.add_argument('--offload_dir', default=None, type=str,
                     help="(Optional) Please specify a temp folder for offloading (useful for low-RAM machines). Default None (disable offload).")
-parser.add_argument('--output_type', default='pth', choices=['pth', 'huggingface'], type=str,
+parser.add_argument('--output_type', default='huggingface', choices=['pth', 'huggingface'], type=str,
                     help="save the merged model in pth or huggingface format.")
-parser.add_argument('--output_dir', default='./', type=str)
+parser.add_argument('--output_dir', default='./merged', type=str)
 
 emb_to_model_size = {
     4096: '7B',
@@ -143,8 +143,12 @@ def save_shards(model_sd, num_shards: int):
                         splits = v.split(v.size(1) // num_shards, dim=1)
                     elif new_k == 'output.weight':
                         print(f"Processing {new_k}")
-                        splits = v.split(v.size(0) // num_shards, dim=0)
-
+                        if v.size(0) % num_shards == 0:
+                            splits = v.split(v.size(0) // num_shards, dim=0)
+                        else:
+                            size_list = [v.size(0) // num_shards] * num_shards
+                            size_list[-1] += v.size(0) % num_shards
+                            splits = v.split(size_list, dim=0)  # 13B: size_list == [24976,24977]
                     elif new_k == 'norm.weight':
                         print(f"Processing {new_k}")
                         splits = [v] * num_shards
@@ -199,10 +203,10 @@ def save_shards(model_sd, num_shards: int):
 
 
 if __name__ == '__main__':
-
     args = parser.parse_args()
-    base_model_path = args.base_model
-    lora_model_paths = [s.strip() for s in args.lora_model.split(',') if len(s.strip()) != 0]
+    print(args)
+    base_model_path = args.base_model_name_or_path
+    lora_model_paths = [s.strip() for s in args.peft_model_path.split(',') if s.strip()]
     output_dir = args.output_dir
     output_type = args.output_type
     offload_dir = args.offload_dir
@@ -228,7 +232,7 @@ if __name__ == '__main__':
             base_model_path,
             load_in_8bit=False,
             torch_dtype=torch.float16,
-            device_map={"": "cpu"},
+            device_map="auto",
         )
 
     ## infer the model size from the checkpoint
@@ -239,6 +243,7 @@ if __name__ == '__main__':
 
     lora_model = None
     lora_model_sd = None
+    tokenizer = None
     for lora_index, lora_model_path in enumerate(lora_model_paths):
         print(f"Loading LoRA {lora_model_path}")
         tokenizer = LlamaTokenizer.from_pretrained(lora_model_path)
@@ -253,7 +258,7 @@ if __name__ == '__main__':
             lora_model = PeftModel.from_pretrained(
                 base_model,
                 lora_model_path,
-                device_map={"": "cpu"},
+                device_map="auto",
                 torch_dtype=torch.float16,
             )
             assert torch.allclose(first_weight_old, first_weight)
@@ -298,8 +303,8 @@ if __name__ == '__main__':
 
     if output_type == 'huggingface':
         print("Saving to Hugging Face format...")
-        LlamaForCausalLM.save_pretrained(base_model, output_dir)  # , state_dict=deloreanized_sd)
-    else:  # output_type=='pth
+        LlamaForCausalLM.save_pretrained(base_model, output_dir)
+    else:  # output_type=='pth'
         print("Saving to pth format...")
 
         base_model_sd = base_model.state_dict()
@@ -315,3 +320,4 @@ if __name__ == '__main__':
         inv_freq = 1.0 / (base ** (torch.arange(0, dims_per_head, 2).float() / dims_per_head))
 
         save_shards(model_sd=base_model_sd, num_shards=num_shards)
+    print(f"Done! model saved to {output_dir}")

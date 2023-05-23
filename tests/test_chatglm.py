@@ -14,8 +14,8 @@ from textgen import ChatGlmArgs, ChatGlmModel
 def test_csc():
     from pycorrector.utils import eval
     model = ChatGlmModel(
-        'chatglm', "THUDM/chatglm-6b", lora_name="shibing624/chatglm-6b-csc-zh-lora",
-        args={'use_lora': True, 'eval_batch_size': 8, "max_length": 128}
+        'chatglm', "THUDM/chatglm-6b", peft_name="shibing624/chatglm-6b-csc-zh-lora",
+        args={'use_peft': True, 'eval_batch_size': 8, "max_length": 128}
     )
     sents = ['问：对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答：',
              '问：对下面中文拼写纠错：\n下个星期，我跟我朋唷打算去法国玩儿。\n答：']
@@ -35,7 +35,7 @@ def test_csc():
 
 
 def test_origin():
-    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b", args={'use_lora': False})
+    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b", args={'use_peft': False})
     response, history = m.chat("你好", history=[])
     print(response)
     assert len(response) > 0
@@ -45,7 +45,7 @@ def test_origin():
 
 
 def test_origin_int4():
-    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b-int4", args={'use_lora': False, "quantization_bit": None},
+    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b-int4", args={'use_peft': False, "quantization_bit": None},
                      cuda_device=0)
     response, history = m.chat("你好", history=[], max_length=20)
     print(response)
@@ -54,7 +54,7 @@ def test_origin_int4():
 
 def test_origin_int4_cpu():
     m = ChatGlmModel('chatglm', "THUDM/chatglm-6b-int4", use_cuda=False,
-                     args={'use_lora': False, "quantization_bit": None},
+                     args={'use_peft': False, "quantization_bit": None},
                      cuda_device=0)
     response, history = m.chat("你好", history=[], max_length=20)
     print(response)

@@ -6,13 +6,11 @@
 import math
 import os
 import random
-import re
 import sys
 from typing import List, Tuple
 
 import numpy as np
 import torch
-import torch.nn as nn
 from loguru import logger
 from peft import (
     get_peft_model,
@@ -23,26 +21,28 @@ from peft import (
     set_peft_model_state_dict,
 )
 from tqdm.auto import tqdm
-from transformers import Trainer, TrainingArguments, AutoTokenizer, AutoModel, AutoConfig
+from transformers import BloomForCausalLM, BloomTokenizerFast
+from transformers import GenerationConfig, DataCollatorForSeq2Seq
+from transformers import Trainer, TrainingArguments, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
 
-from textgen.chatglm.chatglm_utils import load_hf_dataset, ChatGlmDataset
-from textgen.config.model_args import ChatGlmArgs
+from textgen.bloom.bloom_utils import load_hf_dataset, BloomDataset
+from textgen.config.model_args import BloomArgs
 
 has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 MODEL_CLASSES = {
-    "chatglm": (AutoConfig, AutoModel, AutoTokenizer),
+    "bloom": (AutoConfig, BloomForCausalLM, BloomTokenizerFast),
 }
 
 
-class ChatGlmModel:
+class BloomModel:
     def __init__(
             self,
-            model_type="chatglm",
-            model_name="THUDM/chatglm-6b",
+            model_type="bloom",
+            model_name="bigscience/bloomz-560m",
             peft_name=None,
             args=None,
             use_cuda=has_cuda,
@@ -51,12 +51,12 @@ class ChatGlmModel:
     ):
 
         """
-        Initializes a ChatGLMModel model.
+        Initializes a BloomModel model.
 
         Args:
-            model_type: The type of model (chatglm)
+            model_type: The type of model (llama)
             model_name: The exact architecture and trained weights to use. This may be a Hugging Face Transformers compatible pre-trained model, a community model, or the path to a directory containing model files.
-            peft_name (optional): Lora name
+            peft_name (optional): Peft model name
             args (optional): Default args will be used if this parameter is not provided. If provided, it should be a dict containing the args that should be changed in the default args.
             use_cuda (optional): Use GPU if available. Setting to False will force model to use CPU only.
             cuda_device (int, optional): Specific GPU that should be used. Will use the first available GPU by default.
@@ -67,13 +67,14 @@ class ChatGlmModel:
 
         if isinstance(args, dict):
             self.args.update_from_dict(args)
-        elif isinstance(args, ChatGlmArgs):
+        elif isinstance(args, BloomArgs):
             self.args = args
+
         if self.args.manual_seed:
             random.seed(self.args.manual_seed)
             np.random.seed(self.args.manual_seed)
             torch.manual_seed(self.args.manual_seed)
-            if torch.cuda.is_available() > 0:
+            if torch.cuda.is_available():
                 torch.cuda.manual_seed_all(self.args.manual_seed)
 
         self.device_map = "auto"
@@ -96,10 +97,9 @@ class ChatGlmModel:
                 self.device = "cpu"
                 self.device_map = {"": "cpu"}
         logger.debug(f"Device: {self.device}")
-        if self.device == "cpu":
+        if not use_cuda:
             self.args.fp16 = False
             self.args.int8 = False
-
         world_size = int(os.environ.get("WORLD_SIZE", 1))
         self.ddp = world_size != 1
         if self.ddp:
@@ -109,64 +109,46 @@ class ChatGlmModel:
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
         if model_name is None:
             model_name = self.args.model_name_or_path
-        config = AutoConfig.from_pretrained(model_name, trust_remote_code=True, **kwargs)
+        config = AutoConfig.from_pretrained(model_name, **kwargs)
 
         self.model = model_class.from_pretrained(
             model_name,
             config=config,
-            trust_remote_code=True,
             load_in_8bit=self.args.int8,
             torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
             device_map=self.device_map,
         )
 
-        if self.args.quantization_bit:
-            logger.debug(f"Quantized to {self.args.quantization_bit} bit")
-            self.model = self.model.quantize(self.args.quantization_bit)
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
-            self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name, trust_remote_code=True)
+            self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name)
         else:
-            self.tokenizer = tokenizer_class.from_pretrained(model_name, trust_remote_code=True)
+            self.tokenizer = tokenizer_class.from_pretrained(model_name)
             self.args.tokenizer_name = self.args.model_name
 
         self.args.model_type = model_type
         if model_name is None:
-            self.args.model_name = "ChatGLM_from_scratch"
+            self.args.model_name = "Bloom_from_scratch"
         else:
             self.args.model_name = model_name
 
+        self.resize_model_embeddings(len(self.tokenizer))
         self.peft_name = peft_name
         if self.args.use_peft:
             self.load_peft_model()
 
-    def data_collator(self, batch):
-        """
-        Data collator that will dynamically pad the inputs received.
-            set padding side = left, pad on the left side of the sequences
-            if chat task, set prompt ids to -100 of the labels
-            if not, set labels = input_ids
-        """
-        len_ids = [len(example) for example in batch]
-        longest = max(len_ids)
-        input_ids = []
-        labels_list = []
-        for ids_l, example in sorted(zip(len_ids, batch), key=lambda x: -x[0]):
-            ids = list(example)
-            seq_len = ids.index(self.tokenizer.bos_token_id) + 1  # is equal to prompt length
-            pad_ids = ids + [self.tokenizer.pad_token_id] * (longest - ids_l)
-            tensor_ids = torch.LongTensor(pad_ids)
-            if not self.args.is_train_on_prompt:
-                labels = ([-100] * (seq_len - 1) + ids[(seq_len - 1):] + [-100] * (longest - ids_l))
-                labels = torch.LongTensor(labels)
-            else:
-                labels = tensor_ids
-
-            input_ids.append(tensor_ids)
-            labels_list.append(labels)
-        input_ids = torch.stack(input_ids)
-        labels = torch.stack(labels_list)
-        return {"input_ids": input_ids, "labels": labels}
+    def resize_model_embeddings(self, tokenizer_vocab_size):
+        """Resizes model embeddings to match the tokenizer vocab size."""
+        model_vocab_size = self.model.get_input_embeddings().weight.size(0)
+        if model_vocab_size != tokenizer_vocab_size:
+            logger.debug(
+                f"Resize model embeddings to fit tokenizer, "
+                f"Vocab of the base model: {model_vocab_size}, "
+                f"Vocab of the tokenizer: {tokenizer_vocab_size}"
+            )
+            self.model.resize_token_embeddings(tokenizer_vocab_size)
+            assert self.model.get_input_embeddings().weight.size(0) == len(self.tokenizer)
+            logger.debug(f"Model token embeddings updated, size: {len(self.tokenizer)}")
 
     def train_model(
             self,
@@ -220,10 +202,10 @@ class ChatGlmModel:
         # update model train config
         self.model.gradient_checkpointing_enable()
         self.model.enable_input_require_grads()
-        if torch.cuda.device_count() > 1:
+        if not self.ddp and torch.cuda.device_count() > 1:
+            # keeps Trainer from trying its own DataParallelism when more than 1 gpu is available
             self.model.is_parallelizable = True
             self.model.model_parallel = True
-        self.model.lm_head = CastOutputToFloat(self.model.lm_head)
         self.model.config.use_cache = False
         resume_from_checkpoint = self.args.resume_from_checkpoint
 
@@ -366,13 +348,19 @@ class ChatGlmModel:
         )
         logger.info(f"Training/evaluation parameters {training_args}")
 
+        data_collator = DataCollatorForSeq2Seq(
+            self.tokenizer,
+            return_tensors="pt",
+            padding="max_length",
+            max_length=self.args.max_seq_length + self.args.max_length
+        )
         trainer = ModelSaveTrainer(
             model=self.model,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset if eval_data is not None else None,
             args=training_args,
             tokenizer=self.tokenizer,
-            data_collator=self.data_collator,
+            data_collator=data_collator,
         )
 
         if self.args.enable_torch_compile:
@@ -428,8 +416,16 @@ class ChatGlmModel:
                 writer.write("{} = {}\n".format(key, str(metrics[key])))
 
     def load_peft_model(self):
-        """Load peft model."""
+        """Load peft model"""
         if self.peft_name:
+            if os.path.isdir(self.peft_name) and os.path.exists(
+                    os.path.join(self.peft_name, "tokenizer_config.json")):
+                update_tokenizer = True
+            else:
+                update_tokenizer = False
+            if update_tokenizer:
+                self.tokenizer = BloomTokenizerFast.from_pretrained(self.peft_name)
+                self.resize_model_embeddings(len(self.tokenizer))
             self.model = PeftModel.from_pretrained(
                 self.model,
                 self.peft_name,
@@ -449,28 +445,13 @@ class ChatGlmModel:
                 )
                 logger.info(f"Loaded peft model from {peft_path}")
 
-    def process_response(self, response):
-        """Process response text."""
-        response = response.strip()
-        punkts = [
-            [",", "，"],
-            ["!", "！"],
-            [":", "："],
-            [";", "；"],
-            ["\\?", "？"],
-        ]
-        for item in punkts:
-            response = re.sub(r"([\u4e00-\u9fff])%s" % item[0], r"\1%s" % item[1], response)
-            response = re.sub(r"%s([\u4e00-\u9fff])" % item[0], r"%s\1" % item[1], response)
-        return response
-
     @torch.no_grad()
     def predict(self, sentences: List[str], keep_prompt: bool = False, max_length: int = None, **kwargs):
         """
         Performs predictions on a list of text.
 
         Args:
-            sentences: A python list of text (str) to be sent to the model for prediction. 
+            sentences: A python list of text (str) to be sent to the model for prediction. Note that the prefix should be prepended to the text.
             keep_prompt: Whether to keep the prompt in the generated text.
             max_length: The maximum length of the generated text.
 
@@ -495,27 +476,28 @@ class ChatGlmModel:
                 disable=self.args.silent,
         ):
             inputs = self.tokenizer(batch, padding=True, return_tensors='pt').to(self.device)
-            gen_kwargs = {
-                "max_new_tokens": max_length if max_length else self.args.max_length,
-                "temperature": self.args.temperature,
-                "top_p": self.args.top_p,
-                "top_k": self.args.top_k,
-                "do_sample": self.args.do_sample,
-                "repetition_penalty": self.args.repetition_penalty,
-                "length_penalty": self.args.length_penalty,
-                "num_beams": self.args.num_beams,
-                "eos_token_id": self.tokenizer.eos_token_id,
-                "pad_token_id": self.tokenizer.pad_token_id,
-                "num_return_sequences": self.args.num_return_sequences,
-                **kwargs
-            }
-            outputs = self.model.generate(**inputs, **gen_kwargs)
-            for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs)):
+            generation_config = GenerationConfig(
+                max_new_tokens=max_length if max_length else self.args.max_length,
+                temperature=self.args.temperature,
+                top_p=self.args.top_p,
+                top_k=self.args.top_k,
+                do_sample=self.args.do_sample,
+                repetition_penalty=self.args.repetition_penalty,
+                length_penalty=self.args.length_penalty,
+                num_beams=self.args.num_beams,
+                eos_token_id=self.tokenizer.eos_token_id,
+                pad_token_id=self.tokenizer.pad_token_id,
+                num_return_sequences=self.args.num_return_sequences,
+                return_dict_in_generate=True,
+                output_scores=True,
+                **kwargs,
+            )
+            outputs = self.model.generate(**inputs, generation_config=generation_config)
+            for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs.sequences)):
                 # Decode text
-                text = self.tokenizer.decode(generated_sequence)
+                text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
                 prompt_len = len(prompt_text)
                 gen_text = text[prompt_len:]
-                gen_text = self.process_response(gen_text)
                 if keep_prompt:
                     total_sequence = prompt_text + gen_text
                 else:
@@ -552,7 +534,7 @@ class ChatGlmModel:
             self, data, evaluate=False, no_cache=False, verbose=True, silent=False
     ):
         """
-        Creates a ChatGLMDataset from data.
+        Creates a BloomDataset from data.
 
         Utility function for train() and eval() methods. Not intended to be used directly.
         """
@@ -575,7 +557,7 @@ class ChatGlmModel:
             CustomDataset = args.dataset_class
             return CustomDataset(tokenizer, args, data, mode)
         else:
-            return ChatGlmDataset(
+            return BloomDataset(
                 tokenizer,
                 self.args,
                 data,
@@ -585,7 +567,7 @@ class ChatGlmModel:
     def save_model(
             self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
     ):
-        """Save the model and the tokenizer to the `output_dir`."""
+        """Save the model and the tokenizer."""
         if not output_dir:
             output_dir = self.args.output_dir
         os.makedirs(output_dir, exist_ok=True)
@@ -611,23 +593,18 @@ class ChatGlmModel:
         self.args.save(output_dir)
 
     def _load_model_args(self, input_dir):
-        args = ChatGlmArgs()
+        args = BloomArgs()
         args.load(input_dir)
         return args
 
 
 class ModelSaveTrainer(Trainer):
-    """Save model trainer for ChatGlmModel"""
+    """
+    Trainer for save models
+    """
 
     def save_model(self, output_dir=None, _internal_call=False):
-        """Save the LoRA model"""
+        """Save the LoRA model."""
         os.makedirs(output_dir, exist_ok=True)
         torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
         self.model.save_pretrained(output_dir)
-
-
-class CastOutputToFloat(nn.Sequential):
-    """Cast the output of the model to float"""
-
-    def forward(self, x):
-        return super().forward(x).to(torch.float32)

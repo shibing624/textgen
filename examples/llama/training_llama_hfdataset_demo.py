@@ -3,8 +3,9 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-import sys
 import argparse
+import sys
+
 from loguru import logger
 
 sys.path.append('../..')
@@ -17,15 +18,15 @@ def main():
                         help='Dataset name (e.g. tatsu-lab/alpaca, shibing624/alpaca-zh, BelleGroup/train_1M_CN, '
                              'Chinese-Vicuna/guanaco_belle_merge_v1.0)')
     parser.add_argument('--model_type', default='llama', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='shibing624/chinese-alpaca-plus-7b', type=str,
+    parser.add_argument('--model_name', default='shibing624/chinese-alpaca-plus-7b-hf', type=str,
                         help='model name or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--output_dir', default='./outputs-alpaca/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=256, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=256, type=int, help='Output max sequence length')
-    parser.add_argument('--num_epochs', default=1.0, type=float, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=3, type=int, help='Batch size')
+    parser.add_argument('--num_epochs', default=20, type=float, help='Number of training epochs')
+    parser.add_argument('--batch_size', default=4, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
     model = None
@@ -33,7 +34,7 @@ def main():
     if args.do_train:
         logger.info('Loading data...')
         model_args = {
-            'use_lora': True,
+            'use_peft': True,
             "overwrite_output_dir": True,
             "max_seq_length": args.max_seq_length,
             "max_length": args.max_length,
@@ -49,12 +50,12 @@ def main():
         if model is None:
             model = LlamaModel(
                 args.model_type, args.model_name,
-                args={'use_lora': True, 'eval_batch_size': args.batch_size,
+                args={'use_peft': True, 'eval_batch_size': args.batch_size,
                       'output_dir': args.output_dir, "max_length": args.max_length, }
             )
 
         def generate_prompt(instruction):
-            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:"""
+            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:\n\n"""
 
         sents = [
             '用一句话描述地球为什么是独一无二的。',
@@ -70,15 +71,11 @@ def main():
             '经常吃烫的东西会罹患什么病？',
             '盐酸莫西沙星能否用于治疗肺炎？',
             '机场代码KIX代表的是哪个机场？',
+            '给出三个保持健康的秘诀',
+            '给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。',
         ]
         prompt_sents = [generate_prompt(sent) for sent in sents]
         response = model.predict(prompt_sents)
-        print(response)
-        response, history = model.chat("给出三个保持健康的秘诀。", history=[])
-        print(response)
-        response, history = model.chat(
-            "给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。\n",
-            history=history)
         print(response)
 
 

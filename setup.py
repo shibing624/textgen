@@ -7,7 +7,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='textgen',
-    version='0.2.4',
+    version='0.2.6',
     description='Text Generation Model',
     long_description=readme,
     long_description_content_type='text/markdown',
@@ -33,7 +33,6 @@ setup(
         'gensim>=4.0.0',
         'text2vec',
         'tensorboard',
-        'tensorboardX',
         'tqdm>=4.47.0',
         'pandas',
         'wandb>=0.10.32',
