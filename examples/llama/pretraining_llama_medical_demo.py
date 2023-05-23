@@ -21,18 +21,14 @@ def load_data(data, train_limit_size=10000):
     elif os.path.isdir(data):
         dataset = load_from_disk(data)
     else:
-        dataset = load_dataset(data)
+        dataset = load_dataset(data, 'finetune')
     logger.debug(dataset)
-
-    def add_text(example):
-        example["text"] = example["questions"][0][0] + ' ' + example["answers"][0]
-        return example
 
     if train_limit_size > 0:
         dataset_sample = dataset["train"].shuffle(seed=42).select(range(train_limit_size))
     else:
-        dataset_sample = dataset["train"]
-    all_datasets = dataset_sample.map(add_text)
+        dataset_sample = dataset["train"].shuffle(seed=42)
+    all_datasets = dataset_sample
     logger.debug(f"all_datasets size:{len(all_datasets)}, first line: {next(iter(all_datasets))}")
     data = []
     for example in all_datasets:
@@ -43,9 +39,9 @@ def load_data(data, train_limit_size=10000):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', default='FreedomIntelligence/huatuo_encyclopedia_qa', type=str,
+    parser.add_argument('--train_file', default='shibing624/medical', type=str,
                         help='Training data file')
-    parser.add_argument('--train_limit_size', default=-1, type=int, help='Training data limit size')
+    parser.add_argument('--train_limit_size', default=10000, type=int, help='Training data limit size')
     parser.add_argument('--model_type', default='llama', type=str, help='Transformers model type')
     parser.add_argument('--model_name', default='shibing624/chinese-llama-plus-13b-hf', type=str,
                         help='Transformers model or path')

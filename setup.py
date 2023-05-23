@@ -33,7 +33,6 @@ setup(
         'gensim>=4.0.0',
         'text2vec',
         'tensorboard',
-        'tensorboardX',
         'tqdm>=4.47.0',
         'pandas',
         'wandb>=0.10.32',

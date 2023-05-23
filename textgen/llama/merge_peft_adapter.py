@@ -31,7 +31,7 @@ parser.add_argument('--peft_model_path', default=None, required=True,
                     help="Please specify LoRA models to be merged (ordered); use commas to separate multiple LoRA models.")
 parser.add_argument('--offload_dir', default=None, type=str,
                     help="(Optional) Please specify a temp folder for offloading (useful for low-RAM machines). Default None (disable offload).")
-parser.add_argument('--output_type', default='pth', choices=['pth', 'huggingface'], type=str,
+parser.add_argument('--output_type', default='huggingface', choices=['pth', 'huggingface'], type=str,
                     help="save the merged model in pth or huggingface format.")
 parser.add_argument('--output_dir', default='./merged', type=str)
 

@@ -354,7 +354,7 @@ class BloomModel:
             padding="max_length",
             max_length=self.args.max_seq_length + self.args.max_length
         )
-        trainer = FinetuneTrainer(
+        trainer = ModelSaveTrainer(
             model=self.model,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset if eval_data is not None else None,
@@ -598,9 +598,9 @@ class BloomModel:
         return args
 
 
-class FinetuneTrainer(Trainer):
+class ModelSaveTrainer(Trainer):
     """
-    Trainer for finetune models
+    Trainer for save models
     """
 
     def save_model(self, output_dir=None, _internal_call=False):

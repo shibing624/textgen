@@ -366,7 +366,7 @@ class ChatGlmModel:
         )
         logger.info(f"Training/evaluation parameters {training_args}")
 
-        trainer = FinetuneTrainer(
+        trainer = ModelSaveTrainer(
             model=self.model,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset if eval_data is not None else None,
@@ -616,8 +616,8 @@ class ChatGlmModel:
         return args
 
 
-class FinetuneTrainer(Trainer):
-    """Finetune trainer for ChatGlmModel"""
+class ModelSaveTrainer(Trainer):
+    """Save model trainer for ChatGlmModel"""
 
     def save_model(self, output_dir=None, _internal_call=False):
         """Save the LoRA model"""
