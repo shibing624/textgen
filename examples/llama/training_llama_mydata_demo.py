@@ -75,9 +75,10 @@ def main():
         }
         model = LlamaModel(args.model_type, args.model_name, args=model_args)
         train_data = load_data(args.train_data_dir)
-        logger.debug('train_data: {}'.format(train_data[:10]))
+        logger.debug('train_data: {}'.format(train_data[:3]))
         train_df = pd.DataFrame(train_data, columns=["instruction", "input", "output"])
         eval_df = train_df[:10]
+        train_df = train_df[10:]
         model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:

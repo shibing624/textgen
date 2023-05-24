@@ -40,6 +40,7 @@ def main():
         logger.info('Loading data...')
         model_args = {
             "is_pretraining": True,
+            "block_size": args.block_size,
             "use_peft": True,
             "reprocess_input_data": True,
             "overwrite_output_dir": True,
@@ -56,6 +57,7 @@ def main():
         logger.debug(f'train_data, size: {len(train_data)}, head top3: {train_data[:3]}')
         train_df = pd.DataFrame(train_data, columns=["text"])
         eval_df = train_df[:10]
+        train_df = train_df[10:]
         model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:

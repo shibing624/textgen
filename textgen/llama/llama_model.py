@@ -139,13 +139,14 @@ class LlamaModel:
         else:
             self.args.model_name = model_name
 
+        self.tokenizer.padding_side = "left"
+        self.tokenizer.pad_token_id = 0  # unk. we want this to be different from the eos token
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         self.resize_model_embeddings(len(self.tokenizer))
         self.peft_name = peft_name
         if self.args.use_peft:
             self.load_peft_model()
-
-        self.tokenizer.padding_side = "left"
-        self.tokenizer.pad_token_id = 0  # unk. we want this to be different from the eos token
 
     def resize_model_embeddings(self, tokenizer_vocab_size):
         """Resizes model embeddings to match the tokenizer vocab size."""

@@ -47,7 +47,8 @@ def main():
                         help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--output_dir', default='./outputs-pretraining-medical/', type=str, help='Model output directory')
+    parser.add_argument('--output_dir', default='./outputs-pretraining-medical/', type=str,
+                        help='Model output directory')
     parser.add_argument('--block_size', default=1024, type=int, help='Block size for training')
     parser.add_argument('--num_epochs', default=2, type=float, help='Number of training epochs')
     parser.add_argument('--batch_size', default=2, type=int, help='Batch size')
@@ -61,6 +62,7 @@ def main():
         logger.info('Loading data...')
         model_args = {
             "is_pretraining": True,
+            "block_size": args.block_size,
             "use_peft": True,
             "reprocess_input_data": True,
             "overwrite_output_dir": True,
@@ -77,6 +79,7 @@ def main():
         logger.debug(f'train_data, size: {len(train_data)}, head top3: {train_data[:3]}')
         train_df = pd.DataFrame(train_data, columns=["text"])
         eval_df = train_df[:10]
+        train_df = train_df[10:]
         model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:
