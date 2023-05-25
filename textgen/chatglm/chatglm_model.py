@@ -364,7 +364,8 @@ class ChatGlmModel:
             f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}, "
             + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
         )
-        logger.info(f"Training/evaluation parameters {training_args}")
+        if training_args.local_rank <= 0:
+            logger.info(f"Training/evaluation parameters {training_args}")
 
         trainer = ModelSaveTrainer(
             model=self.model,
@@ -399,7 +400,7 @@ class ChatGlmModel:
             self.handle_metrics("eval", metrics, output_dir)
             self.results.update(metrics)
 
-        if verbose:
+        if verbose and training_args.local_rank <= 0:
             logger.debug(f"metrics: {self.results}")
             logger.info(
                 " Training of {} model complete. Saved to {}.".format(
