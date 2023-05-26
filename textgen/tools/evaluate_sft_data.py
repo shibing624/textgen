@@ -94,16 +94,19 @@ if __name__ == '__main__':
     args = parser.parse_args()
     logger.info(args)
     data_list = load_jsonl(args.input_file)
-    print('data_list:', data_list[:3])
+    logger.info(f'data size: {len(data_list)}, first data: {data_list[0]}')
     eval_prompt = """你需要研究评价标准来对模型回答给出分数，满分为1分，最低分为0分。请按照"得分:"这样的形式输出分数。评价标准要求模型回答语句通顺，符合问题要求，同时是真实且没有恶意的。\n"""
     prompts = generate_prompt(data_list, eval_prompt)
-    print('first prompt:', prompts[0])
+    logger.debug(f"first prompt: {prompts[0]}")
 
     res = []
-    for i, (data, c) in tqdm(enumerate(zip(data_list, prompts))):
-        r = get_chatgpt_response(c, args.model_name, args.max_tokens, args.temperature)
-        out_dict = {'instruction': data['instruction'], 'input': data['input'], 'output': data['output'], 'score': r}
-        if r:
-            res.append(out_dict)
-    print('save all')
+    try:
+        for i, (data, c) in tqdm(enumerate(zip(data_list, prompts))):
+            r = get_chatgpt_response(c, args.model_name, args.max_tokens, args.temperature)
+            out_dict = {'instruction': data['instruction'], 'input': data['input'], 'output': data['output'],
+                        'score': r}
+            if r:
+                res.append(out_dict)
+    except KeyboardInterrupt:
+        logger.warning('KeyboardInterrupt')
     save_jsonl(res, args.output_file)

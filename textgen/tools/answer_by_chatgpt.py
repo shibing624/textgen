@@ -93,10 +93,12 @@ if __name__ == '__main__':
     print('first prompt:', prompts[0])
 
     res = []
-    for c in tqdm(prompts):
-        r = get_chatgpt_response(c, args.model_name)
-        out_dict = {'instruction': c, 'input': '', 'output': r}
-        if r:
-            res.append(out_dict)
-    print('save all')
+    try:
+        for c in tqdm(prompts):
+            r = get_chatgpt_response(c, args.model_name)
+            out_dict = {'instruction': c, 'input': '', 'output': r}
+            if r:
+                res.append(out_dict)
+    except KeyboardInterrupt:
+        logger.warning('KeyboardInterrupt')
     save_jsonl(res, args.output_file)
