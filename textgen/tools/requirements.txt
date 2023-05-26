@@ -1,0 +1,3 @@
+shortuuid
+tenacity
+openai
