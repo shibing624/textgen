@@ -19,7 +19,6 @@ from tqdm import tqdm
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 REQ_TIME_GAP = 3
-MAX_API_RETRY = 2
 
 
 def openai_reply(content, model_name, max_tokens, temperature):
@@ -35,24 +34,21 @@ def openai_reply(content, model_name, max_tokens, temperature):
     return response
 
 
-@retry(wait=wait_random_exponential(min=1, max=5), stop=stop_after_attempt(10))
+@retry(wait=wait_random_exponential(min=1, max=3), stop=stop_after_attempt(3))
 def completion_with_backoff(**kwargs):
-    # 重试间隔时间1到5秒，重试次数10
+    # 重试间隔时间1到3秒，重试次数3
     return openai_reply(**kwargs)
 
 
-def get_chatgpt_res(content, model_name, max_tokens, temperature):
-    response = ''
-    for i in range(MAX_API_RETRY):
-        try:
-            response = completion_with_backoff(content, model_name, max_tokens, temperature)
-            logger.debug(f"Successfully get chatgpt response, content:{content}, res:{res}")
-            time.sleep(REQ_TIME_GAP)
-            return response
-        except Exception as e:
-            logger.error(e)
-            time.sleep(min(5 * (i + 1), 100))
-    logger.error(f"Failed after {MAX_API_RETRY} retries.")
+def get_chatgpt_response(content, model_name, max_tokens, temperature):
+    try:
+        response = str(completion_with_backoff(content=content, model_name=model_name, max_tokens=max_tokens,
+                                               temperature=temperature))
+        logger.debug(f"Successfully get chatgpt response, content:{content}, res:{response}")
+    except Exception as e:
+        logger.error(e)
+        response = ''
+    time.sleep(REQ_TIME_GAP)
     return response
 
 
@@ -93,7 +89,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_file', default='./seed_medical_sft_data.jsonl', type=str, help='Input data file')
     parser.add_argument('--output_file', default='./scores.jsonl', type=str, help='Output file')
     parser.add_argument('--model_name', default='gpt-3.5-turbo', type=str, help='gpt-3.5-turbo or gpt-4')
-    parser.add_argument('--max_tokens', default=512, type=int, help='Output max sequence length')
+    parser.add_argument('--max_tokens', default=1024, type=int, help='Output max sequence length')
     parser.add_argument('--temperature', default=0.2, type=float, help='Number of training epochs')
     args = parser.parse_args()
     logger.info(args)
@@ -104,8 +100,8 @@ if __name__ == '__main__':
     print('first prompt:', prompts[0])
 
     res = []
-    for data, c in tqdm(zip(data_list, prompts)):
-        r = get_chatgpt_res(c, args.model_name, args.max_tokens, args.temperature)
+    for i, (data, c) in tqdm(enumerate(zip(data_list, prompts))):
+        r = get_chatgpt_response(c, args.model_name, args.max_tokens, args.temperature)
         out_dict = {'instruction': data['instruction'], 'input': data['input'], 'output': data['output'], 'score': r}
         if r:
             res.append(out_dict)
