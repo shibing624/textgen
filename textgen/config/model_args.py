@@ -342,8 +342,9 @@ class ChatGlmArgs(ModelArgs):
     dataset_class: Dataset = None
     learning_rate: float = 2e-5
     fp16: bool = True
+    bf16: bool = False
     int8: bool = False
-    quantization_bit: int = None  # if use quantization bit, set 4, else None
+    int4: bool = False
     debug: bool = False
     max_seq_length: int = 256  # max length of input sequence
     max_length = 384  # max length of the sequence to be generated
@@ -408,7 +409,6 @@ class LlamaArgs(ModelArgs):
     bf16: bool = False
     int8: bool = False
     int4: bool = False
-    quantization_bit: int = None  # if use quantization bit, set 4, else None
     debug: bool = False
     max_seq_length: int = 256  # max length of input sequence
     max_length = 384  # max length of the sequence to be generated
@@ -472,8 +472,9 @@ class BloomArgs(ModelArgs):
     dataset_class: Dataset = None
     learning_rate: float = 2e-5
     fp16: bool = True
+    bf16: bool = False
     int8: bool = False
-    quantization_bit: int = None  # if use quantization bit, set 4, else None
+    int4: bool = False
     debug: bool = False
     max_seq_length: int = 256  # max length of input sequence
     max_length = 384  # max length of the sequence to be generated

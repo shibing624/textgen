@@ -19,6 +19,7 @@ from peft import (
     PeftModel,
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
+    get_peft_model_state_dict,
 )
 from tqdm.auto import tqdm
 from transformers import BloomForCausalLM, BloomTokenizerFast
@@ -115,7 +116,7 @@ class BloomModel:
             model_name,
             config=config,
             load_in_8bit=self.args.int8,
-            torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+            torch_dtype=(torch.float16 if self.args.fp16 else (torch.bfloat16 if self.args.bf16 else torch.float32)),
             device_map=self.device_map,
         )
 
@@ -149,6 +150,24 @@ class BloomModel:
             self.model.resize_token_embeddings(tokenizer_vocab_size)
             assert self.model.get_input_embeddings().weight.size(0) == len(self.tokenizer)
             logger.debug(f"Model token embeddings updated, size: {len(self.tokenizer)}")
+
+    def find_all_linear_names(self, int4=False, int8=False):
+        cls = torch.nn.Linear
+        if int4 or int8:
+            import bitsandbytes as bnb
+            if int4:
+                cls = bnb.nn.Linear4bit
+            elif int8:
+                cls = bnb.nn.Linear8bitLt
+        lora_module_names = set()
+        for name, module in self.model.named_modules():
+            if isinstance(module, cls):
+                names = name.split('.')
+                lora_module_names.add(names[0] if len(names) == 1 else names[-1])
+
+        if 'lm_head' in lora_module_names:  # needed for 16-bit
+            lora_module_names.remove('lm_head')
+        return list(lora_module_names)
 
     def train_model(
             self,
@@ -208,6 +227,8 @@ class BloomModel:
             self.model.model_parallel = True
         self.model.config.use_cache = False
         resume_from_checkpoint = self.args.resume_from_checkpoint
+        if 'all' in self.args.lora_target_modules:
+            self.args.lora_target_modules = self.find_all_linear_names(self.args.int4, self.args.int8)
 
         # setup peft
         if self.args.use_peft:
@@ -280,8 +301,8 @@ class BloomModel:
 
             if self.args.int8:
                 self.model = prepare_model_for_int8_training(self.model)
-            self.model = get_peft_model(self.model, peft_config)
 
+            old_checkpoint_name = None
             if resume_from_checkpoint:
                 # Check the available weights and load them
                 checkpoint_name = os.path.join(resume_from_checkpoint, "pytorch_model.bin")  # Full checkpoint
@@ -294,11 +315,19 @@ class BloomModel:
                 # The two files above have a different name depending on how they were saved, but are actually the same.
                 if os.path.exists(checkpoint_name):
                     logger.info(f"Restarting from {checkpoint_name}")
-                    adapters_weights = torch.load(checkpoint_name)
-                    set_peft_model_state_dict(self.model, adapters_weights)
+                    old_checkpoint_name = checkpoint_name
                 else:
                     logger.warning(f"Checkpoint {checkpoint_name} not found")
 
+            if old_checkpoint_name:
+                adapters_weights = torch.load(old_checkpoint_name)
+                set_peft_model_state_dict(self.model, adapters_weights)
+                for name, param in self.model.named_parameters():
+                    if 'lora' in name:
+                        logger.debug(f"Loaded {name}, param {param.sum()}")
+            else:
+                logger.info(f"Initializing LoRA model from scratch")
+                self.model = get_peft_model(self.model, peft_config)
             self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
         else:
             logger.warning("Now full model params fine-tune, which is slow, set `use_peft=True` for lora fine-tune.")
@@ -355,18 +384,33 @@ class BloomModel:
             padding="max_length",
             max_length=self.args.max_seq_length + self.args.max_length
         )
-        trainer = ModelSaveTrainer(
-            model=self.model,
-            train_dataset=train_dataset,
-            eval_dataset=eval_dataset if eval_data is not None else None,
-            args=training_args,
-            tokenizer=self.tokenizer,
-            data_collator=data_collator,
-        )
+        if self.args.use_peft:
+            trainer = SavePeftModelTrainer(
+                model=self.model,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset if eval_data is not None else None,
+                args=training_args,
+                tokenizer=self.tokenizer,
+                data_collator=data_collator,
+            )
+        else:
+            trainer = Trainer(
+                model=self.model,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset if eval_data is not None else None,
+                args=training_args,
+                tokenizer=self.tokenizer,
+                data_collator=data_collator,
+            )
 
-        if self.args.enable_torch_compile:
-            if torch.__version__ >= "2" and sys.platform != "win32":
-                self.model = torch.compile(self.model)
+        if self.args.enable_torch_compile and torch.__version__ >= "2" and sys.platform != "win32":
+            self.model = torch.compile(self.model)
+
+        if self.args.int8 or self.args.int4:
+            old_state_dict = self.model.state_dict
+            self.model.state_dict = (
+                lambda self, *_, **__: get_peft_model_state_dict(self, old_state_dict())
+            ).__get__(self.model, type(self.model))
 
         logger.info("*** Train ***")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
@@ -599,7 +643,7 @@ class BloomModel:
         return args
 
 
-class ModelSaveTrainer(Trainer):
+class SavePeftModelTrainer(Trainer):
     """
     Trainer for save models
     """

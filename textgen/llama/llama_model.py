@@ -123,7 +123,6 @@ class LlamaModel:
             model_name,
             config=config,
             load_in_8bit=self.args.int8,
-            load_in_4bit=self.args.int4,
             torch_dtype=(torch.float16 if self.args.fp16 else (torch.bfloat16 if self.args.bf16 else torch.float32)),
             device_map=self.device_map,
         )
@@ -350,7 +349,7 @@ class LlamaModel:
                     if 'lora' in name:
                         logger.debug(f"Loaded {name}, param {param.sum()}")
             else:
-                logger.debug(f"Initializing LoRA model from scratch")
+                logger.info(f"Initializing LoRA model from scratch")
                 self.model = get_peft_model(self.model, peft_config)
             self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
         else:
