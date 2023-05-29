@@ -112,12 +112,13 @@ class ChatGlmModel:
             model_name = self.args.model_name_or_path
         config = AutoConfig.from_pretrained(model_name, trust_remote_code=True, **kwargs)
 
+        self.torch_dtype = torch.float16 if self.args.fp16 else (torch.bfloat16 if self.args.bf16 else torch.float32)
         self.model = model_class.from_pretrained(
             model_name,
             config=config,
             trust_remote_code=True,
             load_in_8bit=self.args.int8,
-            torch_dtype=(torch.float16 if self.args.fp16 else (torch.bfloat16 if self.args.bf16 else torch.float32)),
+            torch_dtype=self.torch_dtype,
             device_map=self.device_map,
         )
 
@@ -321,6 +322,8 @@ class ChatGlmModel:
             if self.args.int8:
                 self.model = prepare_model_for_int8_training(self.model)
 
+            if isinstance(self.model, PeftModel):
+                self.model = self.model.merge_and_unload()
             self.model = get_peft_model(self.model, peft_config)
 
             if resume_from_checkpoint:
@@ -472,7 +475,7 @@ class ChatGlmModel:
             self.model = PeftModel.from_pretrained(
                 self.model,
                 self.peft_name,
-                torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+                torch_dtype=self.torch_dtype,
                 device_map=self.device_map,
             )
             logger.info(f"Loaded peft model from {self.peft_name}")
@@ -483,7 +486,7 @@ class ChatGlmModel:
                 self.model = PeftModel.from_pretrained(
                     self.model,
                     self.args.output_dir,
-                    torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+                    torch_dtype=self.torch_dtype,
                     device_map=self.device_map,
                 )
                 logger.info(f"Loaded peft model from {peft_path}")
