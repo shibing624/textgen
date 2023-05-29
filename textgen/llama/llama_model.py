@@ -508,6 +508,7 @@ class LlamaModel:
                 length_penalty=self.args.length_penalty,
                 num_beams=self.args.num_beams,
                 eos_token_id=self.tokenizer.eos_token_id,
+                pad_token_id=self.tokenizer.pad_token_id,
                 num_return_sequences=self.args.num_return_sequences,
                 return_dict_in_generate=True,
                 output_scores=True,
