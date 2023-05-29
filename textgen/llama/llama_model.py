@@ -20,7 +20,6 @@ from peft import (
     TaskType,
     PeftModel,
     prepare_model_for_int8_training,
-    set_peft_model_state_dict,
     get_peft_model_state_dict,
 )
 from tqdm.auto import tqdm
@@ -141,22 +140,10 @@ class LlamaModel:
             self.args.model_name = model_name
 
         self.tokenizer.padding_side = "left"
-        if self.tokenizer._pad_token is None:
+        if self.tokenizer.pad_token is None:
             self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         self.resize_model_embeddings(len(self.tokenizer))
 
-        # LLaMA tokenizer may not have correct special tokens set.
-        # Check and add them if missing to prevent them from being parsed into different tokens.
-        if self.tokenizer.eos_token_id != self.model.config.eos_token_id or \
-                self.tokenizer.pad_token_id != self.model.config.pad_token_id or \
-                self.tokenizer.unk_token_id != self.model.config.unk_token_id:
-            self.tokenizer.add_special_tokens(
-                {
-                    "eos_token": self.tokenizer.convert_ids_to_tokens(self.model.config.eos_token_id),
-                    "bos_token": self.tokenizer.convert_ids_to_tokens(self.model.config.bos_token_id),
-                    "unk_token": self.tokenizer.convert_ids_to_tokens(self.model.config.pad_token_id),
-                }
-            )
         self.peft_name = peft_name
         if self.args.use_peft:
             self.load_peft_model()
@@ -325,7 +312,7 @@ class LlamaModel:
             if self.args.int8:
                 self.model = prepare_model_for_int8_training(self.model)
 
-            old_checkpoint_name = None
+            old_checkpoint_dir = None
             if resume_from_checkpoint:
                 # Check the available weights and load them
                 checkpoint_name = os.path.join(resume_from_checkpoint, "pytorch_model.bin")  # Full checkpoint
@@ -338,13 +325,12 @@ class LlamaModel:
                 # The two files above have a different name depending on how they were saved, but are actually the same.
                 if os.path.exists(checkpoint_name):
                     logger.info(f"Restarting from {checkpoint_name}")
-                    old_checkpoint_name = checkpoint_name
+                    old_checkpoint_dir = os.path.dirname(checkpoint_name)
                 else:
                     logger.warning(f"Checkpoint {checkpoint_name} not found")
 
-            if old_checkpoint_name:
-                adapters_weights = torch.load(old_checkpoint_name)
-                set_peft_model_state_dict(self.model, adapters_weights)
+            if old_checkpoint_dir:
+                self.model = PeftModel.from_pretrained(self.model, old_checkpoint_dir)
                 for name, param in self.model.named_parameters():
                     if 'lora' in name:
                         logger.debug(f"Loaded {name}, param {param.sum()}")
