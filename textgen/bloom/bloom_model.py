@@ -18,6 +18,7 @@ from peft import (
     TaskType,
     PeftModel,
     prepare_model_for_int8_training,
+set_peft_model_state_dict,
     get_peft_model_state_dict,
 )
 from tqdm.auto import tqdm
@@ -301,7 +302,8 @@ class BloomModel:
             if self.args.int8:
                 self.model = prepare_model_for_int8_training(self.model)
 
-            old_checkpoint_dir = None
+            self.model = get_peft_model(self.model, peft_config)
+
             if resume_from_checkpoint:
                 # Check the available weights and load them
                 checkpoint_name = os.path.join(resume_from_checkpoint, "pytorch_model.bin")  # Full checkpoint
@@ -314,16 +316,11 @@ class BloomModel:
                 # The two files above have a different name depending on how they were saved, but are actually the same.
                 if os.path.exists(checkpoint_name):
                     logger.info(f"Restarting from {checkpoint_name}")
-                    old_checkpoint_dir = os.path.dirname(checkpoint_name)
+                    adapters_weights = torch.load(checkpoint_name)
+                    set_peft_model_state_dict(self.model, adapters_weights)
                 else:
                     logger.warning(f"Checkpoint {checkpoint_name} not found")
 
-            if old_checkpoint_dir:
-                self.model = PeftModel.from_pretrained(self.model, old_checkpoint_dir)
-                self.model = self.model.merge_and_unload()
-            else:
-                logger.info(f"Initializing LoRA model from scratch")
-                self.model = get_peft_model(self.model, peft_config)
             self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
         else:
             logger.warning("Now full model params fine-tune, which is slow, set `use_peft=True` for lora fine-tune.")
