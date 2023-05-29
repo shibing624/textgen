@@ -331,9 +331,7 @@ class LlamaModel:
 
             if old_checkpoint_dir:
                 self.model = PeftModel.from_pretrained(self.model, old_checkpoint_dir)
-                for name, param in self.model.named_parameters():
-                    if 'lora' in name:
-                        logger.debug(f"Loaded {name}, param {param.sum()}")
+                self.model = self.model.merge_and_unload()
             else:
                 logger.info(f"Initializing LoRA model from scratch")
                 self.model = get_peft_model(self.model, peft_config)
