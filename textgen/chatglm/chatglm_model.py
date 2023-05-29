@@ -185,8 +185,11 @@ class ChatGlmModel:
                 names = name.split('.')
                 lora_module_names.add(names[0] if len(names) == 1 else names[-1])
 
-        if 'lm_head' in lora_module_names:  # needed for 16-bit
+        # last layer is not add to lora_module_names
+        if 'lm_head' in lora_module_names:
             lora_module_names.remove('lm_head')
+        if '0' in lora_module_names:
+            lora_module_names.remove('0')
         return list(lora_module_names)
 
     def train_model(
