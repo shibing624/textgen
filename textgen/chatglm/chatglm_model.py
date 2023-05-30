@@ -182,14 +182,11 @@ class ChatGlmModel:
         lora_module_names = set()
         for name, module in self.model.named_modules():
             if isinstance(module, cls):
+                # last layer is not add to lora_module_names
+                if 'lm_head' in name:
+                    continue
                 names = name.split('.')
                 lora_module_names.add(names[0] if len(names) == 1 else names[-1])
-
-        # last layer is not add to lora_module_names
-        if 'lm_head' in lora_module_names:
-            lora_module_names.remove('lm_head')
-        if '0' in lora_module_names:
-            lora_module_names.remove('0')
         return list(lora_module_names)
 
     def train_model(
@@ -259,6 +256,7 @@ class ChatGlmModel:
             logger.info(f"Using PEFT type: {peft_type}")
             # add peft config
             if peft_type == 'LORA':
+                logger.debug(f"Using list modules for LoRA: {self.args.lora_target_modules}")
                 peft_config = LoraConfig(
                     task_type=TaskType.CAUSAL_LM,
                     inference_mode=False,
@@ -270,7 +268,7 @@ class ChatGlmModel:
                 )
             elif peft_type == 'ADALORA':
                 from peft import AdaLoraConfig
-
+                logger.debug(f"Using list modules for LoRA: {self.args.lora_target_modules}")
                 peft_config = AdaLoraConfig(
                     init_r=self.args.adalora_init_r,
                     r=self.args.lora_r,
@@ -312,6 +310,7 @@ class ChatGlmModel:
                 self.model.gradient_checkpointing_disable()
             else:
                 logger.warning(f"Wrong type of peft. Set to default lora")
+                logger.debug(f"Using list modules for LoRA: {self.args.lora_target_modules}")
                 peft_config = LoraConfig(
                     task_type=TaskType.CAUSAL_LM,
                     inference_mode=False,

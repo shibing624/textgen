@@ -375,7 +375,7 @@ class ChatGlmArgs(ModelArgs):
     lora_r: int = 8
     lora_alpha = 16
     lora_dropout = 0.05
-    lora_target_modules = ["query_key_value"]  # ["all"] or target module names
+    lora_target_modules = ["all"]  # ["all"] or ["query_key_value"]
     lora_bias = "none"
     adalora_init_r: int = 12
     adalora_tinit: int = 200
@@ -505,7 +505,7 @@ class BloomArgs(ModelArgs):
     lora_r: int = 8
     lora_alpha = 16
     lora_dropout = 0.05
-    lora_target_modules = ["query_key_value"]  # ["all"] or target module names
+    lora_target_modules = ["all"]  # ["all"] or ["query_key_value"]
     lora_bias = "none"
     adalora_init_r: int = 12
     adalora_tinit: int = 200
