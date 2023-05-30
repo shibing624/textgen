@@ -3,10 +3,11 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-import sys
 import argparse
-from loguru import logger
+import sys
+
 import pandas as pd
+from loguru import logger
 
 sys.path.append('../..')
 from textgen import ChatGlmModel
@@ -35,6 +36,7 @@ def main():
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--is_train_on_prompt', action='store_true', help='Whether to compute loss on prompt')
+    parser.add_argument('--lora_target_modules', nargs='+', default=['all'], type=str, help='Target modules for LoRA')
     parser.add_argument('--output_dir', default='./outputs-demo/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
@@ -58,6 +60,7 @@ def main():
             "eval_batch_size": args.batch_size,
             "num_train_epochs": args.num_epochs,
             "is_train_on_prompt": args.is_train_on_prompt,
+            "lora_target_modules": args.lora_target_modules,
             "output_dir": args.output_dir,
             "resume_from_checkpoint": args.output_dir,
             "eval_steps": args.eval_steps,
@@ -68,6 +71,7 @@ def main():
         logger.debug('train_data: {}'.format(train_data[:10]))
         train_df = pd.DataFrame(train_data, columns=["instruction", "input", "output"])
         eval_df = train_df[:10]
+        train_df = train_df[10:]
         model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:

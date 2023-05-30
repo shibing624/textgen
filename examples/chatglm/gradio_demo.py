@@ -3,28 +3,25 @@
 @author:XuMing(xuming624@qq.com)
 @description: pip install gradio
 """
-import gradio as gr
-import torch
-from peft import PeftModel
-from transformers import AutoModel, AutoTokenizer
+import sys
 
-model = AutoModel.from_pretrained("THUDM/chatglm-6b", trust_remote_code=True)
-model = PeftModel.from_pretrained(model, "shibing624/chatglm-6b-csc-zh-lora")
-if torch.cuda.is_available():
-    model = model.half().cuda()
-else:
-    model = model.cpu().float()
-tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b", trust_remote_code=True)
+import gradio as gr
+
+sys.path.append('../..')
+from textgen import ChatGlmModel
+
+model = ChatGlmModel("chatglm", "THUDM/chatglm-6b", peft_name="shibing624/chatglm-6b-csc-zh-lora")
+r = model.predict(["对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答："])
+print(r)
 
 sents = ['对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答：',
          '对下面中文拼写纠错：\n下个星期，我跟我朋唷打算去法国玩儿。\n答：']
-for s in sents:
-    response = model.chat(tokenizer, s, max_length=128, eos_token_id=tokenizer.eos_token_id)
-    print(response)
+response = model.predict(sents)
+print(response)
 
 
 def ai_text(text):
-    outputs = model.chat(tokenizer, text, max_length=128, eos_token_id=tokenizer.eos_token_id)
+    outputs, _ = model.chat(text)
     return outputs
 
 

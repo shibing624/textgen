@@ -21,15 +21,10 @@ from datasets import load_dataset
 from peft import LoraConfig
 from tqdm import tqdm
 from transformers import Adafactor, AutoTokenizer, HfArgumentParser, pipeline
-
 from trl import AutoModelForCausalLMWithValueHead, PPOConfig, PPOTrainer, set_seed
 from trl.core import LengthSampler
 
-
 DEFAULT_PAD_TOKEN = "[PAD]"
-DEFAULT_EOS_TOKEN = "</s>"
-DEFAULT_BOS_TOKEN = "</s>"
-DEFAULT_UNK_TOKEN = "</s>"
 
 tqdm.pandas()
 
@@ -98,9 +93,6 @@ tokenizer = AutoTokenizer.from_pretrained(script_args.tokenizer_name)
 if "llama" in script_args.tokenizer_name:
     tokenizer.add_special_tokens(
         {
-            "eos_token": DEFAULT_EOS_TOKEN,
-            "bos_token": DEFAULT_BOS_TOKEN,
-            "unk_token": DEFAULT_UNK_TOKEN,
             "pad_token": DEFAULT_PAD_TOKEN,
         }
     )
@@ -112,7 +104,7 @@ else:
 # from the `datasets` library. One should customize this function to train the model on
 # its own dataset.
 def build_dataset(
-    tokenizer, dataset_name="lvwerra/stack-exchange-paired", input_min_text_length=2, input_max_text_length=8
+        tokenizer, dataset_name="lvwerra/stack-exchange-paired", input_min_text_length=2, input_max_text_length=8
 ):
     """
     Build dataset for training. This builds the dataset from `load_dataset`, one should

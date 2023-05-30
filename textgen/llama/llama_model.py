@@ -20,6 +20,7 @@ from peft import (
     TaskType,
     PeftModel,
     prepare_model_for_int8_training,
+    get_peft_model_state_dict,
     set_peft_model_state_dict,
 )
 from tqdm.auto import tqdm
@@ -118,11 +119,12 @@ class LlamaModel:
             model_name = self.args.model_name_or_path
         config = AutoConfig.from_pretrained(model_name, **kwargs)
 
+        self.torch_dtype = torch.float16 if self.args.fp16 else (torch.bfloat16 if self.args.bf16 else torch.float32)
         self.model = model_class.from_pretrained(
             model_name,
             config=config,
             load_in_8bit=self.args.int8,
-            torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+            torch_dtype=self.torch_dtype,
             device_map=self.device_map,
         )
 
@@ -139,13 +141,14 @@ class LlamaModel:
         else:
             self.args.model_name = model_name
 
+        self.tokenizer.padding_side = "left"
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         self.resize_model_embeddings(len(self.tokenizer))
+
         self.peft_name = peft_name
         if self.args.use_peft:
             self.load_peft_model()
-
-        self.tokenizer.padding_side = "left"
-        self.tokenizer.pad_token_id = 0  # unk. we want this to be different from the eos token
 
     def resize_model_embeddings(self, tokenizer_vocab_size):
         """Resizes model embeddings to match the tokenizer vocab size."""
@@ -159,6 +162,24 @@ class LlamaModel:
             self.model.resize_token_embeddings(tokenizer_vocab_size)
             assert self.model.get_input_embeddings().weight.size(0) == len(self.tokenizer)
             logger.debug(f"Model token embeddings updated, size: {len(self.tokenizer)}")
+
+    def find_all_linear_names(self, int4=False, int8=False):
+        cls = torch.nn.Linear
+        if int4 or int8:
+            import bitsandbytes as bnb
+            if int4:
+                cls = bnb.nn.Linear4bit
+            elif int8:
+                cls = bnb.nn.Linear8bitLt
+        lora_module_names = set()
+        for name, module in self.model.named_modules():
+            if isinstance(module, cls):
+                # last layer is not add to lora_module_names
+                if 'lm_head' in name:
+                    continue
+                names = name.split('.')
+                lora_module_names.add(names[0] if len(names) == 1 else names[-1])
+        return list(lora_module_names)
 
     def train_model(
             self,
@@ -218,6 +239,8 @@ class LlamaModel:
             self.model.model_parallel = True
         self.model.config.use_cache = False
         resume_from_checkpoint = self.args.resume_from_checkpoint
+        if 'all' in self.args.lora_target_modules:
+            self.args.lora_target_modules = self.find_all_linear_names(self.args.int4, self.args.int8)
 
         # setup peft
         if self.args.use_peft:
@@ -225,6 +248,7 @@ class LlamaModel:
             logger.info(f"Using PEFT type: {peft_type}")
             # add peft config
             if peft_type == 'LORA':
+                logger.debug(f"Using list modules for LoRA: {self.args.lora_target_modules}")
                 peft_config = LoraConfig(
                     task_type=TaskType.CAUSAL_LM,
                     inference_mode=False,
@@ -236,7 +260,7 @@ class LlamaModel:
                 )
             elif peft_type == 'ADALORA':
                 from peft import AdaLoraConfig
-
+                logger.debug(f"Using list modules for LoRA: {self.args.lora_target_modules}")
                 peft_config = AdaLoraConfig(
                     init_r=self.args.adalora_init_r,
                     r=self.args.lora_r,
@@ -278,6 +302,7 @@ class LlamaModel:
                 self.model.gradient_checkpointing_disable()
             else:
                 logger.warning(f"Wrong type of peft. Set to default lora")
+                logger.debug(f"Using list modules for LoRA: {self.args.lora_target_modules}")
                 peft_config = LoraConfig(
                     task_type=TaskType.CAUSAL_LM,
                     inference_mode=False,
@@ -290,6 +315,9 @@ class LlamaModel:
 
             if self.args.int8:
                 self.model = prepare_model_for_int8_training(self.model)
+
+            if isinstance(self.model, PeftModel):
+                self.model = self.model.merge_and_unload()
             self.model = get_peft_model(self.model, peft_config)
 
             if resume_from_checkpoint:
@@ -356,7 +384,8 @@ class LlamaModel:
             f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}, "
             + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
         )
-        logger.info(f"Training/evaluation parameters {training_args}")
+        if training_args.local_rank <= 0:
+            logger.info(f"Training/evaluation parameters {training_args}")
 
         # Initialize our Trainer
         if self.args.is_pretraining:
@@ -375,18 +404,33 @@ class LlamaModel:
                 padding="max_length",
                 max_length=self.args.max_seq_length + self.args.max_length
             )
-        trainer = ModelSaveTrainer(
-            model=self.model,
-            train_dataset=train_dataset,
-            eval_dataset=eval_dataset if eval_data is not None else None,
-            args=training_args,
-            tokenizer=self.tokenizer,
-            data_collator=data_collator,
-        )
+        if self.args.use_peft:
+            trainer = SavePeftModelTrainer(
+                model=self.model,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset if eval_data is not None else None,
+                args=training_args,
+                tokenizer=self.tokenizer,
+                data_collator=data_collator,
+            )
+        else:
+            trainer = Trainer(
+                model=self.model,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset if eval_data is not None else None,
+                args=training_args,
+                tokenizer=self.tokenizer,
+                data_collator=data_collator,
+            )
 
-        if self.args.enable_torch_compile:
-            if torch.__version__ >= "2" and sys.platform != "win32":
-                self.model = torch.compile(self.model)
+        if self.args.enable_torch_compile and torch.__version__ >= "2" and sys.platform != "win32":
+            self.model = torch.compile(self.model)
+
+        if self.args.int8 or self.args.int4:
+            old_state_dict = self.model.state_dict
+            self.model.state_dict = (
+                lambda self, *_, **__: get_peft_model_state_dict(self, old_state_dict())
+            ).__get__(self.model, type(self.model))
 
         logger.info("*** Train ***")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
@@ -408,7 +452,7 @@ class LlamaModel:
             self.handle_metrics("eval", metrics, output_dir)
             self.results.update(metrics)
 
-        if verbose:
+        if verbose and training_args.local_rank <= 0:
             logger.debug(f"metrics: {self.results}")
             logger.info(
                 " Training of {} model complete. Saved to {}.".format(
@@ -450,7 +494,7 @@ class LlamaModel:
             self.model = PeftModel.from_pretrained(
                 self.model,
                 self.peft_name,
-                torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+                torch_dtype=self.torch_dtype,
                 device_map=self.device_map,
             )
             logger.info(f"Loaded peft model from {self.peft_name}")
@@ -461,7 +505,7 @@ class LlamaModel:
                 self.model = PeftModel.from_pretrained(
                     self.model,
                     self.args.output_dir,
-                    torch_dtype=torch.float16 if self.args.fp16 else torch.float32,
+                    torch_dtype=self.torch_dtype,
                     device_map=self.device_map,
                 )
                 logger.info(f"Loaded peft model from {peft_path}")
@@ -633,7 +677,7 @@ class LlamaModel:
         return args
 
 
-class ModelSaveTrainer(Trainer):
+class SavePeftModelTrainer(Trainer):
     """
     Trainer for lora models
     """
