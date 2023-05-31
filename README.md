@@ -573,14 +573,14 @@ output:
 5. 69万条中文指令Guanaco数据集(Belle50万条+Guanaco19万条)：[Chinese-Vicuna/guanaco_belle_merge_v1.0](https://huggingface.co/datasets/Chinese-Vicuna/guanaco_belle_merge_v1.0)
 6. 240万条中文医疗数据集(包括预训练数据和指令微调数据集)：[shibing624/medical](https://huggingface.co/datasets/shibing624/medical)
 
-## Todo
+## ✅ Todo
 
-1. 新增多轮对话数据微调方法
-2. add reward model finetuning
-3. add rl finetuning
-4. add medical reward dataset
-5. add llama in4 training
-6. add all training and predict demo in colab
+1. [ ] 新增多轮对话数据微调方法
+2. [ ] add reward model finetuning
+3. [ ] add rl finetuning
+4. [ ] add medical reward dataset
+5. [ ] add llama in4 training
+6. [ ] add all training and predict demo in colab
 
 ## ☎️ Contact
 
