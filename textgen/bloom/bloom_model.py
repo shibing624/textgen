@@ -308,6 +308,7 @@ class BloomModel:
                 self.model = prepare_model_for_int8_training(self.model)
 
             if isinstance(self.model, PeftModel):
+                logger.debug("Merge peft weights to base model")
                 self.model = self.model.merge_and_unload()
             self.model = get_peft_model(self.model, peft_config)
 
