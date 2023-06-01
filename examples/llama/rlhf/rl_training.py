@@ -12,6 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+
+!accelerate launch --multi_gpu --num_machines 1  --num_processes 8 rlhf/rl_training.py --log_with=wandb
+--model_name=<LLAMA_SFT_MODEL> --reward_model_name=<LLAMA_SFT_RM_MODEL> --adafactor=False
+--tokenizer_name=<LLAMA_TOKENIZER> --save_freq=100 --output_max_length=128 --batch_size=8
+--gradient_accumulation_steps=8 --batched_gen=True --ppo_epochs=4 --seed=0 --learning_rate=1.4e-5
+--early_stopping=True --output_dir=llama-sft-rl-finetune-128-8-8-1.4e-5_adam
+"""
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -177,15 +185,6 @@ model = AutoModelForCausalLMWithValueHead.from_pretrained(
     peft_config=lora_config,
 )
 
-optimizer = None
-if script_args.adafactor:
-    optimizer = Adafactor(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        scale_parameter=False,
-        relative_step=False,
-        warmup_init=False,
-        lr=config.learning_rate,
-    )
 # We then build the PPOTrainer, passing the model, the reference model, the tokenizer
 ppo_trainer = PPOTrainer(
     config,
@@ -194,7 +193,6 @@ ppo_trainer = PPOTrainer(
     tokenizer=tokenizer,
     dataset=dataset,
     data_collator=collator,
-    optimizer=optimizer,
 )
 
 # We then build the sentiment analysis pipeline, passing the model name and the

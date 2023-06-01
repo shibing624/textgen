@@ -12,6 +12,7 @@ from typing import Optional
 
 from loguru import logger
 from torch.utils.data import Dataset
+from transformers.trainer_utils import ExplicitEnum
 
 
 def get_default_process_count():
@@ -80,7 +81,7 @@ class ModelArgs:
     polynomial_decay_schedule_power: float = 1.0
     process_count: int = field(default_factory=get_default_process_count)
     quantized_model: bool = False
-    reprocess_input_data: bool = True
+    reprocess_input_data: bool = False
     save_best_model: bool = True
     save_eval_checkpoints: bool = True
     save_model_every_epoch: bool = False
@@ -140,6 +141,13 @@ class ModelArgs:
                         "when loading the model."
                     )
                 self.update_from_dict(model_args)
+
+
+class TrainingTask(ExplicitEnum):
+    PT = "pretraining"
+    FT = "finetuning"
+    RM = "reward_modeling"
+    RL = "reinforcement_learning"
 
 
 @dataclass
@@ -458,9 +466,9 @@ class LlamaArgs(ModelArgs):
     logging_steps = 50
     resume_from_checkpoint: str = None
     enable_torch_compile: bool = True
-    is_pretraining: bool = False
     block_size: int = 1024
-
+    target_kl: float = 0.1  # kl target for early stopping
+    reward_baseline: float = 0.0 # baseline value that is subtracted from the reward
 
 @dataclass
 class BloomArgs(ModelArgs):

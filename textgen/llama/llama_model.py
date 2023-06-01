@@ -9,8 +9,9 @@ import math
 import os
 import random
 import sys
-from typing import List, Tuple
+from typing import List, Tuple, Union,Optional
 
+import evaluate
 import numpy as np
 import torch
 from loguru import logger
@@ -20,22 +21,25 @@ from peft import (
     TaskType,
     PeftModel,
     prepare_model_for_int8_training,
-    get_peft_model_state_dict,
     set_peft_model_state_dict,
 )
 from tqdm.auto import tqdm
 from transformers import GenerationConfig, DataCollatorForSeq2Seq
-from transformers import LlamaForCausalLM, LlamaTokenizer
+from transformers import LlamaForCausalLM, LlamaTokenizer, LlamaForSequenceClassification
 from transformers import Trainer, TrainingArguments, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
-
-from textgen.config.model_args import LlamaArgs
+from transformers import Adafactor, AutoTokenizer, HfArgumentParser, pipeline
+from trl import AutoModelForCausalLMWithValueHead, PPOConfig, PPOTrainer, set_seed
+from trl.core import LengthSampler
+from textgen.config.model_args import LlamaArgs, TrainingTask
 from textgen.llama.llama_utils import (
     load_hf_instruction_dataset,
     LlamaInstructionDataset,
     LlamaPretrainingDataset,
     load_hf_pretraining_dataset,
+    RewardDataCollatorWithPadding,
 )
+
 
 has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
@@ -49,12 +53,14 @@ MODEL_CLASSES = {
 class LlamaModel:
     def __init__(
             self,
-            model_type="llama",
-            model_name="shibing624/chinese-alpaca-plus-7b-hf",
-            peft_name=None,
-            args=None,
-            use_cuda=has_cuda,
-            cuda_device=-1,
+            model_type: str = "llama",
+            model_name: str = "shibing624/chinese-alpaca-plus-7b-hf",
+            training_task: Union[str, TrainingTask] = None,
+            peft_name: Optional[str] = None,
+            args: Optional[dict] = None,
+            use_cuda: Optional[bool] = has_cuda,
+            cuda_device: Optional[int] = -1,
+            reward_model_name: Optional[str] = None,
             **kwargs,
     ):
 
@@ -64,6 +70,7 @@ class LlamaModel:
         Args:
             model_type: The type of model (llama)
             model_name: The exact architecture and trained weights to use. This may be a Hugging Face Transformers compatible pre-trained model, a community model, or the path to a directory containing model files.
+            training_task (optional): The type of training task to perform (`str` or TrainingTask, *optional*, defaults to `finetuning`)
             peft_name (optional): Peft model name
             args (optional): Default args will be used if this parameter is not provided. If provided, it should be a dict containing the args that should be changed in the default args.
             use_cuda (optional): Use GPU if available. Setting to False will force model to use CPU only.
@@ -71,6 +78,10 @@ class LlamaModel:
             **kwargs (optional): For providing proxies, force_download, resume_download, cache_dir and other options specific to the 'from_pretrained' implementation where this will be supplied.
         """  # noqa: ignore flake8"
         model_type = model_type.lower()
+        if training_task is None:
+            self.training_task = TrainingTask.FT
+        else:
+            self.training_task = training_task
         self.args = self._load_model_args(model_name)
 
         if isinstance(args, dict):
@@ -122,13 +133,23 @@ class LlamaModel:
         if torch.cuda.is_bf16_supported() and not self.args.bf16:
             logger.warning("GPU supports bf16, you can enable bf16.")
         self.torch_dtype = torch.bfloat16 if self.args.bf16 else (torch.float16 if self.args.fp16 else torch.float32)
-        self.model = model_class.from_pretrained(
-            model_name,
-            config=config,
-            load_in_8bit=self.args.int8,
-            torch_dtype=self.torch_dtype,
-            device_map=self.device_map,
-        )
+        if self.training_task == TrainingTask.RM:
+            self.model = LlamaForSequenceClassification.from_pretrained(
+                model_name,
+                num_labels=1,
+                config=config,
+                load_in_8bit=self.args.int8,
+                torch_dtype=self.torch_dtype,
+                device_map=self.device_map,
+            )
+        else:
+            self.model = model_class.from_pretrained(
+                model_name,
+                config=config,
+                load_in_8bit=self.args.int8,
+                torch_dtype=self.torch_dtype,
+                device_map=self.device_map,
+            )
 
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
@@ -146,11 +167,11 @@ class LlamaModel:
         self.tokenizer.padding_side = "left"
         if self.tokenizer.pad_token is None:
             self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
-        self.resize_model_embeddings(len(self.tokenizer))
 
         self.peft_name = peft_name
         if self.args.use_peft:
             self.load_peft_model()
+        self.reward_model_name = reward_model_name
 
     def resize_model_embeddings(self, tokenizer_vocab_size):
         """Resizes model embeddings to match the tokenizer vocab size."""
@@ -181,7 +202,7 @@ class LlamaModel:
                     continue
                 names = name.split('.')
                 lora_module_names.add(names[0] if len(names) == 1 else names[-1])
-        return list(lora_module_names)
+        return sorted(lora_module_names)
 
     def train_model(
             self,
@@ -376,6 +397,7 @@ class LlamaModel:
             ddp_find_unused_parameters=False if self.ddp else None,
             save_total_limit=self.args.save_total_limit,
             fp16=self.args.fp16,
+            bf16=self.args.bf16,
             remove_unused_columns=self.args.remove_unused_columns,
             report_to=self.args.report_to,
             overwrite_output_dir=self.args.overwrite_output_dir,
@@ -391,7 +413,7 @@ class LlamaModel:
             logger.info(f"Training/evaluation parameters {training_args}")
 
         # Initialize our Trainer
-        if self.args.is_pretraining:
+        if self.training_task == TrainingTask.PT:
             # For pretraining, we use a special data collator that simply regroups
             data_collator = DataCollatorForSeq2Seq(
                 self.tokenizer,
@@ -399,7 +421,7 @@ class LlamaModel:
                 return_tensors="pt",
                 padding=True
             )
-        else:
+        elif self.training_task == TrainingTask.FT:
             # For fine-tuning, padding to max length
             data_collator = DataCollatorForSeq2Seq(
                 self.tokenizer,
@@ -407,17 +429,73 @@ class LlamaModel:
                 padding="max_length",
                 max_length=self.args.max_seq_length + self.args.max_length
             )
-        if self.args.use_peft:
-            trainer = SavePeftModelTrainer(
+        elif self.training_task == TrainingTask.RM:
+            # For reward model fine-tuning, padding to max length
+            data_collator = RewardDataCollatorWithPadding(
+                tokenizer=self.tokenizer,
+                padding="max_length",
+                max_length=self.args.max_seq_length + self.args.max_length,
+                return_tensors="pt",
+            )
+        elif self.training_task == TrainingTask.RL:
+            def data_collator(data):
+                return dict((key, [d[key] for d in data]) for key in data[0])
+        else:
+            raise ValueError(f"Invalid training task: {self.training_task}")
+
+        if self.training_task == TrainingTask.RM:
+            # Define the metric that we'll use for validation.
+            accuracy = evaluate.load("accuracy")
+
+            def compute_metrics(eval_pred):
+                predictions, _ = eval_pred
+                # Here, predictions is rewards_chosen and rewards_rejected.
+                # We want to see how much of the time rewards_chosen > rewards_rejected.
+                predictions = np.argmax(predictions, axis=0)
+                labels = np.zeros(predictions.shape)
+                return accuracy.compute(predictions=predictions, references=labels)
+
+            trainer = RewardTrainer(
                 model=self.model,
                 train_dataset=train_dataset,
                 eval_dataset=eval_dataset if eval_data is not None else None,
                 args=training_args,
                 tokenizer=self.tokenizer,
+                compute_metrics=compute_metrics,
                 data_collator=data_collator,
             )
+        elif self.training_task == TrainingTask.RL:
+            self.model = AutoModelForCausalLMWithValueHead.from_pretrained(self.model)
+            # Build the PPOTrainer, passing the model, the reference model, the tokenizer
+            config = PPOConfig(
+                model_name=self.args.model_name,
+                learning_rate=self.args.learning_rate,
+                log_with=self.args.report_to,
+                batch_size=self.args.per_device_train_batch_size,
+                gradient_accumulation_steps=self.args.gradient_accumulation_steps,
+                optimize_cuda_cache=True,
+                early_stopping=self.args.early_stopping,
+                target_kl=self.args.target_kl,
+                ppo_epochs=self.args.num_train_epochs,
+                seed=self.args.manual_seed,
+            )
+            trainer = PPOTrainer(
+                config,
+                self.model,
+                ref_model=None,
+                tokenizer=self.tokenizer,
+                dataset=train_dataset,
+                data_collator=data_collator,
+            )
+            # Build the sentiment analysis pipeline for reward score
+            sentiment_pipe = pipeline(
+                task="sentiment-analysis",
+                model=self.reward_model_name,
+                tokenizer=self.tokenizer,
+                device_map=self.device_map,
+            )
         else:
-            trainer = Trainer(
+            trainer = SavePeftModelTrainer(
                 model=self.model,
                 train_dataset=train_dataset,
                 eval_dataset=eval_dataset if eval_data is not None else None,
@@ -429,40 +507,70 @@ class LlamaModel:
         if self.args.enable_torch_compile and torch.__version__ >= "2" and sys.platform != "win32":
             self.model = torch.compile(self.model)
 
-        if self.args.int8 or self.args.int4:
-            old_state_dict = self.model.state_dict
-            self.model.state_dict = (
-                lambda self, *_, **__: get_peft_model_state_dict(self, old_state_dict())
-            ).__get__(self.model, type(self.model))
-
         logger.info("*** Train ***")
-        (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
-        self.handle_metrics("train", metrics, output_dir)
-        self.results.update(metrics)
-        self.save_model(model=self.model)
+        if self.training_task == TrainingTask.RL:
+            global_step = 0
+            sent_kwargs = {"return_all_scores": True, "function_to_apply": "none", "batch_size": 16, "truncation": True}
+            generation_kwargs = {
+                "top_k": 0,
+                "top_p": self.args.top_p,
+                "do_sample": self.args.do_sample,
+                "pad_token_id": self.tokenizer.pad_token_id,
+                "eos_token_id": self.tokenizer.eos_token_id,
+            }
+            for step, batch in tqdm(enumerate(trainer.dataloader)):
+                question_tensors = batch["input_ids"]
 
-        if eval_data is not None:
-            logger.info("*** Evaluate ***")
-            if self.args.fp16:
-                self.model.half()
-            metrics = trainer.evaluate(metric_key_prefix="eval")
-            try:
-                perplexity = math.exp(metrics["eval_loss"])
-            except OverflowError:
-                perplexity = float("inf")
-            metrics["perplexity"] = perplexity
-            logger.debug(f"eval metrics: {metrics}")
-            self.handle_metrics("eval", metrics, output_dir)
-            self.results.update(metrics)
-
-        if verbose and training_args.local_rank <= 0:
-            logger.debug(f"metrics: {self.results}")
-            logger.info(
-                " Training of {} model complete. Saved to {}.".format(
-                    self.args.model_name, output_dir
+                response_tensors = trainer.generate(
+                    question_tensors,
+                    return_prompt=False,
+                    **generation_kwargs,
                 )
-            )
-        return global_step, training_loss
+                batch["response"] = self.tokenizer.batch_decode(response_tensors, skip_special_tokens=True)
+
+                # Compute sentiment score
+                texts = [q + r for q, r in zip(batch["query"], batch["response"])]
+                pipe_outputs = sentiment_pipe(texts, **sent_kwargs)
+                rewards = [torch.tensor(output[0]["score"] - self.args.reward_baseline) for output in pipe_outputs]
+
+                # Run PPO step
+                stats = trainer.step(question_tensors, response_tensors, rewards)
+                trainer.log_stats(stats, batch, rewards)
+
+                if step and step % self.args.save_steps == 0:
+                    trainer.save_pretrained(output_dir + f"checkpoint-{step}")
+                trainer.save_pretrained(output_dir)
+                self.tokenizer.save_pretrained(output_dir)
+                global_step = step
+            return global_step
+        else:
+            (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
+            self.handle_metrics("train", metrics, output_dir)
+            self.results.update(metrics)
+            self.save_model(model=self.model)
+
+            if eval_data is not None:
+                logger.info("*** Evaluate ***")
+                if self.args.fp16:
+                    self.model.half()
+                metrics = trainer.evaluate(metric_key_prefix="eval")
+                try:
+                    perplexity = math.exp(metrics["eval_loss"])
+                except OverflowError:
+                    perplexity = float("inf")
+                metrics["perplexity"] = perplexity
+                logger.debug(f"eval metrics: {metrics}")
+                self.handle_metrics("eval", metrics, output_dir)
+                self.results.update(metrics)
+
+            if verbose and training_args.local_rank <= 0:
+                logger.debug(f"metrics: {self.results}")
+                logger.info(
+                    " Training of {} model complete. Saved to {}.".format(
+                        self.args.model_name, output_dir
+                    )
+                )
+            return global_step, training_loss
 
     @staticmethod
     def handle_metrics(split, metrics, output_dir):
@@ -617,7 +725,7 @@ class LlamaModel:
             os.makedirs(self.args.cache_dir, exist_ok=True)
 
         mode = "dev" if evaluate else "train"
-        if self.args.is_pretraining:
+        if self.training_task == TrainingTask.PT:
             if self.args.use_hf_datasets:
                 dataset = load_hf_pretraining_dataset(data, tokenizer, self.args, mode)
                 return dataset
@@ -690,3 +798,20 @@ class SavePeftModelTrainer(Trainer):
         os.makedirs(output_dir, exist_ok=True)
         torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
         self.model.save_pretrained(output_dir)
+
+
+class RewardTrainer(SavePeftModelTrainer):
+    """
+    Trainer for reward models
+        Define how to compute the reward loss. Use the InstructGPT pairwise logloss: https://arxiv.org/abs/2203.02155
+    """
+
+    def compute_loss(self, model, inputs, return_outputs=False):
+        rewards_chosen = model(input_ids=inputs["input_ids_chosen"],
+                               attention_mask=inputs["attention_mask_chosen"])[0]
+        rewards_rejected = model(input_ids=inputs["input_ids_rejected"],
+                                 attention_mask=inputs["attention_mask_rejected"])[0]
+        loss = -torch.nn.functional.logsigmoid(rewards_chosen - rewards_rejected).mean()
+        if return_outputs:
+            return loss, {"rewards_chosen": rewards_chosen, "rewards_rejected": rewards_rejected}
+        return loss

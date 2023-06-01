@@ -21,7 +21,6 @@ from peft import (
     PeftModel,
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
-    get_peft_model_state_dict,
 )
 from tqdm.auto import tqdm
 from transformers import Trainer, TrainingArguments, AutoTokenizer, AutoModel, AutoConfig
@@ -189,7 +188,7 @@ class ChatGlmModel:
                     continue
                 names = name.split('.')
                 lora_module_names.add(names[0] if len(names) == 1 else names[-1])
-        return list(lora_module_names)
+        return sorted(lora_module_names)
 
     def train_model(
             self,
@@ -384,6 +383,7 @@ class ChatGlmModel:
             ddp_find_unused_parameters=False if self.ddp else None,
             save_total_limit=self.args.save_total_limit,
             fp16=self.args.fp16,
+            bf16=self.args.bf16,
             remove_unused_columns=self.args.remove_unused_columns,
             report_to=self.args.report_to,
             overwrite_output_dir=self.args.overwrite_output_dir,
@@ -419,12 +419,6 @@ class ChatGlmModel:
 
         if self.args.enable_torch_compile and torch.__version__ >= "2" and sys.platform != "win32":
             self.model = torch.compile(self.model)
-
-        if self.args.int8 or self.args.int4:
-            old_state_dict = self.model.state_dict
-            self.model.state_dict = (
-                lambda self, *_, **__: get_peft_model_state_dict(self, old_state_dict())
-            ).__get__(self.model, type(self.model))
 
         logger.info("*** Train ***")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)

@@ -135,7 +135,7 @@ example: [examples/chatglm/training_chatglm_demo.py](https://github.com/shibing6
 单卡训练：
 ```shell
 cd examples/chatglm
-python training_chatglm_demo.py --do_train --do_predict --num_epochs 1 --output_dir outputs_chatglm
+CUDA_VISIBLE_DEVICES=0 python training_chatglm_demo.py --do_train --do_predict --num_epochs 1 --output_dir outputs_chatglm
 ```
 
 多卡训练：
