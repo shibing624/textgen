@@ -135,6 +135,7 @@ class BloomModel:
         else:
             self.args.model_name = model_name
 
+        self.resize_model_embeddings(len(self.tokenizer))
         self.peft_name = peft_name
         if self.args.use_peft:
             self.load_peft_model()

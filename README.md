@@ -599,7 +599,7 @@ output:
 ```latex
 @misc{textgen,
   title={textgen: Text Generation Tool},
-  author={Xu Ming},
+  author={Ming Xu},
   year={2021},
   howpublished={\url{https://github.com/shibing624/textgen}},
 }
