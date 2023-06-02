@@ -64,7 +64,6 @@ def main():
             "is_pretraining": True,
             "block_size": args.block_size,
             "use_peft": True,
-            "reprocess_input_data": True,
             "overwrite_output_dir": True,
             "per_device_train_batch_size": args.batch_size,
             "eval_batch_size": args.batch_size,

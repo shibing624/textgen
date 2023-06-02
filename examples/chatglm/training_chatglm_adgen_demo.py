@@ -75,7 +75,6 @@ def main():
         model_args = {
             "dataset_class": AdgDataset,
             'use_peft': True,
-            "reprocess_input_data": True,
             "overwrite_output_dir": True,
             "max_seq_length": args.max_seq_length,
             "max_length": args.max_length,
