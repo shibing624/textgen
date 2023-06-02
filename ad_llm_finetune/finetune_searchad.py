@@ -9,8 +9,8 @@ import pandas as pd
 import os
 import torch
 pwd_path = os.path.abspath(os.path.dirname(__file__))
-sys.path.append(os.path.join(pwd_path, '../..'))
-sys.path.append('../..')
+sys.path.append(os.path.join(pwd_path, '..'))
+sys.path.append('..')
 from textgen import ChatGlmModel
 import random
 
