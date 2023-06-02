@@ -9,6 +9,8 @@ import random
 
 import numpy as np
 import torch
+from loguru import logger
+from transformers import BertTokenizerFast
 from transformers import (
     CTRLConfig,
     CTRLLMHeadModel,
@@ -29,12 +31,18 @@ from transformers import (
     XLNetLMHeadModel,
     XLNetTokenizer,
 )
-from transformers import BertTokenizerFast
 
 from textgen.config.model_args import LanguageGenerationArgs
 from textgen.language_generation.language_generation_utils import PREPROCESSING_FUNCTIONS
-from loguru import logger
 
+MODEL_CLASSES = {
+    "gpt2": (GPT2Config, GPT2LMHeadModel, GPT2Tokenizer),
+    "ctrl": (CTRLConfig, CTRLLMHeadModel, CTRLTokenizer),
+    "openai-gpt": (OpenAIGPTConfig, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer),
+    "xlnet": (XLNetConfig, XLNetLMHeadModel, XLNetTokenizer),
+    "transfo-xl": (TransfoXLConfig, TransfoXLLMHeadModel, TransfoXLTokenizer),
+    "xlm": (XLMConfig, XLMWithLMHeadModel, XLMTokenizer),
+}
 has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -65,15 +73,6 @@ class LanguageGenerationModel:
             cuda_device (optional): Specific GPU that should be used. Will use the first available GPU by default.
             **kwargs (optional): For providing proxies, force_download, resume_download, cache_dir and other options specific to the 'from_pretrained' implementation where this will be supplied.
         """  # noqa: ignore flake8"
-
-        MODEL_CLASSES = {
-            "gpt2": (GPT2Config, GPT2LMHeadModel, GPT2Tokenizer),
-            "ctrl": (CTRLConfig, CTRLLMHeadModel, CTRLTokenizer),
-            "openai-gpt": (OpenAIGPTConfig, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer),
-            "xlnet": (XLNetConfig, XLNetLMHeadModel, XLNetTokenizer),
-            "transfo-xl": (TransfoXLConfig, TransfoXLLMHeadModel, TransfoXLTokenizer),
-            "xlm": (XLMConfig, XLMWithLMHeadModel, XLMTokenizer),
-        }
 
         self.args = self._load_model_args(model_name)
 

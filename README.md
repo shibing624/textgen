@@ -135,7 +135,7 @@ example: [examples/chatglm/training_chatglm_demo.py](https://github.com/shibing6
 单卡训练：
 ```shell
 cd examples/chatglm
-python training_chatglm_demo.py --do_train --do_predict --num_epochs 1 --output_dir outputs_chatglm
+CUDA_VISIBLE_DEVICES=0 python training_chatglm_demo.py --do_train --do_predict --num_epochs 1 --output_dir outputs_chatglm
 ```
 
 多卡训练：
@@ -573,30 +573,14 @@ output:
 5. 69万条中文指令Guanaco数据集(Belle50万条+Guanaco19万条)：[Chinese-Vicuna/guanaco_belle_merge_v1.0](https://huggingface.co/datasets/Chinese-Vicuna/guanaco_belle_merge_v1.0)
 6. 240万条中文医疗数据集(包括预训练数据和指令微调数据集)：[shibing624/medical](https://huggingface.co/datasets/shibing624/medical)
 
-<details>
-<summary>文本生成方法介绍</summary>
+## ✅ Todo
 
-### 文本生成方法
-
-1. seq2seq: Seq2Seq、ConvSeq2Seq、BART
-2. language_modeling: GPT2、SongNet、ChatGLM、LLaMA
-3. t5: T5、CopyT5
-
-### 文本扩增方法
-
-#### 词粒度扩增
-
-1. UDA，非核心词替换
-2. EDA，简单数据增强技术：相似词、同义词替换，随机词插入、删除、替换
-
-#### 句粒度扩增
-
-1. 回译（BT, Back Translate）：中文-英文-中文
-2. GPT2模型续写：短文本->长文本
-3. BART摘要模型：长文本->短文本
-4. TGLS：无监督相似文本生成模型
-
-</details>
+1. [ ] 新增多轮对话数据微调方法
+2. [ ] add reward model finetuning
+3. [ ] add rl finetuning
+4. [ ] add medical reward dataset
+5. [ ] add llama in4 training
+6. [ ] add all training and predict demo in colab
 
 ## ☎️ Contact
 

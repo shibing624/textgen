@@ -21,7 +21,6 @@ from peft import (
     PeftModel,
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
-    get_peft_model_state_dict,
 )
 from tqdm.auto import tqdm
 from transformers import Trainer, TrainingArguments, AutoTokenizer, AutoModel, AutoConfig
@@ -112,7 +111,9 @@ class ChatGlmModel:
             model_name = self.args.model_name_or_path
         config = AutoConfig.from_pretrained(model_name, trust_remote_code=True, **kwargs)
 
-        self.torch_dtype = torch.float16 if self.args.fp16 else (torch.bfloat16 if self.args.bf16 else torch.float32)
+        if torch.cuda.is_bf16_supported() and not self.args.bf16:
+            logger.warning("GPU supports bf16, you can enable bf16.")
+        self.torch_dtype = torch.bfloat16 if self.args.bf16 else (torch.float16 if self.args.fp16 else torch.float32)
         self.model = model_class.from_pretrained(
             model_name,
             config=config,
@@ -187,7 +188,7 @@ class ChatGlmModel:
                     continue
                 names = name.split('.')
                 lora_module_names.add(names[0] if len(names) == 1 else names[-1])
-        return list(lora_module_names)
+        return sorted(lora_module_names)
 
     def train_model(
             self,
@@ -325,6 +326,7 @@ class ChatGlmModel:
                 self.model = prepare_model_for_int8_training(self.model)
 
             if isinstance(self.model, PeftModel):
+                logger.debug("Merge peft weights to base model")
                 self.model = self.model.merge_and_unload()
             self.model = get_peft_model(self.model, peft_config)
 
@@ -381,6 +383,7 @@ class ChatGlmModel:
             ddp_find_unused_parameters=False if self.ddp else None,
             save_total_limit=self.args.save_total_limit,
             fp16=self.args.fp16,
+            bf16=self.args.bf16,
             remove_unused_columns=self.args.remove_unused_columns,
             report_to=self.args.report_to,
             overwrite_output_dir=self.args.overwrite_output_dir,
@@ -416,12 +419,6 @@ class ChatGlmModel:
 
         if self.args.enable_torch_compile and torch.__version__ >= "2" and sys.platform != "win32":
             self.model = torch.compile(self.model)
-
-        if self.args.int8 or self.args.int4:
-            old_state_dict = self.model.state_dict
-            self.model.state_dict = (
-                lambda self, *_, **__: get_peft_model_state_dict(self, old_state_dict())
-            ).__get__(self.model, type(self.model))
 
         logger.info("*** Train ***")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
