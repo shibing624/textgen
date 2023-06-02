@@ -12,7 +12,6 @@ from typing import Optional
 
 from loguru import logger
 from torch.utils.data import Dataset
-from transformers.trainer_utils import ExplicitEnum
 
 
 def get_default_process_count():
@@ -141,13 +140,6 @@ class ModelArgs:
                         "when loading the model."
                     )
                 self.update_from_dict(model_args)
-
-
-class TrainingTask(ExplicitEnum):
-    PT = "pretraining"
-    FT = "finetuning"
-    RM = "reward_modeling"
-    RL = "reinforcement_learning"
 
 
 @dataclass
@@ -466,9 +458,10 @@ class LlamaArgs(ModelArgs):
     logging_steps = 50
     resume_from_checkpoint: str = None
     enable_torch_compile: bool = True
+    is_pretraining: bool = False
     block_size: int = 1024
-    target_kl: float = 0.1  # kl target for early stopping
-    reward_baseline: float = 0.0 # baseline value that is subtracted from the reward
+
+
 
 @dataclass
 class BloomArgs(ModelArgs):
