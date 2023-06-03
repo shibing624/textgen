@@ -8,10 +8,8 @@ from loguru import logger
 import pandas as pd
 import os
 import torch
-pwd_path = os.path.abspath(os.path.dirname(__file__))
-sys.path.append(os.path.join(pwd_path, '..'))
 sys.path.append('..')
-from textgen import ChatGlmModel
+from textgen import LlamaModel
 import random
 
 
@@ -54,7 +52,6 @@ def main():
     logger.info(args)
     #torch.cuda.set_device(args.local_rank)
     model = None
-    # fine-tune ChatGlmModel
     if args.do_train:
         logger.info('Loading data...')
         model_args = {
@@ -72,7 +69,7 @@ def main():
             "eval_steps": args.eval_steps,
             "save_steps": args.save_steps,
         }
-        model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
+        model = LlamaModel(args.model_type, args.model_name, args=model_args)
         train_data = load_data(args.train_file)
         logger.debug('train_data: {}'.format(train_data[:10]))
         train_df = pd.DataFrame(train_data, columns=["instruction", "input", "output"])
@@ -82,7 +79,7 @@ def main():
         model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:
-            model = ChatGlmModel(
+            model = LlamaModel(
                 args.model_type, args.model_name,
                 args={'use_peft': True, 'eval_batch_size': args.batch_size,
                       'output_dir': args.output_dir, "max_length": args.max_length, }
@@ -116,7 +113,7 @@ def main():
         print(response)
     if args.do_debug:
         if model is None:
-            model = ChatGlmModel(
+            model = LlamaModel(
                 args.model_type, args.model_name, args.peft_name,
                 args={'use_peft': True, 'eval_batch_size': args.batch_size,
                       'output_dir': args.output_dir, "max_length": args.max_length, }
