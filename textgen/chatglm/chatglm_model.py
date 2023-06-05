@@ -7,7 +7,6 @@ import math
 import os
 import random
 import re
-import sys
 from typing import List, Tuple
 
 import numpy as np
@@ -240,13 +239,17 @@ class ChatGlmModel:
                 " Set args.overwrite_output_dir = True to overcome.".format(output_dir)
             )
         # update model train config
-        self.model.gradient_checkpointing_enable()
+        if self.args.gradient_checkpointing:
+            self.model.gradient_checkpointing_enable()
+            self.model.config.use_cache = False
+        else:
+            self.model.config.use_cache = True
         self.model.enable_input_require_grads()
-        if torch.cuda.device_count() > 1:
+        if not self.ddp and torch.cuda.device_count() > 1:
+            # keeps Trainer from trying its own DataParallelism when more than 1 gpu is available
             self.model.is_parallelizable = True
             self.model.model_parallel = True
         self.model.lm_head = CastOutputToFloat(self.model.lm_head)
-        self.model.config.use_cache = False
         resume_from_checkpoint = self.args.resume_from_checkpoint
         if 'all' in self.args.lora_target_modules:
             self.args.lora_target_modules = self.find_all_linear_names(self.args.int4, self.args.int8)
@@ -373,6 +376,8 @@ class ChatGlmModel:
             per_device_train_batch_size=self.args.per_device_train_batch_size,
             per_device_eval_batch_size=self.args.per_device_train_batch_size,
             gradient_accumulation_steps=self.args.gradient_accumulation_steps,
+            gradient_checkpointing=self.args.gradient_checkpointing,
+            torch_compile=self.args.torch_compile,
             warmup_steps=self.args.warmup_steps,
             save_steps=self.args.save_steps,
             optim=self.args.optimizer,
@@ -417,9 +422,7 @@ class ChatGlmModel:
                 data_collator=self.data_collator,
             )
 
-        if self.args.enable_torch_compile and torch.__version__ >= "2" and sys.platform != "win32":
-            self.model = torch.compile(self.model)
-
+        # Training
         logger.info("*** Train ***")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
         self.handle_metrics("train", metrics, output_dir)

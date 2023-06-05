@@ -389,11 +389,12 @@ class ChatGlmArgs(ModelArgs):
     per_device_train_batch_size = 2
     eval_batch_size: int = 4
     gradient_accumulation_steps = 1
+    gradient_checkpointing: bool = True
+    torch_compile: bool = False
     save_total_limit = 3
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
-    enable_torch_compile: bool = True
 
 
 @dataclass
@@ -457,10 +458,10 @@ class LlamaArgs(ModelArgs):
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
-    enable_torch_compile: bool = True
-    is_pretraining: bool = False
-    block_size: int = 1024
-
+    gradient_checkpointing: bool = True
+    torch_compile: bool = False
+    is_pretraining: bool = False  # Whether to pretrain the model
+    block_size: int = 1024  # block size for pretraining
 
 
 @dataclass
@@ -519,9 +520,10 @@ class BloomArgs(ModelArgs):
     max_steps = -1
     per_device_train_batch_size = 2
     eval_batch_size: int = 4
+    gradient_checkpointing: bool = True
+    torch_compile: bool = False
     gradient_accumulation_steps = 1
     save_total_limit = 3
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
-    enable_torch_compile: bool = True
