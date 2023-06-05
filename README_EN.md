@@ -19,24 +19,21 @@
 
 ## 📖 Introduction
 
-**TextGen**实现了多种文本生成模型，包括：LLaMA、ChatGLM、UDA、GPT2、Seq2Seq、BART、T5、SongNet等模型，开箱即用。
+**TextGen** implements a variety of text generation models, including: LLaMA, ChatGLM, UDA, GPT2, Seq2Seq, BART, T5, SongNet and other models, out of the box.
 
 ## 😊 Feature
 
-- [ChatGLM](textgen/chatglm)：本项目基于PyTorch实现了ChatGLM-6B模型LoRA微调训练和预测，可以用于句子纠错、对话等文本生成任务
-- [LLaMA](textgen/llama)：本项目基于PyTorch实现了LLaMA模型LoRA微调训练和预测，可以用于对话生成任务和领域微调训练
-- [BLOOM](textgen/bloom)：本项目基于PyTorch实现了BLOOM模型LoRA微调训练和预测，可以用于对话生成任务和领域微调训练
-- [UDA/EDA](textgen/augment/word_level_augment.py)：本项目实现了UDA(非核心词替换)、EDA和Back Translation(回译)算法，基于TF-IDF将句子中部分不重要词替换为同义词，随机词插入、删除、替换等方法，产生新的文本，实现了文本扩增
-- [Seq2Seq](textgen/seq2seq)：本项目基于PyTorch实现了Seq2Seq、ConvSeq2Seq、BART模型的训练和预测，可以用于文本翻译、对话生成、摘要生成等文本生成任务
-- [T5](textgen/t5)：本项目基于PyTorch实现了T5和CopyT5模型训练和预测，可以用于文本翻译、对话生成、对联生成、文案撰写等文本生成任务
-- [GPT2](textgen/language_modeling)：本项目基于PyTorch实现了GTP2模型训练和预测，可以用于文章生成、对联生成等文本生成任务
-- [SongNet](textgen/language_modeling/songnet_model.py)：本项目基于PyTorch实现了SongNet模型训练和预测，可以用于规范格式的诗词、歌词等文本生成任务
-- [TGLS](textgen/unsup_generation)：本项目实现了[TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5)无监督相似文本生成模型，是一种“先搜索后学习”的文本生成方法，通过反复迭代学习候选集，最终模型能生成类似候选集的高质量相似文本
-
+- [ChatGLM](textgen/chatglm): This project implements the LoRA fine-tuning training and prediction of the ChatGLM-6B model based on PyTorch, which can be used for text generation tasks such as sentence error correction and dialogue
+- [LLaMA](textgen/llama): This project implements the LLaMA model LoRA fine-tuning training and prediction based on PyTorch, which can be used for dialogue generation tasks and domain fine-tuning training
+- [BLOOM](textgen/bloom): This project implements the BLOOM model LoRA fine-tuning training and prediction based on PyTorch, which can be used for dialogue generation tasks and domain fine-tuning training
+- [UDA/EDA](textgen/augment/word_level_augment.py): This project implements UDA (non-core word replacement), EDA and Back Translation (back translation) algorithms, and replaces some unimportant words in sentences based on TF-IDF For synonyms, random word insertion, deletion, replacement, etc., generate new text and realize text amplification
+- [Seq2Seq](textgen/seq2seq): This project implements the training and prediction of Seq2Seq, ConvSeq2Seq, and BART models based on PyTorch, which can be used for text generation tasks such as text translation, dialogue generation, and abstract generation
+- [T5](textgen/t5): This project implements T5 and CopyT5 model training and prediction based on PyTorch, which can be used for text generation tasks such as text translation, dialogue generation, couplet generation, and copywriting
+- [GPT2](textgen/language_modeling): This project implements GTP2 model training and prediction based on PyTorch, which can be used for text generation tasks such as article generation and couplet generation
+- [SongNet](textgen/language_modeling/songnet_model.py): This project implements SongNet model training and prediction based on PyTorch, which can be used for text generation tasks such as poems and lyrics in standardized formats
+- [TGLS](textgen/unsup_generation): This project implements the [TGLS](https://www.jiqizhixin.com/articles/2020-08-11-5) unsupervised similar text generation model, which is a "first The text generation method of "learning after searching" learns the candidate set repeatedly, and the final model can generate high-quality similar text similar to the candidate set
 ### Release Models
-
-release基于`textgen`训练的中文模型，模型已经release到HuggingFace models，指定模型名称`textgen`会自动下载模型，可直接使用。
-
+The release is based on the Chinese model trained by `textgen`. The model has been released to HuggingFace models. Specifying the model name `textgen` will automatically download the model and can be used directly.
 
 | Model                                                                                                     | Arch       | Introduce                                                                                                                                                                | Training                                                                                                                                     | Inference                                                                                                             | 
 |:----------------------------------------------------------------------------------------------------------|:-----------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------|
@@ -67,16 +64,17 @@ release基于`textgen`训练的中文模型，模型已经release到HuggingFace 
 | [TheBloke/vicuna-13B-1.1-HF](https://huggingface.co/TheBloke/vicuna-13B-1.1-HF)                                                             | LLaMA-13B  | 使用原生vicuna-13B-1.1合并后的模型，评估测试集并标注得分                                                                                                                                                                                                                                                           | 5.13     |
 | [IDEA-CCNL/Ziya-LLaMA-13B-v1](https://huggingface.co/IDEA-CCNL/Ziya-LLaMA-13B-v1)                                                           | LLaMA-13B  | 使用姜子牙通用大模型V1，评估测试集并标注得分                                                                                                                                                                                                                                                                       | 6.63     |
 
-说明：
-- 评估case，详见在线文档：中文LLM-benchmark多任务评估集(腾讯文档) https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=r7io7g  感谢韩俊明、[杨家铭](https://github.com/yangjiam)等同学的标注
-- 评估任务类型包括：知识问答，开放式问答，数值计算，诗词、音乐、体育，娱乐，写文章，文本翻译，代码编程，伦理、拒答类，多轮问答，Score 评分是前100条（10分制）的平均分数，人工打分，越高越好
-- 评估数量少，任务类型不够全面，评分之间的大小关系有一些参考价值，分数的绝对值没太大参考价值
-- 评估脚本：[tests/test_benchmark.py](https://github.com/shibing624/textgen/blob/main/tests/test_benchmark.py) ，使用fp16预测，无int量化处理，运行脚本可复现评估结果，但生成结果具有随机性，受解码超参、随机种子等因素影响。评测并非绝对严谨，测试结果仅供晾晒参考
-- 结论：ChatGLM-6B、LLaMA-13B的中文衍生模型（包括alpaca-plus, vicuna, ziya）的表现属于第一梯队，原版LLaMA-7B的表现整体稍差些
-- LLaMA-13B-Chinese-Alpaca是在原版LLaMA上扩充了中文词表，并融入了约20G的通用中文语料后的指令微调模型，表明了LLaMA的底座优秀，具有强大的语言迁移能力
-- ChatGLM这种原生的中文预训练模型更理解中文语义，且在中文知识问答、开放式问答得分高
-- LLaMA系列模型数值计算、中英翻译、代码编程类得分高
-- 经过中文预训练和SFT微调后的Chinese-LLaMA模型在中文诗词、娱乐、伦理类得分相较原版LLaMA有提升
+Evaluation conclusion:
+
+- Evaluation case, see the online document for details: Chinese LLM-benchmark multi-task evaluation set (Tencent document) https://docs.qq.com/sheet/DUUpsREtWbFBsUVJE?tab=r7io7g Thanks to Han Junming, [Yang Jiaming](https:// github.com/yangjiam) and other students' annotations
+- Evaluation task types include: knowledge quiz, open-ended question and answer, numerical calculation, poetry, music, sports, entertainment, article writing, text translation, code programming, ethics, refusal, multi-round question and answer, Score score is the top 100 ( 10-point scale) average score, manually scored, the higher the better
+- The number of evaluations is small, the types of tasks are not comprehensive enough, the size relationship between the scores has some reference value, and the absolute value of the score is not much reference value
+- Evaluation script: [tests/test_benchmark.py](https://github.com/shibing624/textgen/blob/main/tests/test_benchmark.py), using fp16 prediction, no int quantization processing, running the script can reproduce the evaluation However, the generated results are random and are affected by factors such as decoding hyperparameters and random seeds. The evaluation is not absolutely rigorous, and the test results are for reference only
+- Conclusion: The performance of the Chinese derivative models of ChatGLM-6B and LLaMA-13B (including alpaca-plus, vicuna, ziya) belongs to the first echelon, and the performance of the original LLaMA-7B is slightly worse overall
+- LLaMA-13B-Chinese-Alpaca is an instruction fine-tuning model that expands the Chinese vocabulary on the original LLaMA and incorporates about 20G of general Chinese corpus, which shows that LLaMA has an excellent base and strong language transfer capabilities
+- ChatGLM, a native Chinese pre-training model, understands Chinese semantics better, and scores high in Chinese knowledge questions and answers and open questions and answers
+- High scores in numerical calculation, Chinese-English translation, and code programming of LLaMA series models
+- The Chinese-LLaMA model after Chinese pre-training and SFT fine-tuning has improved scores in Chinese poetry, entertainment, and ethics compared with the original LLaMA model
 
 ## 🚀 Demo
 
@@ -110,9 +108,9 @@ python setup.py install
 
 ## ▶️ Usage
 
-### ChatGLM-6B 模型
+### ChatGLM-6B Model
 
-#### 使用 ChatGLM-6B 微调后的模型
+#### Fine-tuned model using ChatGLM-6B
 
 example: [examples/chatglm/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/predict_demo.py)
 
@@ -124,50 +122,48 @@ r = model.predict(["对下面中文拼写纠错：\n少先队员因该为老人�
 print(r)  # ['少先队员应该为老人让座。\n错误字：因，坐']
 ```
 
-PS：由于使用了开发中的peft库，可能由于版本更新，导致LoRA模型加载失败，建议使用下面的训练方法，自己训练LoRA模型。
+PS: Due to the use of the peft library under development, the loading of the LoRA model may fail due to the version update. It is recommended to use the following training method to train the LoRA model by yourself.
 
-#### 训练 ChatGLM-6B 微调模型
+#### Train the ChatGLM-6B fine-tuning model
 
-1. 支持自定义训练数据集和训练参数，数据集格式参考[examples/data/zh_csc_test.tsv](https://github.com/shibing624/textgen/blob/main/examples/data/zh_csc_test.tsv)或者[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
-2. 支持AdaLoRA、LoRA、P_Tuning、Prefix_Tuning等部分参数微调方法，也支持全参微调
-3. 支持多卡训练，支持混合精度训练
+1. Support custom training data sets and training parameters, the data set format reference [examples/data/zh_csc_test.tsv](https://github.com/shibing624/textgen/blob/main/examples/data/zh_csc_test.tsv) Or [shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
+2. Support some parameter fine-tuning methods such as AdaLoRA, LoRA, P_Tuning, Prefix_Tuning, etc., and also support full parameter fine-tuning
+3. Support multi-card training and mixed precision training
 
 example: [examples/chatglm/training_chatglm_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/training_chatglm_demo.py)
 
-单卡训练：
+Training with Single GPU：
 ```shell
 cd examples/chatglm
 CUDA_VISIBLE_DEVICES=0 python training_chatglm_demo.py --do_train --do_predict --num_epochs 1 --output_dir outputs_chatglm
 ```
 
-多卡训练：
+Training with Multi GPU：
 ```shell
 cd examples/chatglm
 CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node 2 training_chatglm_demo.py --do_train --do_predict --num_epochs 20
 ```
 
+#### Continue training based on fine-tuning (LoRA) model
+If you need to continue training based on the Lora model, you can use the following script to merge the model into a new base model, and then fine-tune the training.
 
-#### 基于微调(LoRA)模型继续训练
-如果需要基于Lora模型继续训练，可以使用下面的脚本合并模型为新的base model，再微调训练即可。
-
-执行以下命令：
+Execute the following command:
 ```shell
 python -m textgen/chatglm/merge_peft_adapter.py \
-    --base_model_name_or_path path_to_original_base_model_dir \
-    --peft_model_path path_to_peft_model_dir \
-    --output_dir path_to_output_dir 
+     --base_model_name_or_path path_to_original_base_model_dir \
+     --peft_model_path path_to_peft_model_dir \
+     --output_dir path_to_output_dir
 ```
-参数说明：
+Parameter Description:
 ```
---base_model_name_or_path：存放HF格式的底座模型权重和配置文件的目录
---peft_model_path：存放PEFT格式的微调模型权重和配置文件的目录
---output_dir：指定保存全量模型权重的目录，默认为./merged
+--base_model_name_or_path: directory to store base model weights and configuration files in HF format
+--peft_model_path: directory for storing fine-tuning model weights and configuration files in PEFT format
+--output_dir: Specify the directory to save the weight of the full model, the default is ./merged
 ```
 
-### LLaMA 模型
+### LLaMA model
 
-#### 使用 LLaMA 微调后的模型
-
+#### Fine-tuned model using LLaMA
 example: [examples/llama/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/predict_demo.py)
 
 <details>
@@ -192,20 +188,20 @@ print(r)  # ['地球是唯一一颗拥有生命的行星。']
 
 </details>
 
-#### 训练 LLaMA 微调模型
-1. 支持自定义训练数据集和训练参数，数据集格式参考[examples/data/zh_csc_test.tsv](https://github.com/shibing624/textgen/blob/main/examples/data/zh_csc_test.tsv)或者[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
-2. 支持AdaLoRA、LoRA、P_Tuning、Prefix_Tuning等部分参数微调方法，也支持全参微调
-3. 支持多卡训练，支持混合精度训练，使用方法同上（ChatGLM多卡训练）
+#### Train the LLaMA fine-tuning model
+1. Support custom training data sets and training parameters, the data set format reference [examples/data/zh_csc_test.tsv](https://github.com/shibing624/textgen/blob/main/examples/data/zh_csc_test.tsv) Or [shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
+2. Support some parameter fine-tuning methods such as AdaLoRA, LoRA, P_Tuning, Prefix_Tuning, etc., and also support full parameter fine-tuning
+3. Support multi-card training, support mixed precision training, use the same method as above (ChatGLM multi-GPU training)
 
 example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)
 
 
-#### 基于微调(LoRA)模型继续训练
-如果需要基于Lora模型继续训练，可以使用下面的脚本合并模型为新的base model，再微调训练即可。
+#### Continue training based on fine-tuning (LoRA) model
+If you need to continue training based on the Lora model, you can use the following script to merge the model into a new base model, and then fine-tune the training.
 
-单LoRA权重合并（适用于 Chinese-LLaMA, Chinese-LLaMA-Plus, Chinese-Alpaca）
+Single LoRA weight merging (for Chinese-LLaMA, Chinese-LLaMA-Plus, Chinese-Alpaca)
 
-执行以下命令：
+Execute the following command:
 ```shell
 python -m textgen/llama/merge_peft_adapter.py \
     --base_model_name_or_path path_to_original_base_model_dir \
@@ -213,32 +209,32 @@ python -m textgen/llama/merge_peft_adapter.py \
     --output_type [pth|huggingface]
     --output_dir path_to_output_dir 
 ```
-参数说明：
+Parameter Description:
 ```
---base_model_name_or_path：存放HF格式的底座模型权重和配置文件的目录
---peft_model_path：中文LLaMA/Alpaca LoRA解压后文件所在目录，也可使用HF上的Lora模型名称，如`ziqingyang/chinese-alpaca-lora-7b`会自动下载对应模型
---output_type: 指定输出格式，可为pth或huggingface。若不指定，默认为huggingface
---output_dir：指定保存全量模型权重的目录，默认为./merged
---offload_dir（可选）：对于低内存用户需要指定一个offload缓存路径
+--base_model_name_or_path: directory to store base model weights and configuration files in HF format
+--peft_model_path: The directory where the Chinese LLaMA/Alpaca LoRA file is decompressed. You can also use the Lora model name on HF. For example, `ziqingyang/chinese-alpaca-lora-7b` will automatically download the corresponding model
+--output_type: Specifies the output format, which can be pth or huggingface. If not specified, the default is huggingface
+--output_dir: Specify the directory to save the weight of the full model, the default is ./merged
+--offload_dir (optional): For low memory users need to specify an offload cache path
 ```
 
-#### 训练领域模型
+#### Training Domain Model
 
-| Notebook     | Description |    |
+| Notebook | Description | |
 |:----------|:------------|------:|
-| [training_medical_model.ipynb](https://github.com/shibing624/textgen/blob/main/examples/llama/training_medical_model.ipynb)  | 训练医疗大模型     |[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shibing624/textgen/blob/main/examples/llama/training_medical_model.ipynb) |
+| [training_medical_model.ipynb](https://github.com/shibing624/textgen/blob/main/examples/llama/training_medical_model.ipynb) | Training medical large model|[![Open In Colab](https://colab .research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shibing624/textgen/blob/main/examples/llama/training_medical_model.ipynb) |
 
-Note: 为了全面的介绍训练医疗大模型的过程，把4阶段训练方法(Pretraining, Supervised Finetuning, Reward Modeling and Reinforcement Learning)单独新建了一个repo：[shibing624/MedicalGPT](https://github.com/shibing624/MedicalGPT)，请移步该repo查看训练方法。
+Note: In order to comprehensively introduce the process of training large medical models, a new repo has been created for the 4-stage training method (Pretraining, Supervised Finetuning, Reward Modeling and Reinforcement Learning): [shibing624/MedicalGPT](https://github.com/ shibing624/MedicalGPT), please move to this repo to view the training method.
 
-### BLOOM 模型
+### BLOOM model
 
-#### 训练 BLOOM 微调模型
+#### Train the BLOOM fine-tuning model
 
 example: [examples/bloom/training_bloom_demo.py](https://github.com/shibing624/textgen/blob/main/examples/bloom/training_bloom_demo.py)
 
 ### ConvSeq2Seq 模型
 
-训练并预测ConvSeq2Seq模型：
+Train and predict the ConvSeq2Seq model:
 
 example: [examples/seq2sesq/training_convseq2seq_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/seq2seq/training_convseq2seq_model_demo.py)
 
@@ -294,9 +290,8 @@ outputs: ['人工智能是工程和科学的分支,致力于构建思维的机�
 
 </details>
 
-### BART 模型
-
-训练并预测BART模型：
+### BART Model
+Train and predict the BART model:
 
 example: [examples/seq2sesq/training_bartseq2seq_zh_demo.py](https://github.com/shibing624/textgen/blob/main/examples/seq2seq/training_bartseq2seq_zh_demo.py)
 
@@ -307,7 +302,7 @@ inputs: ['什么是ai', '你是什么类型的计算机', '你知道热力学吗
 outputs: ['人工智能是工程和科学的分支,致力于构', '我的程序运行在python,所以我在任何电脑上', '什么是热力学吗？']
 ```
 
-### T5 模型
+### T5 Model
 
 example: [examples/t5/training_zh_t5_model_demo.py](https://github.com/shibing624/textgen/blob/main/examples/t5/training_zh_t5_model_demo.py)
 
@@ -413,34 +408,34 @@ outputs: ['人工智能有两个广义的定义,任何拟人的机械,如在卡�
 
 </details>
 
-### GPT2 模型
+### GPT2 Model
 
-#### 中文GPT2 - 文章生成
+#### Chinese GPT2 - Article Generation
 
-使用中文数据集（段落格式，`\n`间隔），训练GPT2模型，可以用于诗歌生成、文章生成等任务。
+Use the Chinese dataset (paragraph format, `\n` interval) to train the GPT2 model, which can be used for poetry generation, article generation and other tasks.
 
 example: [examples/gpt2/training_zh_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/gpt2/training_zh_gpt2_demo.py)
 
-#### 中文GPT2 - 对联生成
+#### Chinese GPT2 - couplet generation
 
-使用中文对联数据集（tsv格式，`\t`间隔），自定义数据集读取Dataset，训练GPT2模型，可以用于对联生成、对话生成等任务。
+Use the Chinese couplet dataset (tsv format, `\t` interval), customize the dataset to read the Dataset, and train the GPT2 model, which can be used for couplet generation, dialogue generation and other tasks.
 
 example: [examples/gpt2/training_couplet_gpt2_demo.py](https://github.com/shibing624/textgen/blob/main/examples/gpt2/training_couplet_gpt2_demo.py)
 
 GPT2 vs T5：
 
-1. 都是从Transformer改进来的，T5同时有编码器和解码器，GPT2只有解码器
-2. T5的模型优势是处理给定输入，产出对应输出的任务，如翻译、对话、问答等
-3. GPT2的模型优势是自由创作，如写一篇短文
-4. T5的对联生成效果好于GPT2、GPT2的诗词生成效果好于T5
+1. Both are improved from Transformer, T5 has both encoder and decoder, GPT2 only has decoder
+2. The advantage of the T5 model is to process a given input and output tasks corresponding to the output, such as translation, dialogue, question and answer, etc.
+3. The advantage of the GPT2 model is free creation, such as writing a short article
+4. The couplet generation effect of T5 is better than that of GPT2, and the poetry generation effect of GPT2 is better than that of T5
 
 - [对联生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%AF%B9%E8%81%94%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)
 - [古诗生成模型调研](https://github.com/shibing624/textgen/blob/main/docs/%E5%8F%A4%E8%AF%97%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94.md)
 
 ### SongNet 模型
 
-格式控制的文本生成模型，paper见[SongNet: Rigid Formats Controlled Text Generation](https://arxiv.org/abs/2004.08022)，
-适用于强韵律格式要求的诗歌、对联、歌词生成等任务。
+Format-controlled text generation model, see paper [SongNet: Rigid Formats Controlled Text Generation](https://arxiv.org/abs/2004.08022),
+It is suitable for tasks such as poetry, couplets, and lyrics generation that require strong rhythmic formats.
 
 example: [examples/songnet/training_zh_songnet_demo.py](https://github.com/shibing624/textgen/blob/main/examples/songnet/training_zh_songnet_demo.py)
 
@@ -495,9 +490,9 @@ mix-0.2: ('主要研究机器学习、深度学、计算机听觉、智能对话
 ```
 </details>
 
-### TGLS 模型（无监督相似文本生成模型）
+### TGLS model (unsupervised similar text generation model)
 
-无监督的中文电商评论生成：从**电商评论**中提取用户表达观点的短句并进行组合来生成仿真评论。
+Unsupervised generation of Chinese e-commerce reviews: Extract short sentences expressing opinions from users from **e-commerce reviews** and combine them to generate simulated reviews.
 
 example: [examples/unsup_generation/unsup_generation_demo.py](examples/unsup_generation/unsup_generation_demo.py)
 
@@ -563,40 +558,40 @@ output:
 面膜的补水效果非常好，保湿效果确实很赞，这个面膜相对于胶原蛋白和美白的那两款的面膜纸要厚一些，看着价格合适。
 ```
 
-前10句是真实用户评论，后10句是生成的。
+The first 10 sentences are real user reviews, and the last 10 sentences are generated.
 
 </details>
 
 ## 📚 Dataset 
 
-1. 50万条中文ChatGPT指令Belle数据集：[BelleGroup/train_0.5M_CN](https://huggingface.co/datasets/BelleGroup/train_0.5M_CN)
-2. 100万条中文ChatGPT指令Belle数据集：[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)
-3. 5万条英文ChatGPT指令Alpaca数据集：[50k English Stanford Alpaca dataset](https://github.com/tatsu-lab/stanford_alpaca#data-release)
-4. 2万条中文ChatGPT指令Alpaca数据集：[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
-5. 69万条中文指令Guanaco数据集(Belle50万条+Guanaco19万条)：[Chinese-Vicuna/guanaco_belle_merge_v1.0](https://huggingface.co/datasets/Chinese-Vicuna/guanaco_belle_merge_v1.0)
-6. 240万条中文医疗数据集(包括预训练数据和指令微调数据集)：[shibing624/medical](https://huggingface.co/datasets/shibing624/medical)
+1. Belle dataset of 500,000 Chinese ChatGPT commands: [BelleGroup/train_0.5M_CN](https://huggingface.co/datasets/BelleGroup/train_0.5M_CN)
+2. Belle dataset of 1 million Chinese ChatGPT commands: [BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)
+3. Alpaca dataset of 50,000 English ChatGPT commands: [50k English Stanford Alpaca dataset](https://github.com/tatsu-lab/stanford_alpaca#data-release)
+4. Alpaca dataset of 20,000 Chinese ChatGPT commands: [shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
+5. Guanaco dataset with 690,000 Chinese instructions (500,000 Belle + 190,000 Guanaco): [Chinese-Vicuna/guanaco_belle_merge_v1.0](https://huggingface.co/datasets/Chinese-Vicuna/guanaco_belle_merge_v1.0)
+6. 2.4 million Chinese medical data sets (including pre-training data and instruction fine-tuning data sets): [shibing624/medical](https://huggingface.co/datasets/shibing624/medical)
 
 ## ✅ Todo
 
-1. [ ] 新增多轮对话数据微调方法
-2. [ ] add reward model finetuning
-3. [ ] add rl finetuning
-4. [ ] add medical reward dataset
-5. [ ] add llama in4 training
+1. [ ] Added multi-round dialogue data fine-tuning method
+2. [x] add reward model finetuning
+3. [x] add rl finetuning
+4. [x] add medical reward dataset
+5. [x] add llama in4 training
 6. [ ] add all training and predict demo in colab
 
 ## ☎️ Contact
 
-- Issue(建议)
-  ：[![GitHub issues](https://img.shields.io/github/issues/shibing624/textgen.svg)](https://github.com/shibing624/textgen/issues)
-- 邮件我：xuming: xuming624@qq.com
-- 微信我： 加我*微信号：xuming624, 备注：姓名-公司名-NLP* 进NLP交流群。
+- Issue (suggestion)
+   : [![GitHub issues](https://img.shields.io/github/issues/shibing624/textgen.svg)](https://github.com/shibing624/textgen/issues)
+- Email me: xuming: xuming624@qq.com
+- WeChat Me: Add me* WeChat ID: xuming624, Remarks: Name-Company Name-NLP* Enter the NLP exchange group.
 
 <img src="docs/wechat.jpeg" width="200" />
 
 ## 😇 Citation
 
-如果你在研究中使用了textgen，请按如下格式引用：
+If you use textgen in your research, please cite it in the following format:
 
 ```latex
 @misc{textgen,
@@ -609,16 +604,16 @@ output:
 
 ## 🤗 License
 
-授权协议为 [The Apache License 2.0](/LICENSE)，可免费用做商业用途。请在产品说明中附加textgen的链接和授权协议。
+The authorization agreement is [The Apache License 2.0](/LICENSE), which can be used for commercial purposes free of charge. Please attach textgen's link and license agreement in the product description.
 
 ## 😍 Contribute
 
-项目代码还很粗糙，如果大家对代码有所改进，欢迎提交回本项目，在提交之前，注意以下两点：
+The project code is still rough. If you have improved the code, you are welcome to submit it back to this project. Before submitting, please pay attention to the following two points:
 
-- 在`tests`添加相应的单元测试
-- 使用`python -m pytest`来运行所有单元测试，确保所有单测都是通过的
+- Add corresponding unit tests in `tests`
+- Use `python -m pytest` to run all unit tests to ensure that all unit tests are passed
 
-之后即可提交PR。
+Then you can submit a PR.
 
 ## 💕 Acknowledgements 
 
