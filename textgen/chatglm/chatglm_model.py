@@ -140,8 +140,18 @@ class ChatGlmModel:
             self.args.model_name = model_name
 
         self.peft_name = peft_name
-        if self.args.use_peft:
+        if self.args.use_peft and self.peft_name:
             self.load_peft_model()
+
+    def load_peft_model(self):
+        """Load peft model."""
+        self.model = PeftModel.from_pretrained(
+            self.model,
+            self.peft_name,
+            torch_dtype=self.torch_dtype,
+            device_map=self.device_map,
+        )
+        logger.info(f"Loaded peft model from {self.peft_name}")
 
     def data_collator(self, batch):
         """
@@ -470,28 +480,6 @@ class ChatGlmModel:
         with open(output_file, "w") as writer:
             for key in sorted(metrics.keys()):
                 writer.write("{} = {}\n".format(key, str(metrics[key])))
-
-    def load_peft_model(self):
-        """Load peft model."""
-        if self.peft_name:
-            self.model = PeftModel.from_pretrained(
-                self.model,
-                self.peft_name,
-                torch_dtype=self.torch_dtype,
-                device_map=self.device_map,
-            )
-            logger.info(f"Loaded peft model from {self.peft_name}")
-        else:
-            # Load peft model from output_dir
-            peft_path = os.path.join(self.args.output_dir, self.args.peft_bin_name)
-            if peft_path and os.path.exists(peft_path):
-                self.model = PeftModel.from_pretrained(
-                    self.model,
-                    self.args.output_dir,
-                    torch_dtype=self.torch_dtype,
-                    device_map=self.device_map,
-                )
-                logger.info(f"Loaded peft model from {peft_path}")
 
     def process_response(self, response):
         """Process response text."""

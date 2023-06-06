@@ -10,7 +10,7 @@ from textgen import LlamaModel
 
 
 def generate_prompt(instruction):
-    return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:\n\n"""
+    return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response: """
 
 
 model = LlamaModel("llama", "shibing624/chinese-alpaca-plus-7b-hf")

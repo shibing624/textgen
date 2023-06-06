@@ -83,8 +83,8 @@ def main():
         if model is None:
             model = LlamaModel(
                 args.model_type, args.model_name,
-                args={'use_peft': True, 'eval_batch_size': args.batch_size,
-                      'output_dir': args.output_dir, "max_length": args.max_length, }
+                peft_name=args.output_dir,
+                args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length, }
             )
         test_data = load_data(args.test_data_dir)[:10]
         test_df = pd.DataFrame(test_data, columns=["instruction", "input", "output"])
@@ -92,9 +92,9 @@ def main():
 
         def get_prompt(arr):
             if arr['input'].strip():
-                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n### Input:\n{arr['input']}\n\n### Response:\n\n"""
+                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n### Input:\n{arr['input']}\n\n### Response: """
             else:
-                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n\n### Response:\n\n"""
+                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n\n### Response: """
 
         test_df['prompt'] = test_df.apply(get_prompt, axis=1)
         test_df['predict_after'] = model.predict(test_df['prompt'].tolist())

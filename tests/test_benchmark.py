@@ -16,7 +16,7 @@ pwd_path = os.path.abspath(os.path.dirname(__file__))
 
 
 def llama_generate_prompt(instruction):
-    return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:\n\n"""
+    return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response: """
 
 
 def chatglm_generate_prompt(instruction):

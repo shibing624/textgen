@@ -3,11 +3,12 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-import sys
-import os
 import argparse
-from loguru import logger
+import os
+import sys
+
 from datasets import load_dataset, load_from_disk
+from loguru import logger
 from torch.utils.data import Dataset
 
 sys.path.append('../..')
@@ -91,10 +92,11 @@ def main():
         if model is None:
             model = ChatGlmModel(
                 args.model_type, args.model_name,
-                args={'use_peft': True, 'eval_batch_size': args.batch_size,
-                      'output_dir': args.output_dir, "max_length": args.max_length, }
+                peft_name=args.output_dir,
+                args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length}
             )
-        sents = ['改写为电商广告文案：\n类型#上衣*材质#牛仔布*颜色#白色*风格#简约*图案#刺绣*衣样式#外套*衣款式#破洞\n答：', ]
+        sents = [
+            '改写为电商广告文案：\n类型#上衣*材质#牛仔布*颜色#白色*风格#简约*图案#刺绣*衣样式#外套*衣款式#破洞\n答：', ]
         response = model.predict(sents)
         print(response)
 

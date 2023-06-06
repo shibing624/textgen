@@ -62,8 +62,8 @@ def main():
         if model is None:
             model = LlamaModel(
                 args.model_type, args.model_name,
-                args={'use_peft': True, 'eval_batch_size': args.batch_size,
-                      'output_dir': args.output_dir, "max_length": args.max_length, }
+                peft_name=args.output_dir,
+                args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length, }
             )
         response = model.predict(["给出三个保持健康的秘诀。"])
         print(response)
