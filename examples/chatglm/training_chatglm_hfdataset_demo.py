@@ -49,8 +49,8 @@ def main():
         if model is None:
             model = ChatGlmModel(
                 args.model_type, args.model_name,
-                args={'use_peft': True, 'eval_batch_size': args.batch_size,
-                      'output_dir': args.output_dir, "max_length": args.max_length, }
+                peft_name=args.output_dir,
+                args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length, }
             )
         sents = [
             '问：用一句话描述地球为什么是独一无二的。\n答：',
