@@ -50,6 +50,7 @@ release基于`textgen`训练的中文模型，模型已经release到HuggingFace 
 | [shibing624/llama-13b-belle-zh-lora](https://huggingface.co/shibing624/llama-13b-belle-zh-lora)           | LLaMA-13B  | 在100万条中文ChatGPT指令Belle数据集[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)上微调了一版Llama-13B，问答效果有提升，发布微调后的LoRA权重                            | [training script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_hfdataset_demo.py)                           | [predict script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_hfdataset_demo.py)     |
 | [shibing624/chinese-alpaca-plus-7b-hf](https://huggingface.co/shibing624/chinese-alpaca-plus-7b-hf)       | LLaMA-7B   | [中文LLaMA-Plus, Alpaca-Plus 7B版本](https://github.com/ymcui/Chinese-LLaMA-Alpaca/releases/tag/v3.0)，在LLaMA-7B上扩充了中文词表并继续预训练120G文本（通用领域），在4M指令数据集上微调后得到的中文Alpaca-plus模型     | [training script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)                           | [predict script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)     |
 | [shibing624/chinese-alpaca-plus-13b-hf](https://huggingface.co/shibing624/chinese-alpaca-plus-13b-hf)     | LLaMA-13B  | [中文LLaMA-Plus, Alpaca-Plus 13B版本](https://github.com/ymcui/Chinese-LLaMA-Alpaca/releases/tag/v3.1)，在LLaMA-13B上扩充了中文词表并继续预训练120G文本（通用领域），在4.3M指令数据集上微调后得到的中文Alpaca-plus模型 | [training script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)                           | [predict script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)     |
+| [shibing624/ziya-llama-13b-medical-lora](https://huggingface.co/shibing624/ziya-llama-13b-medical-lora)     | LLaMA-13B  | 在240万条中英文医疗数据集[shibing624/medical](https://huggingface.co/datasets/shibing624/medical)上微调了一版Ziya-LLaMA-13B模型，医疗问答效果有提升，发布微调后的LoRA权重                                      | [training script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)                           | [predict script](https://github.com/shibing624/textgen/blob/main/examples/llama/training_llama_demo.py)     |
 
 ### Evaluation
 
@@ -569,20 +570,33 @@ output:
 
 ## 📚 Dataset 
 
-1. 50万条中文ChatGPT指令Belle数据集：[BelleGroup/train_0.5M_CN](https://huggingface.co/datasets/BelleGroup/train_0.5M_CN)
-2. 100万条中文ChatGPT指令Belle数据集：[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)
-3. 5万条英文ChatGPT指令Alpaca数据集：[50k English Stanford Alpaca dataset](https://github.com/tatsu-lab/stanford_alpaca#data-release)
-4. 2万条中文ChatGPT指令Alpaca数据集：[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
-5. 69万条中文指令Guanaco数据集(Belle50万条+Guanaco19万条)：[Chinese-Vicuna/guanaco_belle_merge_v1.0](https://huggingface.co/datasets/Chinese-Vicuna/guanaco_belle_merge_v1.0)
-6. 240万条中文医疗数据集(包括预训练数据和指令微调数据集)：[shibing624/medical](https://huggingface.co/datasets/shibing624/medical)
+#### SFT datasets
+- 50万条中文ChatGPT指令Belle数据集：[BelleGroup/train_0.5M_CN](https://huggingface.co/datasets/BelleGroup/train_0.5M_CN)
+- 100万条中文ChatGPT指令Belle数据集：[BelleGroup/train_1M_CN](https://huggingface.co/datasets/BelleGroup/train_1M_CN)
+- 5万条英文ChatGPT指令Alpaca数据集：[50k English Stanford Alpaca dataset](https://github.com/tatsu-lab/stanford_alpaca#data-release)
+- 2万条中文ChatGPT指令Alpaca数据集：[shibing624/alpaca-zh](https://huggingface.co/datasets/shibing624/alpaca-zh)
+- 69万条中文指令Guanaco数据集(Belle50万条+Guanaco19万条)：[Chinese-Vicuna/guanaco_belle_merge_v1.0](https://huggingface.co/datasets/Chinese-Vicuna/guanaco_belle_merge_v1.0)
+- 240万条中文医疗数据集(包括预训练数据和指令微调数据集)：[shibing624/medical](https://huggingface.co/datasets/shibing624/medical)
 
+- 5万条英文ChatGPT多轮对话数据集：[RyokoAI/ShareGPT52K](https://huggingface.co/datasets/RyokoAI/ShareGPT52K)
+- 80万条中文ChatGPT多轮对话数据集：[BelleGroup/multiturn_chat_0.8M](https://huggingface.co/datasets/BelleGroup/multiturn_chat_0.8M)
+- 116万条中文ChatGPT多轮对话数据集：[fnlp/moss-002-sft-data](https://huggingface.co/datasets/fnlp/moss-002-sft-data)
+#### Reward Model datasets
+- 原版的oasst1数据集：[OpenAssistant/oasst1](https://huggingface.co/datasets/OpenAssistant/oasst1)
+- 2万条多语言oasst1的reward数据集：[tasksource/oasst1_pairwise_rlhf_reward](https://huggingface.co/datasets/tasksource/oasst1_pairwise_rlhf_reward)
+- 11万条英文hh-rlhf的reward数据集：[Dahoas/full-hh-rlhf](https://huggingface.co/datasets/Dahoas/full-hh-rlhf)
+- 9万条英文reward数据集(来自Anthropic's Helpful Harmless dataset)：[Dahoas/static-hh](https://huggingface.co/datasets/Dahoas/static-hh)
+- 7万条英文reward数据集（来源同上）：[Dahoas/rm-static](https://huggingface.co/datasets/Dahoas/rm-static)
+- 7万条繁体中文的reward数据集（翻译自rm-static）[liswei/rm-static-m2m100-zh](https://huggingface.co/datasets/liswei/rm-static-m2m100-zh)
+- 7万条英文Reward数据集：[yitingxie/rlhf-reward-datasets](https://huggingface.co/datasets/yitingxie/rlhf-reward-datasets)
+- 3千条中文知乎问答偏好数据集：[liyucheng/zhihu_rlhf_3k](https://huggingface.co/datasets/liyucheng/zhihu_rlhf_3k)
 ## ✅ Todo
 
-1. [ ] 新增多轮对话数据微调方法
-2. [ ] add reward model finetuning
-3. [ ] add rl finetuning
-4. [ ] add medical reward dataset
-5. [ ] add llama in4 training
+1. [ ] add multiple rounds of dialogue data fine-tuning method
+2. [x] add reward model finetuning, go to [shibing624/MeidcalGPT](https://github.com/shibing624/MedicalGPT)
+3. [x] add rl finetuning, go to [shibing624/MeidcalGPT](https://github.com/shibing624/MedicalGPT)
+4. [x] add medical reward dataset
+5. [x] add llama in4 training, go to [shibing624/MeidcalGPT](https://github.com/shibing624/MedicalGPT)
 6. [ ] add all training and predict demo in colab
 
 ## ☎️ Contact
