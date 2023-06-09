@@ -580,6 +580,39 @@ class ChatGlmModel:
         history = history + [(query, response)]
         return response, history
 
+    @torch.no_grad()
+    def stream_chat(self, query: str, history: List[Tuple[str, str]] = None, max_length: int = 2048, **kwargs):
+        """Chat with the model in a streaming fashion"""
+        if history is None:
+            history = []
+        gen_kwargs = {
+            "max_new_tokens": max_length if max_length else self.args.max_length,
+            "temperature": self.args.temperature,
+            "top_p": self.args.top_p,
+            "do_sample": self.args.do_sample,
+            "repetition_penalty": self.args.repetition_penalty,
+            "length_penalty": self.args.length_penalty,
+            "num_beams": self.args.num_beams,
+            "eos_token_id": self.tokenizer.eos_token_id,
+            "pad_token_id": self.tokenizer.pad_token_id,
+            "num_return_sequences": self.args.num_return_sequences,
+            **kwargs
+        }
+        if not history:
+            prompt = query
+        else:
+            prompt = ""
+            for i, (old_query, response) in enumerate(history):
+                prompt += "[Round {}]\n问：{}\n答：{}\n".format(i, old_query, response)
+            prompt += "[Round {}]\n问：{}\n答：".format(len(history), query)
+        inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+        for outputs in self.model.stream_generate(**inputs, **gen_kwargs):
+            outputs = outputs.tolist()[0][len(inputs["input_ids"][0]):]
+            response = self.tokenizer.decode(outputs)
+            response = self.process_response(response)
+            new_history = history + [(query, response)]
+            yield response, new_history
+
     def load_and_cache_examples(
             self, data, evaluate=False, no_cache=False, verbose=True, silent=False
     ):
