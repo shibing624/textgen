@@ -47,6 +47,7 @@ def main():
     parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     parser.add_argument('--eval_steps', default=500, type=int, help='Eval every X steps')
     parser.add_argument('--save_steps', default=500, type=int, help='Save checkpoint every X steps')
+    parser.add_argument('--save_total_limit', default=100, type=int, help='max nums of save checkpoints')
     #parser.add_argument("--local_rank", type=int, default=0)
     args = parser.parse_args()
     logger.info(args)
