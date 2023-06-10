@@ -50,12 +50,12 @@ def main():
         if model is None:
             model = LlamaModel(
                 args.model_type, args.model_name,
-                args={'use_peft': True, 'eval_batch_size': args.batch_size,
-                      'output_dir': args.output_dir, "max_length": args.max_length, }
+                peft_name=args.output_dir,
+                args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length, }
             )
 
         def generate_prompt(instruction):
-            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:\n\n"""
+            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response: """
 
         sents = [
             '用一句话描述地球为什么是独一无二的。',

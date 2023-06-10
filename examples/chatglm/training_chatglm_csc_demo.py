@@ -3,11 +3,12 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-import sys
-import os
 import argparse
-from loguru import logger
+import os
+import sys
+
 from datasets import load_dataset, load_from_disk
+from loguru import logger
 from torch.utils.data import Dataset
 
 sys.path.append('../..')
@@ -89,8 +90,8 @@ def main():
         if model is None:
             model = ChatGlmModel(
                 args.model_type, args.model_name,
-                args={'use_peft': True, 'eval_batch_size': args.batch_size,
-                      'output_dir': args.output_dir, "max_length": args.max_length, }
+                peft_name=args.output_dir,
+                args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length, }
             )
         sents = ['对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答：',
                  '对下面中文拼写纠错：\n下个星期，我跟我朋唷打算去法国玩儿。\n答：']

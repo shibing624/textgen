@@ -52,7 +52,6 @@ def main():
         logger.info('Loading data...')
         model_args = {
             "use_peft": True,
-            "reprocess_input_data": True,
             "overwrite_output_dir": True,
             "max_seq_length": args.max_seq_length,
             "max_length": args.max_length,
@@ -76,8 +75,8 @@ def main():
         if model is None:
             model = LlamaModel(
                 args.model_type, args.model_name,
-                args={'use_peft': True, 'eval_batch_size': args.batch_size,
-                      'output_dir': args.output_dir, "max_length": args.max_length, }
+                peft_name=args.output_dir,
+                args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length, }
             )
         test_data = load_data(args.test_file)[:10]
         test_df = pd.DataFrame(test_data, columns=["instruction", "input", "output"])
@@ -85,9 +84,9 @@ def main():
 
         def get_prompt(arr):
             if arr['input'].strip():
-                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n### Input:\n{arr['input']}\n\n### Response:\n\n"""
+                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n### Input:\n{arr['input']}\n\n### Response: """
             else:
-                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n\n### Response:\n\n"""
+                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n\n### Response: """
 
         test_df['prompt'] = test_df.apply(get_prompt, axis=1)
         test_df['predict_after'] = model.predict(test_df['prompt'].tolist())
@@ -96,11 +95,12 @@ def main():
         out_df.to_json('test_result.json', force_ascii=False, orient='records', lines=True)
 
         def generate_prompt(instruction):
-            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{instruction}\n\n### Response:\n\n"""
+            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{instruction}\n\n### Response: """
 
         response = model.predict([generate_prompt("给出三个保持健康的秘诀。")])
         print(response)
-        response = model.predict([generate_prompt("给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。")])
+        response = model.predict([generate_prompt(
+            "给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。")])
         print(response)
 
 

@@ -12,7 +12,6 @@ from typing import Optional
 
 from loguru import logger
 from torch.utils.data import Dataset
-from transformers.trainer_utils import ExplicitEnum
 
 
 def get_default_process_count():
@@ -141,13 +140,6 @@ class ModelArgs:
                         "when loading the model."
                     )
                 self.update_from_dict(model_args)
-
-
-class TrainingTask(ExplicitEnum):
-    PT = "pretraining"
-    FT = "finetuning"
-    RM = "reward_modeling"
-    RL = "reinforcement_learning"
 
 
 @dataclass
@@ -397,11 +389,12 @@ class ChatGlmArgs(ModelArgs):
     per_device_train_batch_size = 2
     eval_batch_size: int = 4
     gradient_accumulation_steps = 1
+    gradient_checkpointing: bool = True
+    torch_compile: bool = False
     save_total_limit = 3
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
-    enable_torch_compile: bool = True
 
 
 @dataclass
@@ -465,10 +458,11 @@ class LlamaArgs(ModelArgs):
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
-    enable_torch_compile: bool = True
-    block_size: int = 1024
-    target_kl: float = 0.1  # kl target for early stopping
-    reward_baseline: float = 0.0 # baseline value that is subtracted from the reward
+    gradient_checkpointing: bool = True
+    torch_compile: bool = False
+    is_pretraining: bool = False  # Whether to pretrain the model
+    block_size: int = 1024  # block size for pretraining
+
 
 @dataclass
 class BloomArgs(ModelArgs):
@@ -526,9 +520,10 @@ class BloomArgs(ModelArgs):
     max_steps = -1
     per_device_train_batch_size = 2
     eval_batch_size: int = 4
+    gradient_checkpointing: bool = True
+    torch_compile: bool = False
     gradient_accumulation_steps = 1
     save_total_limit = 3
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
-    enable_torch_compile: bool = True
