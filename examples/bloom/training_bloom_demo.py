@@ -46,7 +46,7 @@ def main():
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=1, type=float, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=2, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
     model = None
@@ -94,11 +94,12 @@ def main():
         out_df = test_df[['instruction', 'input', 'output', 'predict_after']]
         out_df.to_json('test_result.json', force_ascii=False, orient='records', lines=True)
 
-        sents = ["that 's the kind of guy she likes ? Pretty ones ?",
-                 "Not the hacking and gagging and spitting part .", ]
-        response, history = model.chat(sents[0], history=[])
+        def generate_prompt(instruction):
+            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{instruction}\n\n### Response: """
+
+        response = model.predict([generate_prompt("给出三个保持健康的秘诀。")])
         print(response)
-        response, history = model.chat(sents[1], history=history)
+        response = model.predict([generate_prompt("介绍下北京")])
         print(response)
 
 
