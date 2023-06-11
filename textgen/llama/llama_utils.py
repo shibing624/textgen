@@ -58,27 +58,27 @@ def preprocess_instruction_data(data):
         prompt += EOS_TOKEN
         example = tokenizer(prompt, return_offsets_mapping=True)
         labels = example['input_ids'].copy()
-        source_len = len(tokenizer(PROMPT_DICT['prompt_multi_round_no_input'].split('\n\n')[0] + '\n\n')['input_ids'])
-        labels[:source_len] = [IGNORE_INDEX] * source_len
-        offsets = example["offset_mapping"]
+        if not args.is_train_on_prompt:
+            source_len = len(
+                tokenizer(PROMPT_DICT['prompt_multi_round_no_input'].split('\n\n')[0] + '\n\n')['input_ids'])
+            labels[:source_len] = [IGNORE_INDEX] * source_len
+            offsets = example["offset_mapping"]
 
-        matches = re.finditer(r'### (?!Assistant:)(.*?)<\/s>', prompt, re.DOTALL)
-        for match in matches:
-            start_pos, end_pos = match.span()
-            start_idx = None
-            end_idx = None
+            matches = re.finditer(r'### (?!Assistant:)(.*?)<\/s>', prompt, re.DOTALL)
+            for match in matches:
+                start_pos, end_pos = match.span()
+                start_idx = None
+                end_idx = None
 
-            for i, (start, end) in enumerate(offsets):
-                if start <= start_pos < end:
-                    start_idx = i
-                if start <= end_pos < end:
-                    end_idx = i
+                for i, (start, end) in enumerate(offsets):
+                    if start <= start_pos < end:
+                        start_idx = i
+                    if start <= end_pos < end:
+                        end_idx = i
 
-            if start_idx is not None and end_idx is not None:
-                for i in range(start_idx, end_idx - 1):
-                    labels[i] = IGNORE_INDEX
-
-        example['labels'] = labels
+                if start_idx is not None and end_idx is not None:
+                    for i in range(start_idx, end_idx - 1):
+                        labels[i] = IGNORE_INDEX
         return example
     else:
         full_prompt = prompt + target_text + tokenizer.eos_token
@@ -103,7 +103,6 @@ def preprocess_instruction_data(data):
             # set labels to full max length to adjust for DataCollatorForSeq2Seq padding
             example["labels"] = [-100] * (full_max_length - len(example['labels']) + user_prompt_len) + \
                                 example["labels"][user_prompt_len:]
-
         return example
 
 
