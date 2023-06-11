@@ -107,7 +107,7 @@ def preprocess_data(data):
 
 def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):
     data = (dataset["instruction"], dataset["input"], dataset["output"], tokenizer, args)
-    dataset['input_ids'] = preprocess_data(data)
+    dataset = preprocess_data(data)
     return dataset
 
 
