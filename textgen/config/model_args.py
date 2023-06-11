@@ -460,8 +460,6 @@ class LlamaArgs(ModelArgs):
     resume_from_checkpoint: str = None
     gradient_checkpointing: bool = True
     torch_compile: bool = False
-    is_pretraining: bool = False  # Whether to pretrain the model
-    block_size: int = 1024  # block size for pretraining
 
 
 @dataclass
