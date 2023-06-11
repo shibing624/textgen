@@ -6,6 +6,7 @@
 
 import os
 import pickle
+import re
 from multiprocessing import Pool
 
 import datasets
@@ -14,7 +15,6 @@ from datasets import load_dataset
 from loguru import logger
 from torch.utils.data import Dataset
 from tqdm.auto import tqdm
-import re
 
 PROMPT_DICT = {
     "prompt_input": (
@@ -46,6 +46,7 @@ def generate_prompt(instruction, input_text, output_text):
         else:
             prompt = PROMPT_DICT["prompt_no_input"].format(instruction=instruction)
         return prompt, 'single_round'
+
 
 def preprocess_data(data):
     instruction, input_text, target_text, tokenizer, args = data

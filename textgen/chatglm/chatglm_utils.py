@@ -15,6 +15,7 @@ from datasets import load_dataset
 from loguru import logger
 from rouge import Rouge
 from torch.utils.data import Dataset
+from tqdm.auto import tqdm
 
 PROMPT_DICT = {
     "prompt_input": (
@@ -159,8 +160,13 @@ class ChatGlmDataset(Dataset):
                 self.examples = pickle.load(handle)
         else:
             logger.debug(" Creating features from dataset file at %s" % args.cache_dir)
-            dataset = load_hf_dataset(data, tokenizer, args, mode)
-            self.examples = list(dataset)
+            data = [
+                (instruction, input_text, target_text, tokenizer, args)
+                for instruction, input_text, target_text in zip(
+                    data["instruction"], data["input"], data["output"]
+                )
+            ]
+            self.examples = [preprocess_data(d) for d in tqdm(data, disable=args.silent)]
             if not args.no_cache:
                 logger.info(" Saving features into cached file %s" % cached_features_file)
                 with open(cached_features_file, "wb") as handle:
