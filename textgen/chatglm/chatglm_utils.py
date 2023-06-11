@@ -166,13 +166,11 @@ class ChatGlmDataset(Dataset):
                 with open(cached_features_file, "wb") as handle:
                     pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+    def __len__(self):
+        return len(self.examples)
 
-def __len__(self):
-    return len(self.examples)
-
-
-def __getitem__(self, index):
-    return self.examples[index]
+    def __getitem__(self, index):
+        return self.examples[index]
 
 
 def compute_bleu(label, pred, weights=None):
