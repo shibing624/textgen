@@ -435,6 +435,7 @@ class LlamaModel:
 
         # Training
         logger.info("*** Train ***")
+        logger.debug(f"Train dataloader example: {list(trainer.get_train_dataloader())[0]}")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
         self.results.update(metrics)
         trainer.log_metrics("train", metrics)
