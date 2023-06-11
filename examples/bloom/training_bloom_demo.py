@@ -56,6 +56,7 @@ def main():
         model_args = {
             "use_peft": True,
             "overwrite_output_dir": True,
+            "reprocess_input_data": True,
             "max_seq_length": args.max_seq_length,
             "max_length": args.max_length,
             "per_device_train_batch_size": args.batch_size,

@@ -77,7 +77,7 @@ def preprocess_data(data):
 
             if start_idx is not None and end_idx is not None:
                 for i in range(start_idx, end_idx - 1):
-                    labels[i] = -100
+                    labels[i] = IGNORE_INDEX
 
         example['labels'] = labels
         return example

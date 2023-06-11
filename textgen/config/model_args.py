@@ -440,7 +440,7 @@ class LlamaArgs(ModelArgs):
     lora_r: int = 8
     lora_alpha = 16
     lora_dropout = 0.05
-    lora_target_modules = ["all"]  # ["all"] or target module names
+    lora_target_modules = ["all"]  # ["all"] or ["k_proj"]
     lora_bias = "none"
     adalora_init_r: int = 12
     adalora_tinit: int = 200

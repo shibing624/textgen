@@ -146,6 +146,8 @@ class LlamaModel:
         self.peft_name = peft_name
         if self.args.use_peft and self.peft_name:
             self.load_peft_model()
+        # Set padding side equal to Collator padding side
+        self.tokenizer.padding_side = "left"
 
     def load_peft_model(self):
         """Load peft model"""

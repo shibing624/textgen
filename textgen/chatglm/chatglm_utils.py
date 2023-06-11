@@ -76,7 +76,7 @@ def preprocess_data(data):
 
                 if start_idx is not None and end_idx is not None:
                     for i in range(start_idx, end_idx - 1):
-                        labels[i] = -100
+                        labels[i] = IGNORE_INDEX
 
             example['labels'] = labels
         return example
@@ -100,7 +100,7 @@ def preprocess_data(data):
                 add_special_tokens=False
             )
             user_prompt_len = len(user_example["input_ids"])
-            # set labels to full max length to adjust for DataCollatorForSeq2Seq padding
+            # -100 is the ignore index that is replaced with model prediction
             example["labels"] = [-100] * (full_max_length - len(example['labels']) + user_prompt_len) + \
                                 example["labels"][user_prompt_len:]
         return example
