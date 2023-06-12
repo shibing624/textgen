@@ -23,7 +23,7 @@ from peft import (
 )
 from tqdm.auto import tqdm
 from transformers import GenerationConfig, DataCollatorForSeq2Seq
-from transformers import LlamaForCausalLM, LlamaTokenizer
+from transformers import LlamaForCausalLM, LlamaTokenizerFast
 from transformers import Trainer, TrainingArguments, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
 
@@ -35,7 +35,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 MODEL_CLASSES = {
-    "llama": (AutoConfig, LlamaForCausalLM, LlamaTokenizer),
+    "llama": (AutoConfig, LlamaForCausalLM, LlamaTokenizerFast),
 }
 
 
@@ -501,7 +501,7 @@ class LlamaModel:
         ):
             if add_system_prompt:
                 batch = [PROMPT_DICT['prompt_no_input'].format(instruction=s) for s in batch]
-            inputs = self.tokenizer(batch, padding=True, return_tensors='pt').to(self.device)
+            inputs = self.tokenizer(batch, return_tensors='pt')
             generation_config = GenerationConfig(
                 max_new_tokens=max_length if max_length else self.args.max_length,
                 temperature=self.args.temperature,
@@ -518,7 +518,11 @@ class LlamaModel:
                 output_scores=True,
                 **kwargs,
             )
-            outputs = self.model.generate(**inputs, generation_config=generation_config)
+            outputs = self.model.generate(
+                input_ids=inputs['input_ids'].to(self.device),
+                attention_mask=inputs['attention_mask'].to(self.device),
+                generation_config=generation_config
+            )
             for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs.sequences)):
                 # Decode text
                 text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
