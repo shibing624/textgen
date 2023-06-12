@@ -7,14 +7,12 @@
 import os
 import pickle
 import re
-from multiprocessing import Pool
 
 import datasets
 from datasets import Dataset as HFDataset
 from datasets import load_dataset
 from loguru import logger
 from torch.utils.data import Dataset
-from tqdm.auto import tqdm
 
 PROMPT_DICT = {
     "prompt_input": (
@@ -117,7 +115,7 @@ def preprocess_batch_for_hf_dataset(example, tokenizer, args):
     return example
 
 
-def load_hf_dataset(data, tokenizer, args, mode):
+def load_hf_dataset(tokenizer, args, data, mode):
     if isinstance(data, str):
         if data.endswith('.json') or data.endswith('.jsonl'):
             dataset = load_dataset("json", data_files=data)
@@ -166,7 +164,7 @@ class BloomDataset(Dataset):
         else:
             logger.info(" Creating features from dataset file at %s" % args.cache_dir)
 
-            self.examples = list(load_hf_dataset(data, tokenizer, args, mode))
+            self.examples = list(load_hf_dataset(tokenizer, args, data, mode))
             if not args.no_cache:
                 logger.info(" Saving features into cached file %s" % cached_features_file)
                 with open(cached_features_file, "wb") as handle:

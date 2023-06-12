@@ -25,7 +25,7 @@ from transformers import GenerationConfig, DataCollatorForSeq2Seq
 from transformers import Trainer, TrainingArguments, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
 
-from textgen.bloom.bloom_utils import load_hf_dataset, BloomDataset
+from textgen.bloom.bloom_utils import BloomDataset
 from textgen.config.model_args import BloomArgs
 
 has_cuda = torch.cuda.is_available()
@@ -457,7 +457,6 @@ class BloomModel:
             )
         return global_step, training_loss
 
-
     @torch.inference_mode()
     def predict(self, sentences: List[str], keep_prompt: bool = False, max_length: int = None, **kwargs):
         """
@@ -563,19 +562,11 @@ class BloomModel:
 
         mode = "dev" if evaluate else "train"
 
-        if self.args.use_hf_datasets:
-            dataset = load_hf_dataset(data, tokenizer, self.args, mode)
-            return dataset
-        elif args.dataset_class:
+        if args.dataset_class:
             CustomDataset = args.dataset_class
             return CustomDataset(tokenizer, args, data, mode)
         else:
-            return BloomDataset(
-                tokenizer,
-                self.args,
-                data,
-                mode,
-            )
+            return BloomDataset(tokenizer, args, data, mode)
 
     def save_model(
             self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
