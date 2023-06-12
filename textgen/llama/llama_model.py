@@ -501,7 +501,7 @@ class LlamaModel:
         ):
             if add_system_prompt:
                 batch = [PROMPT_DICT['prompt_no_input'].format(instruction=s) for s in batch]
-            inputs = self.tokenizer(batch, return_tensors='pt')
+            inputs = self.tokenizer(batch, padding=True, return_tensors='pt')
             generation_config = GenerationConfig(
                 max_new_tokens=max_length if max_length else self.args.max_length,
                 temperature=self.args.temperature,

@@ -51,30 +51,37 @@ def preprocess_data(data):
     IGNORE_INDEX = -100
     EOS_TOKEN = tokenizer.eos_token
     full_max_length = args.max_seq_length + args.max_length
+
     prompt, round_type = generate_prompt(instruction, input_text, target_text)
+
     if round_type == 'multi_round':
         prompt = re.sub(r'(?<!\n)\n### ', f'\n{EOS_TOKEN}### ', prompt)
         prompt += EOS_TOKEN
-        example = tokenizer(prompt, max_length=full_max_length, truncation=True, padding=False,
-                            return_offsets_mapping=True)
+        example = tokenizer(prompt, max_length=full_max_length, truncation=True, padding=False)
         labels = example['input_ids'].copy()
         if not args.is_train_on_prompt:
             source_len = len(tokenizer(
                 PROMPT_DICT['prompt_multi_round_no_input'].split('\n\n')[0] + '\n\n')['input_ids'])
             labels[:source_len] = [IGNORE_INDEX] * source_len
-            offsets = example["offset_mapping"]
 
-            matches = re.finditer(r'### (?!Assistant:)(.*?)<\/s>', prompt, re.DOTALL)
+            matches = re.finditer(r'### (?!Assistant:)(.*?)</s>', prompt, re.DOTALL)
+            input_tokens = tokenizer.convert_ids_to_tokens(example["input_ids"])
             for match in matches:
                 start_pos, end_pos = match.span()
                 start_idx = None
                 end_idx = None
+                current_pos = 0
+                current_idx = 0
 
-                for i, (start, end) in enumerate(offsets):
-                    if start <= start_pos < end:
-                        start_idx = i
-                    if start <= end_pos < end:
-                        end_idx = i
+                while current_pos < start_pos:
+                    current_pos += len(input_tokens[current_idx]) + 1
+                    current_idx += 1
+                start_idx = current_idx
+
+                while current_pos < end_pos:
+                    current_pos += len(input_tokens[current_idx]) + 1
+                    current_idx += 1
+                end_idx = current_idx - 1
 
                 if start_idx is not None and end_idx is not None:
                     for i in range(start_idx, end_idx - 1):
@@ -99,7 +106,7 @@ def preprocess_data(data):
                 add_special_tokens=False
             )
             user_prompt_len = len(user_example["input_ids"])
-            # -100 is the ignore index that is replaced with model prediction
+            # Padding labels to full max length to equalize the length of input_ids after collator
             example["labels"] = [IGNORE_INDEX] * (full_max_length - len(example['labels']) + user_prompt_len) + \
                                 example["labels"][user_prompt_len:]
     return {"input_ids": example['input_ids'], "labels": example["labels"]}
