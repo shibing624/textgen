@@ -23,7 +23,7 @@ from peft import (
 )
 from tqdm.auto import tqdm
 from transformers import GenerationConfig, DataCollatorForSeq2Seq
-from transformers import LlamaForCausalLM, LlamaTokenizerFast
+from transformers import LlamaForCausalLM, LlamaTokenizer
 from transformers import Trainer, TrainingArguments, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
 
@@ -35,7 +35,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 MODEL_CLASSES = {
-    "llama": (AutoConfig, LlamaForCausalLM, LlamaTokenizerFast),
+    "llama": (AutoConfig, LlamaForCausalLM, LlamaTokenizer),
 }
 
 
@@ -150,7 +150,7 @@ class LlamaModel:
         """Load peft model"""
         if os.path.isdir(self.peft_name) and os.path.exists(
                 os.path.join(self.peft_name, "tokenizer_config.json")):
-            self.tokenizer = LlamaTokenizerFast.from_pretrained(self.peft_name)
+            self.tokenizer = self.tokenizer_class.from_pretrained(self.peft_name)
             self.resize_model_embeddings(len(self.tokenizer))
         self.model = PeftModel.from_pretrained(
             self.model,

@@ -130,9 +130,9 @@ class ChatGlmModel:
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
             self.tokenizer = tokenizer_class.from_pretrained(
-                self.args.tokenizer_name, trust_remote_code=True, use_fast=True)
+                self.args.tokenizer_name, trust_remote_code=True)
         else:
-            self.tokenizer = tokenizer_class.from_pretrained(model_name, trust_remote_code=True, use_fast=True)
+            self.tokenizer = tokenizer_class.from_pretrained(model_name, trust_remote_code=True)
             self.args.tokenizer_name = self.args.model_name
 
         self.args.model_type = model_type
