@@ -25,7 +25,7 @@ from transformers import GenerationConfig, DataCollatorForSeq2Seq
 from transformers import Trainer, TrainingArguments, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
 
-from textgen.bloom.bloom_utils import BloomDataset
+from textgen.bloom.bloom_utils import BloomDataset, PROMPT_DICT
 from textgen.config.model_args import BloomArgs
 
 has_cuda = torch.cuda.is_available()
@@ -353,6 +353,7 @@ class BloomModel:
         train_dataset = self.load_and_cache_examples(train_data)
         if verbose:
             logger.debug(f"train_dataset len: {len(train_dataset)}, train_dataset[0]: {train_dataset[0]}")
+            logger.debug(f"text of train_dataset[0]: {self.tokenizer.decode(train_dataset[0]['input_ids'])}")
         eval_dataset = None
         if eval_data is not None:
             eval_dataset = self.load_and_cache_examples(eval_data, evaluate=True)
@@ -518,26 +519,20 @@ class BloomModel:
         return all_outputs
 
     @torch.inference_mode()
-    def chat(self, query: str, history: List[Tuple[str, str]] = None,
-             keep_prompt: bool = False, max_length: int = 128, **kwargs):
-        """
-        Chat with the model
-        :param query:
-        :param history:
-        :param keep_prompt:
-        :param max_length:
-        :param kwargs:
-        :return: response, history
-        """
+    def chat(self, query: str, history: List[Tuple[str, str]] = None, keep_prompt: bool = False,
+             max_length: int = 1024, add_system_prompt=True, **kwargs):
+        """Chat with the model."""
         if history is None:
             history = []
         if not history:
             prompt = query
         else:
             prompt = ""
-            for i, (old_query, response) in enumerate(history):
-                prompt += "\n### Human: {}\n### Assistant: {}\n".format(i, old_query, response)
-            prompt += "\n### Human: {}\n### Assistant: ".format(len(history), query)
+            for i, (q, a) in enumerate(history):
+                prompt += "\n### Human: {}\n### Assistant: {}\n".format(q, a)
+            prompt += "\n### Human: {}\n### Assistant: ".format(query)
+        if add_system_prompt:
+            prompt = PROMPT_DICT['prompt_multi_round_no_input'].format(instruction=prompt, output_text="")
         response = self.predict([prompt], keep_prompt=keep_prompt, max_length=len(prompt) + max_length, **kwargs)[0]
         history = history + [(query, response)]
         return response, history

@@ -34,8 +34,8 @@ PROMPT_DICT = {
 def generate_prompt(instruction, input_text, output_text):
     """Generate prompt for instruction."""
     if 'Human:' in instruction and 'Assistant:' in instruction:
-        instruction = instruction.replace('Human:', '### Human: ')
-        instruction = instruction.replace('Assistant:', '### Assistant: ')
+        instruction = instruction.replace('Human:', '### Human:')
+        instruction = instruction.replace('Assistant:', '### Assistant:')
         prompt = PROMPT_DICT['prompt_multi_round_no_input'].format(instruction=instruction, output_text=output_text)
         return prompt, 'multi_round'
     else:
@@ -50,12 +50,13 @@ def preprocess_data(data):
     instruction, input_text, target_text, tokenizer, args = data
     IGNORE_INDEX = -100
     EOS_TOKEN = tokenizer.eos_token
-
+    full_max_length = args.max_seq_length + args.max_length
     prompt, round_type = generate_prompt(instruction, input_text, target_text)
     if round_type == 'multi_round':
         prompt = re.sub(r'(?<!\n)\n### ', f'\n{EOS_TOKEN}### ', prompt)
         prompt += EOS_TOKEN
-        example = tokenizer(prompt, return_offsets_mapping=True)
+        example = tokenizer(prompt, max_length=full_max_length, truncation=True, padding=False,
+                            return_offsets_mapping=True)
         labels = example['input_ids'].copy()
         if not args.is_train_on_prompt:
             source_len = len(
@@ -78,10 +79,9 @@ def preprocess_data(data):
                 if start_idx is not None and end_idx is not None:
                     for i in range(start_idx, end_idx - 1):
                         labels[i] = IGNORE_INDEX
-        example['labels'] = labels
+        example['labels'] = [IGNORE_INDEX] * (full_max_length - len(labels)) + labels
     else:
         full_prompt = prompt + target_text + tokenizer.eos_token
-        full_max_length = args.max_seq_length + args.max_length
         example = tokenizer(
             full_prompt,
             truncation=True,
@@ -100,7 +100,7 @@ def preprocess_data(data):
             )
             user_prompt_len = len(user_example["input_ids"])
             # set labels to full max length to adjust for DataCollatorForSeq2Seq padding
-            example["labels"] = [-100] * (full_max_length - len(example['labels']) + user_prompt_len) + \
+            example["labels"] = [IGNORE_INDEX] * (full_max_length - len(example['labels']) + user_prompt_len) + \
                                 example["labels"][user_prompt_len:]
     return {
         "input_ids": example["input_ids"],
