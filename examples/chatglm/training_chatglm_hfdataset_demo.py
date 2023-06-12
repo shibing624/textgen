@@ -40,7 +40,6 @@ def main():
             "per_device_train_batch_size": args.batch_size,
             "num_train_epochs": args.num_epochs,
             "output_dir": args.output_dir,
-            "use_hf_datasets": True,
         }
         model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
 
@@ -71,21 +70,7 @@ def main():
         print(response)
         response, history = model.chat("给出三个保持健康的秘诀。", history=[])
         print(response)
-        response, history = model.chat(
-            "给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。\n",
-            history=history)
-        print(response)
-        del model
-
-        ref_model = ChatGlmModel(args.model_type, args.model_name,
-                                 args={'use_peft': False, 'eval_batch_size': args.batch_size})
-        response = ref_model.predict(sents)
-        print(response)
-        response, history = ref_model.chat("给出三个保持健康的秘诀。", history=[])
-        print(response)
-        response, history = ref_model.chat(
-            "给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。\n",
-            history=history)
+        response, history = model.chat("再说3个", history=history)
         print(response)
 
 

@@ -41,7 +41,6 @@ def main():
             "per_device_train_batch_size": args.batch_size,
             "num_train_epochs": args.num_epochs,
             "output_dir": args.output_dir,
-            "use_hf_datasets": True,
         }
         model = LlamaModel(args.model_type, args.model_name, args=model_args)
 

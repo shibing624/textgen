@@ -9,49 +9,29 @@ import sys
 
 from datasets import load_dataset, load_from_disk
 from loguru import logger
-from torch.utils.data import Dataset
 
 sys.path.append('../..')
 from textgen import ChatGlmModel
 
 
-def preprocess_batch_for_hf_dataset(example, tokenizer, args):
-    input_text, wrong_ids, target_text = example["original_text"], example["wrong_ids"], example["correct_text"]
-    instruction = '对下面中文拼写纠错：'
-    prompt = f"问：{instruction}\n{input_text}\n答："
-    target_text = target_text + '\n错误字：' + '，'.join([input_text[i] for i in wrong_ids])
-    prompt_ids = tokenizer.encode(prompt, max_length=args.max_seq_length)
-    target_ids = tokenizer.encode(target_text, max_length=args.max_length, add_special_tokens=False)
-    input_ids = prompt_ids + target_ids
-    input_ids = input_ids[:(args.max_seq_length + args.max_length)] + [tokenizer.eos_token_id]
-
-    example['input_ids'] = input_ids
+def preprocess_function(example):
+    original_text, wrong_ids, correct_text = example["original_text"], example["wrong_ids"], example["correct_text"]
+    example['instruction'] = '对下面中文拼写纠错：'
+    example['input'] = original_text
+    example['output'] = correct_text + '\n错误字：' + '，'.join([correct_text[i] for i in wrong_ids])
     return example
 
 
-class CscDataset(Dataset):
-    def __init__(self, tokenizer, args, data, mode):
-        if data.endswith('.json') or data.endswith('.jsonl'):
-            dataset = load_dataset("json", data_files=data)
-        elif os.path.isdir(data):
-            dataset = load_from_disk(data)
-        else:
-            dataset = load_dataset(data)
-        # This is not necessarily a train dataset. The datasets library insists on calling it train.
-        dataset = dataset["train"]
-        dataset = dataset.map(
-            lambda x: preprocess_batch_for_hf_dataset(x, tokenizer, args),
-            batched=False, remove_columns=dataset.column_names
-        )
-        dataset.set_format(type="np", columns=["input_ids"])
-
-        self.examples = dataset["input_ids"]
-
-    def __len__(self):
-        return len(self.examples)
-
-    def __getitem__(self, index):
-        return self.examples[index]
+def load_data(data):
+    if data.endswith('.json') or data.endswith('.jsonl'):
+        dataset = load_dataset("json", data_files=data)
+    elif os.path.isdir(data):
+        dataset = load_from_disk(data)
+    else:
+        dataset = load_dataset(data)
+    dataset = dataset["train"]
+    dataset = dataset.map(preprocess_function, batched=True, remove_columns=dataset.column_names)
+    return dataset.to_pandas()
 
 
 def main():
@@ -74,7 +54,6 @@ def main():
     if args.do_train:
         logger.info('Loading data...')
         model_args = {
-            "dataset_class": CscDataset,
             'use_peft': True,
             "overwrite_output_dir": True,
             "max_seq_length": args.max_seq_length,
@@ -84,8 +63,11 @@ def main():
             "output_dir": args.output_dir,
         }
         model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
-
-        model.train_model(args.train_file)
+        train_df = load_data(args.train_file)
+        logger.debug('train_data: {}'.format(train_df))
+        eval_df = train_df[:10]
+        train_df = train_df[10:]
+        model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:
             model = ChatGlmModel(

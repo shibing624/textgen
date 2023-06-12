@@ -224,11 +224,6 @@ python -m textgen/llama/merge_peft_adapter.py \
 ```
 
 #### 训练领域模型
-
-| Notebook     | Description |    |
-|:----------|:------------|------:|
-| [training_medical_model.ipynb](https://github.com/shibing624/textgen/blob/main/examples/llama/training_medical_model.ipynb)  | 训练医疗大模型     |[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shibing624/textgen/blob/main/examples/llama/training_medical_model.ipynb) |
-
 Note: 为了全面的介绍训练医疗大模型的过程，把4阶段训练方法(Pretraining, Supervised Finetuning, Reward Modeling and Reinforcement Learning)单独新建了一个repo：[shibing624/MedicalGPT](https://github.com/shibing624/MedicalGPT)，请移步该repo查看训练方法。
 
 ### BLOOM 模型

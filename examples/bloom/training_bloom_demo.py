@@ -12,32 +12,24 @@ from loguru import logger
 sys.path.append('../..')
 from textgen import BloomModel
 
-
 def load_data(file_path):
     data = []
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
-            line = line.strip()
-            if line.startswith('='):
-                q = ''
-                a = ''
-                continue
-            if line.startswith('Q: '):
-                q = line[3:]
-            if line.startswith('A: '):
-                a = line[3:]
-                if q and a:
-                    instruction = 'answer the question.'
-                    data.append((instruction, q, a))
-                    q = ''
-                    a = ''
+            line = line.strip('\n')
+            terms = line.split('\t')
+            instruction = '对下面中文拼写纠错：'
+            if len(terms) == 2:
+                data.append([instruction, terms[0], terms[1]])
+            else:
+                logger.warning(f'line error: {line}')
     return data
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', default='../data/en_dialog.txt', type=str, help='Training data file')
-    parser.add_argument('--test_file', default='../data/en_dialog.txt', type=str, help='Test data file')
+    parser.add_argument('--train_file', default='../data/zh_csc_train.tsv', type=str, help='Training data file')
+    parser.add_argument('--test_file', default='../data/zh_csc_test.tsv', type=str, help='Test data file')
     parser.add_argument('--model_type', default='bloom', type=str, help='Transformers model type')
     parser.add_argument('--model_name', default='bigscience/bloomz-560m', type=str, help='Model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
