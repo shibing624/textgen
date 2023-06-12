@@ -30,7 +30,7 @@ def load_data(data):
     else:
         dataset = load_dataset(data)
     dataset = dataset["train"]
-    dataset = dataset.map(preprocess_function, batched=True, remove_columns=dataset.column_names)
+    dataset = dataset.map(preprocess_function, batched=False, remove_columns=dataset.column_names)
     return dataset.to_pandas()
 
 

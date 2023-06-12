@@ -16,6 +16,7 @@ from textgen import BloomModel
 
 def preprocess_function(example):
     original_text, wrong_ids, correct_text = example["original_text"], example["wrong_ids"], example["correct_text"]
+    logger.info('original_text:{}, wrong_ids:{}, correct_text:{}'.format(original_text, wrong_ids, correct_text))
     example['instruction'] = '对下面中文拼写纠错：'
     example['input'] = original_text
     example['output'] = correct_text + '\n错误字：' + '，'.join([correct_text[i] for i in wrong_ids])
@@ -30,7 +31,7 @@ def load_data(data):
     else:
         dataset = load_dataset(data)
     dataset = dataset["train"]
-    dataset = dataset.map(preprocess_function, batched=True, remove_columns=dataset.column_names)
+    dataset = dataset.map(preprocess_function, batched=False, remove_columns=dataset.column_names)
     return dataset.to_pandas()
 
 
