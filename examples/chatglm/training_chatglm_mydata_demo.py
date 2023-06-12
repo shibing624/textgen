@@ -12,7 +12,7 @@ from datasets import load_dataset, concatenate_datasets
 from loguru import logger
 
 sys.path.append('../..')
-from textgen import LlamaModel
+from textgen import ChatGlmModel
 
 
 def load_data(data_dir):
@@ -47,7 +47,7 @@ def main():
     args = parser.parse_args()
     logger.info(args)
     model = None
-    # fine-tune Llama model
+    # fine-tune model
     if args.do_train:
         logger.info('Loading data...')
         model_args = {
@@ -64,14 +64,15 @@ def main():
             "eval_steps": args.eval_steps,
             "save_steps": args.save_steps,
         }
-        model = LlamaModel(args.model_type, args.model_name, args=model_args)
+        model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
         train_df = load_data(args.train_data_dir)
+        logger.debug('train_df: {}'.format(train_df))
         eval_df = train_df[:10]
         train_df = train_df[10:]
         model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:
-            model = LlamaModel(
+            model = ChatGlmModel(
                 args.model_type, args.model_name,
                 peft_name=args.output_dir,
                 args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length, }
@@ -80,10 +81,7 @@ def main():
         logger.debug('test_df: {}'.format(test_df))
 
         def get_prompt(arr):
-            if arr['input'].strip():
-                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n### Input:\n{arr['input']}\n\n### Response: """
-            else:
-                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n\n### Response: """
+            return f"""问：{arr['instruction']}\n答："""
 
         test_df['prompt'] = test_df.apply(get_prompt, axis=1)
         test_df['predict_after'] = model.predict(test_df['prompt'].tolist())

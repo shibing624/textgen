@@ -68,10 +68,6 @@ def main():
         ]
         response = model.predict(sents)
         print(response)
-        response, history = model.chat("给出三个保持健康的秘诀。", history=[])
-        print(response)
-        response, history = model.chat("再说3个", history=history)
-        print(response)
 
 
 if __name__ == '__main__':

@@ -67,6 +67,7 @@ def main():
         }
         model = LlamaModel(args.model_type, args.model_name, args=model_args)
         train_df = load_data(args.train_data_dir)
+        logger.debug('train_df: {}'.format(train_df))
         eval_df = train_df[:10]
         train_df = train_df[10:]
         model.train_model(train_df, eval_data=eval_df)
