@@ -463,7 +463,8 @@ class ChatGlmModel:
         return response
 
     @torch.inference_mode()
-    def predict(self, sentences: List[str], keep_prompt: bool = False, max_length: int = None, **kwargs):
+    def predict(self, sentences: List[str], keep_prompt: bool = False,
+                max_length: int = None, add_system_prompt=False, **kwargs):
         """
         Performs predictions on a list of text.
 
@@ -471,6 +472,7 @@ class ChatGlmModel:
             sentences: A python list of text (str) to be sent to the model for prediction. 
             keep_prompt: Whether to keep the prompt in the generated text.
             max_length: The maximum length of the generated text.
+            add_system_prompt: Whether to add the system prompt to the prompt text.
 
         Returns:
             preds: A python list of the generated sequences.
@@ -492,6 +494,8 @@ class ChatGlmModel:
                 desc="Generating outputs",
                 disable=self.args.silent,
         ):
+            if add_system_prompt:
+                batch = [PROMPT_DICT['prompt_no_input'].format(instruction=s) for s in batch]
             inputs = self.tokenizer(batch, padding=True, return_tensors='pt').to(self.device)
             gen_kwargs = {
                 "max_new_tokens": max_length if max_length else self.args.max_length,

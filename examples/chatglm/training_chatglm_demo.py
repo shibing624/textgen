@@ -96,6 +96,7 @@ def main():
         out_df = test_df[['instruction', 'input', 'output', 'predict_after']]
         out_df.to_json('test_result.json', force_ascii=False, orient='records', lines=True)
 
+        # Predict with model
         def generate_prompt(instruction):
             return f"""问：{instruction}\n答："""
 

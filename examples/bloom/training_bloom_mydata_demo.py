@@ -4,17 +4,34 @@
 @description: 
 """
 import argparse
+import os
 import sys
+from pathlib import Path
 
+from datasets import load_dataset, concatenate_datasets
 from loguru import logger
 
 sys.path.append('../..')
 from textgen import BloomModel
 
 
+def load_data(data_dir):
+    path = Path(data_dir)
+    files = [os.path.join(path, file.name) for file in path.glob("*.json")]
+    logger.info(f"training files: {' '.join(files)}")
+    all_datasets = []
+    for file in files:
+        raw_dataset = load_dataset("json", data_files=file)
+        all_datasets.append(raw_dataset["train"])
+    all_datasets = concatenate_datasets(all_datasets)
+    logger.debug(f"all_datasets size:{all_datasets}, first line: {next(iter(all_datasets))}")
+    return all_datasets.to_pandas()
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', default="../data/multi_round_alpaca.json", type=str, help='Train file')
+    parser.add_argument('--train_data_dir', default='../data/json_files/', type=str, help='Train data file')
+    parser.add_argument('--test_data_dir', default='../data/json_files/', type=str, help='Test data file')
     parser.add_argument('--model_type', default='bloom', type=str, help='Transformers model type')
     parser.add_argument('--model_name', default='bigscience/bloomz-560m', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
@@ -40,8 +57,11 @@ def main():
             "output_dir": args.output_dir,
         }
         model = BloomModel(args.model_type, args.model_name, args=model_args)
-
-        model.train_model(args.train_file, eval_data=args.train_file)
+        train_df = load_data(args.train_data_dir)
+        logger.debug('train_data: {}'.format(train_df))
+        eval_df = train_df[:10]
+        train_df = train_df[10:]
+        model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:
             model = BloomModel(
@@ -55,12 +75,14 @@ def main():
 
         response = model.predict([generate_prompt("给出三个保持健康的秘诀。")])
         print(response)
-        response = model.predict([generate_prompt("介绍下北京")])
+        response = model.predict(["介绍下北京"], add_system_prompt=True)
         print(response)
 
-        response, history = model.chat('what is your name?', add_system_prompt=True)
+        # Chat with model
+        response, history = model.chat('What is the sum of 1 and 2?', add_system_prompt=True)
         print(response)
-        response, history = model.chat('how to spell it', history=history, add_system_prompt=True)
+        response, history = model.chat('what is the multiplication result of two num? please think step by step.',
+                                       history=history, add_system_prompt=True)
         print(response)
 
 
