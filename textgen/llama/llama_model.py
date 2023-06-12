@@ -153,7 +153,7 @@ class LlamaModel:
         """Load peft model"""
         if os.path.isdir(self.peft_name) and os.path.exists(
                 os.path.join(self.peft_name, "tokenizer_config.json")):
-            self.tokenizer = LlamaTokenizer.from_pretrained(self.peft_name)
+            self.tokenizer = LlamaTokenizerFast.from_pretrained(self.peft_name)
             self.resize_model_embeddings(len(self.tokenizer))
         self.model = PeftModel.from_pretrained(
             self.model,

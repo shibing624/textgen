@@ -80,8 +80,7 @@ def preprocess_data(data):
                 if start_idx is not None and end_idx is not None:
                     for i in range(start_idx, end_idx - 1):
                         labels[i] = IGNORE_INDEX
-            example['labels'] = labels
-        return example
+        example['labels'] = labels
     else:
         full_prompt = prompt + target_text + tokenizer.eos_token
         full_max_length = args.max_seq_length + args.max_length
@@ -105,7 +104,11 @@ def preprocess_data(data):
             # set labels to full max length to adjust for DataCollatorForSeq2Seq padding
             example["labels"] = [-100] * (full_max_length - len(example['labels']) + user_prompt_len) + \
                                 example["labels"][user_prompt_len:]
-        return example
+    return {
+        "input_ids": example["input_ids"],
+        "attention_mask": example["attention_mask"],
+        "labels": example['labels'],
+    }
 
 
 def preprocess_batch_for_hf_dataset(example, tokenizer, args):
@@ -163,31 +166,7 @@ class BloomDataset(Dataset):
         else:
             logger.info(" Creating features from dataset file at %s" % args.cache_dir)
 
-            data = [
-                (instruction, input_text, target_text, tokenizer, args)
-                for instruction, input_text, target_text in zip(
-                    data["instruction"], data["input"], data["output"]
-                )
-            ]
-
-            if (mode == "train" and args.use_multiprocessing) or (
-                    mode == "dev" and args.use_multiprocessing_for_evaluation
-            ):
-                if args.multiprocessing_chunksize == -1:
-                    chunksize = max(len(data) // (args.process_count * 2), 500)
-                else:
-                    chunksize = args.multiprocessing_chunksize
-
-                with Pool(args.process_count) as p:
-                    self.examples = list(
-                        tqdm(
-                            p.imap(preprocess_data, data, chunksize=chunksize),
-                            total=len(data),
-                            disable=args.silent,
-                        )
-                    )
-            else:
-                self.examples = [preprocess_data(d) for d in tqdm(data, disable=args.silent)]
+            self.examples = list(load_hf_dataset(data, tokenizer, args, mode))
             if not args.no_cache:
                 logger.info(" Saving features into cached file %s" % cached_features_file)
                 with open(cached_features_file, "wb") as handle:

@@ -77,7 +77,7 @@ def preprocess_data(data):
                 if start_idx is not None and end_idx is not None:
                     for i in range(start_idx, end_idx - 1):
                         labels[i] = IGNORE_INDEX
-        return {"input_ids": example['input_ids'], "labels": labels}
+        example["labels"] = labels
     else:
         full_prompt = prompt + target_text + tokenizer.eos_token
         full_max_length = args.max_seq_length + args.max_length
@@ -101,7 +101,7 @@ def preprocess_data(data):
             # -100 is the ignore index that is replaced with model prediction
             example["labels"] = [-100] * (full_max_length - len(example['labels']) + user_prompt_len) + \
                                 example["labels"][user_prompt_len:]
-        return {"input_ids": example['input_ids'], "labels": example["labels"]}
+    return {"input_ids": example['input_ids'], "labels": example["labels"]}
 
 
 def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):

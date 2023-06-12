@@ -79,8 +79,7 @@ def preprocess_instruction_data(data):
                 if start_idx is not None and end_idx is not None:
                     for i in range(start_idx, end_idx - 1):
                         labels[i] = IGNORE_INDEX
-            example['labels'] = labels
-        return example
+        example['labels'] = labels
     else:
         full_prompt = prompt + target_text + tokenizer.eos_token
         full_max_length = args.max_seq_length + args.max_length
@@ -104,7 +103,11 @@ def preprocess_instruction_data(data):
             # set labels to full max length to adjust for DataCollatorForSeq2Seq padding
             example["labels"] = [-100] * (full_max_length - len(example['labels']) + user_prompt_len) + \
                                 example["labels"][user_prompt_len:]
-        return example
+    return {
+        "input_ids": example["input_ids"],
+        "attention_mask": example["attention_mask"],
+        "labels": example['labels'],
+    }
 
 
 def preprocess_batch_for_hf_instruction_dataset(example, tokenizer, args):
