@@ -520,7 +520,7 @@ class BloomModel:
 
     @torch.inference_mode()
     def chat(self, query: str, history: List[Tuple[str, str]] = None, keep_prompt: bool = False,
-             max_length: int = 1024, add_system_prompt=True, **kwargs):
+             max_length: int = 2048, add_system_prompt=True, **kwargs):
         """Chat with the model."""
         if history is None:
             history = []

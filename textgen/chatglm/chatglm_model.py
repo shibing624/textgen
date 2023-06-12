@@ -25,7 +25,7 @@ from tqdm.auto import tqdm
 from transformers import Trainer, TrainingArguments, AutoTokenizer, AutoModel, AutoConfig, DataCollatorForSeq2Seq
 from transformers.trainer import TRAINING_ARGS_NAME
 
-from textgen.chatglm.chatglm_utils import load_hf_dataset, ChatGlmDataset
+from textgen.chatglm.chatglm_utils import ChatGlmDataset, PROMPT_DICT
 from textgen.config.model_args import ChatGlmArgs
 
 has_cuda = torch.cuda.is_available()
@@ -343,6 +343,7 @@ class ChatGlmModel:
         train_dataset = self.load_and_cache_examples(train_data)
         if verbose:
             logger.debug(f"train_dataset len: {len(train_dataset)}, train_dataset[0]: {train_dataset[0]}")
+            logger.debug(f"text of train_dataset[0]: {self.tokenizer.decode(train_dataset[0]['input_ids'])}")
         eval_dataset = None
         if eval_data is not None:
             eval_dataset = self.load_and_cache_examples(eval_data, evaluate=True)
@@ -521,14 +522,15 @@ class ChatGlmModel:
         return all_outputs
 
     @torch.inference_mode()
-    def chat(self, query: str, history: List[Tuple[str, str]] = None,
-             keep_prompt: bool = False, max_length: int = 128, **kwargs):
+    def chat(self, query: str, history: List[Tuple[str, str]] = None, keep_prompt: bool = False,
+             max_length: int = 2048, add_system_prompt=True, **kwargs):
         """
         Chat with the model
         :param query:
         :param history:
         :param keep_prompt:
         :param max_length:
+        :param add_system_prompt:
         :param kwargs:
         :return: response, history
         """
@@ -538,15 +540,18 @@ class ChatGlmModel:
             prompt = query
         else:
             prompt = ""
-            for i, (old_query, response) in enumerate(history):
-                prompt += "\n问：{}\n答：{}\n".format(i, old_query, response)
-            prompt += "\n问：{}\n答：".format(len(history), query)
-        response = self.predict([prompt], keep_prompt=keep_prompt, max_length=len(prompt) + max_length, **kwargs)[0]
+            for i, (q, a) in enumerate(history):
+                prompt += "\n### Human: {}\n### Assistant: {}\n".format(q, a)
+            prompt += "\n### Human: {}\n### Assistant: ".format(query)
+        if add_system_prompt:
+            prompt = PROMPT_DICT['prompt_multi_round_no_input'].format(instruction=prompt, output_text="")
+        response = self.predict([prompt], keep_prompt=keep_prompt, max_length=max_length, **kwargs)[0]
         history = history + [(query, response)]
         return response, history
 
     @torch.inference_mode()
-    def stream_chat(self, query: str, history: List[Tuple[str, str]] = None, max_length: int = 2048, **kwargs):
+    def stream_chat(self, query: str, history: List[Tuple[str, str]] = None,
+                    max_length: int = 2048, add_system_prompt=True, **kwargs):
         """Chat with the model in a streaming fashion"""
         if history is None:
             history = []
@@ -567,9 +572,11 @@ class ChatGlmModel:
             prompt = query
         else:
             prompt = ""
-            for i, (old_query, response) in enumerate(history):
-                prompt += "\n问：{}\n答：{}\n".format(i, old_query, response)
-            prompt += "\n问：{}\n答：".format(len(history), query)
+            for i, (q, a) in enumerate(history):
+                prompt += "\n### Human: {}\n### Assistant: {}\n".format(q, a)
+            prompt += "\n### Human: {}\n### Assistant: ".format(query)
+        if add_system_prompt:
+            prompt = PROMPT_DICT['prompt_multi_round_no_input'].format(instruction=prompt, output_text="")
         inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
         for outputs in self.model.stream_generate(**inputs, **gen_kwargs):
             outputs = outputs.tolist()[0][len(inputs["input_ids"][0]):]
@@ -598,19 +605,11 @@ class ChatGlmModel:
 
         mode = "dev" if evaluate else "train"
 
-        if self.args.use_hf_datasets:
-            dataset = load_hf_dataset(data, tokenizer, self.args, mode)
-            return dataset
-        elif args.dataset_class:
+        if args.dataset_class:
             CustomDataset = args.dataset_class
             return CustomDataset(tokenizer, args, data, mode)
         else:
-            return ChatGlmDataset(
-                tokenizer,
-                self.args,
-                data,
-                mode,
-            )
+            return ChatGlmDataset(tokenizer, args, data, mode)
 
     def save_model(
             self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
