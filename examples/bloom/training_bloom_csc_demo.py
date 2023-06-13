@@ -11,11 +11,12 @@ from datasets import load_dataset, load_from_disk
 from loguru import logger
 
 sys.path.append('../..')
-from textgen import ChatGlmModel
+from textgen import BloomModel
 
 
 def preprocess_function(example):
     original_text, wrong_ids, correct_text = example["original_text"], example["wrong_ids"], example["correct_text"]
+    logger.info('original_text:{}, wrong_ids:{}, correct_text:{}'.format(original_text, wrong_ids, correct_text))
     example['instruction'] = '对下面中文拼写纠错：'
     example['input'] = original_text
     example['output'] = correct_text + '\n错误字：' + '，'.join([correct_text[i] for i in wrong_ids])
@@ -36,17 +37,16 @@ def load_data(data):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', default="shibing624/CSC", type=str,
-                        help='Datasets name, eg:shibing624/CSC')
-    parser.add_argument('--model_type', default='chatglm', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='THUDM/chatglm-6b', type=str, help='Transformers model or path')
+    parser.add_argument('--train_file', default="shibing624/CSC", type=str, help='Train file')
+    parser.add_argument('--model_type', default='bloom', type=str, help='Transformers model type')
+    parser.add_argument('--model_name', default='bigscience/bloomz-560m', type=str, help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--output_dir', default='./outputs-csc/', type=str, help='Model output directory')
+    parser.add_argument('--output_dir', default='./outputs-csc-v1/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=1.0, type=float, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=1, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
     model = None
@@ -62,7 +62,7 @@ def main():
             "num_train_epochs": args.num_epochs,
             "output_dir": args.output_dir,
         }
-        model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
+        model = BloomModel(args.model_type, args.model_name, args=model_args)
         train_df = load_data(args.train_file)
         logger.debug('train_data: {}'.format(train_df))
         eval_df = train_df[:10]
@@ -70,14 +70,18 @@ def main():
         model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:
-            model = ChatGlmModel(
+            model = BloomModel(
                 args.model_type, args.model_name,
                 peft_name=args.output_dir,
                 args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length, }
             )
-        sents = ['对下面中文拼写纠错：\n少先队员因该为老人让坐。\n答：',
-                 '对下面中文拼写纠错：\n下个星期，我跟我朋唷打算去法国玩儿。\n答：']
-        response = model.predict(sents)
+
+        def generate_prompt(q):
+            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n对下面中文拼写纠错：\n{q}\n### Response: """
+
+        sents = ['少先队员因该为老人让坐。',
+                 '下个星期，我跟我朋唷打算去法国玩儿。']
+        response = model.predict([generate_prompt(q) for q in sents])
         print(response)
 
 

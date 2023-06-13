@@ -12,7 +12,7 @@ from datasets import load_dataset, concatenate_datasets
 from loguru import logger
 
 sys.path.append('../..')
-from textgen import LlamaModel
+from textgen import ChatGlmModel
 
 
 def load_data(data_dir):
@@ -32,12 +32,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_data_dir', default='../data/json_files/', type=str, help='Training data file')
     parser.add_argument('--test_data_dir', default='../data/json_files/', type=str, help='Test data file')
-    parser.add_argument('--model_type', default='llama', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='shibing624/chinese-alpaca-plus-7b-hf', type=str,
+    parser.add_argument('--model_type', default='chatglm', type=str, help='Transformers model type')
+    parser.add_argument('--model_name', default='THUDM/chatglm-6b', type=str,
                         help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--is_train_on_prompt', action='store_true', help='Whether to compute loss on prompt')
     parser.add_argument('--output_dir', default='./outputs-mydata/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=256, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=256, type=int, help='Output max sequence length')
@@ -48,24 +47,24 @@ def main():
     args = parser.parse_args()
     logger.info(args)
     model = None
-    # fine-tune Llama model
+    # fine-tune model
     if args.do_train:
         logger.info('Loading data...')
         model_args = {
             "use_peft": True,
             "overwrite_output_dir": True,
+            "reprocess_input_data": True,
             "max_seq_length": args.max_seq_length,
             "max_length": args.max_length,
             "per_device_train_batch_size": args.batch_size,
             "eval_batch_size": args.batch_size,
             "num_train_epochs": args.num_epochs,
-            "is_train_on_prompt": args.is_train_on_prompt,
             "output_dir": args.output_dir,
             "resume_from_checkpoint": args.output_dir,
             "eval_steps": args.eval_steps,
             "save_steps": args.save_steps,
         }
-        model = LlamaModel(args.model_type, args.model_name, args=model_args)
+        model = ChatGlmModel(args.model_type, args.model_name, args=model_args)
         train_df = load_data(args.train_data_dir)
         logger.debug('train_df: {}'.format(train_df))
         eval_df = train_df[:10]
@@ -73,7 +72,7 @@ def main():
         model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:
-            model = LlamaModel(
+            model = ChatGlmModel(
                 args.model_type, args.model_name,
                 peft_name=args.output_dir,
                 args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length, }
@@ -82,10 +81,7 @@ def main():
         logger.debug('test_df: {}'.format(test_df))
 
         def get_prompt(arr):
-            if arr['input'].strip():
-                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n### Input:\n{arr['input']}\n\n### Response: """
-            else:
-                return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{arr['instruction']}\n\n### Response: """
+            return f"""问：{arr['instruction']}\n答："""
 
         test_df['prompt'] = test_df.apply(get_prompt, axis=1)
         test_df['predict_after'] = model.predict(test_df['prompt'].tolist())

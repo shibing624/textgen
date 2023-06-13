@@ -12,32 +12,24 @@ from loguru import logger
 sys.path.append('../..')
 from textgen import BloomModel
 
-
 def load_data(file_path):
     data = []
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
-            line = line.strip()
-            if line.startswith('='):
-                q = ''
-                a = ''
-                continue
-            if line.startswith('Q: '):
-                q = line[3:]
-            if line.startswith('A: '):
-                a = line[3:]
-                if q and a:
-                    instruction = 'answer the question.'
-                    data.append((instruction, q, a))
-                    q = ''
-                    a = ''
+            line = line.strip('\n')
+            terms = line.split('\t')
+            instruction = '对下面中文拼写纠错：'
+            if len(terms) == 2:
+                data.append([instruction, terms[0], terms[1]])
+            else:
+                logger.warning(f'line error: {line}')
     return data
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_file', default='../data/en_dialog.txt', type=str, help='Training data file')
-    parser.add_argument('--test_file', default='../data/en_dialog.txt', type=str, help='Test data file')
+    parser.add_argument('--train_file', default='../data/zh_csc_train.tsv', type=str, help='Training data file')
+    parser.add_argument('--test_file', default='../data/zh_csc_test.tsv', type=str, help='Test data file')
     parser.add_argument('--model_type', default='bloom', type=str, help='Transformers model type')
     parser.add_argument('--model_name', default='bigscience/bloomz-560m', type=str, help='Model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
@@ -46,7 +38,7 @@ def main():
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=1, type=float, help='Number of training epochs')
-    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=2, type=int, help='Batch size')
     args = parser.parse_args()
     logger.info(args)
     model = None
@@ -56,6 +48,7 @@ def main():
         model_args = {
             "use_peft": True,
             "overwrite_output_dir": True,
+            "reprocess_input_data": True,
             "max_seq_length": args.max_seq_length,
             "max_length": args.max_length,
             "per_device_train_batch_size": args.batch_size,
@@ -94,11 +87,12 @@ def main():
         out_df = test_df[['instruction', 'input', 'output', 'predict_after']]
         out_df.to_json('test_result.json', force_ascii=False, orient='records', lines=True)
 
-        sents = ["that 's the kind of guy she likes ? Pretty ones ?",
-                 "Not the hacking and gagging and spitting part .", ]
-        response, history = model.chat(sents[0], history=[])
+        def generate_prompt(instruction):
+            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{instruction}\n\n### Response: """
+
+        response = model.predict([generate_prompt("给出三个保持健康的秘诀。")])
         print(response)
-        response, history = model.chat(sents[1], history=history)
+        response = model.predict([generate_prompt("介绍下北京")])
         print(response)
 
 

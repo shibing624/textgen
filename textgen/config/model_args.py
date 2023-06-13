@@ -440,7 +440,7 @@ class LlamaArgs(ModelArgs):
     lora_r: int = 8
     lora_alpha = 16
     lora_dropout = 0.05
-    lora_target_modules = ["all"]  # ["all"] or target module names
+    lora_target_modules = ["all"]  # ["all"] or ["k_proj"]
     lora_bias = "none"
     adalora_init_r: int = 12
     adalora_tinit: int = 200
@@ -460,8 +460,6 @@ class LlamaArgs(ModelArgs):
     resume_from_checkpoint: str = None
     gradient_checkpointing: bool = True
     torch_compile: bool = False
-    is_pretraining: bool = False  # Whether to pretrain the model
-    block_size: int = 1024  # block size for pretraining
 
 
 @dataclass

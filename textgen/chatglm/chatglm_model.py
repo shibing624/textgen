@@ -22,10 +22,10 @@ from peft import (
     set_peft_model_state_dict,
 )
 from tqdm.auto import tqdm
-from transformers import Trainer, TrainingArguments, AutoTokenizer, AutoModel, AutoConfig
+from transformers import Trainer, TrainingArguments, AutoTokenizer, AutoModel, AutoConfig, DataCollatorForSeq2Seq
 from transformers.trainer import TRAINING_ARGS_NAME
 
-from textgen.chatglm.chatglm_utils import load_hf_dataset, ChatGlmDataset
+from textgen.chatglm.chatglm_utils import ChatGlmDataset, PROMPT_DICT
 from textgen.config.model_args import ChatGlmArgs
 
 has_cuda = torch.cuda.is_available()
@@ -91,6 +91,7 @@ class ChatGlmModel:
         else:
             if torch.backends.mps.is_available():
                 self.device = torch.device("mps")
+                self.device_map = {"": "mps"}
             else:
                 self.device = "cpu"
                 self.device_map = {"": "cpu"}
@@ -108,7 +109,7 @@ class ChatGlmModel:
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
         if model_name is None:
             model_name = self.args.model_name_or_path
-        config = AutoConfig.from_pretrained(model_name, trust_remote_code=True, **kwargs)
+        config = config_class.from_pretrained(model_name, trust_remote_code=True, **kwargs)
 
         if torch.cuda.is_bf16_supported() and not self.args.bf16:
             logger.warning("GPU supports bf16, you can enable bf16.")
@@ -152,34 +153,6 @@ class ChatGlmModel:
             device_map=self.device_map,
         )
         logger.info(f"Loaded peft model from {self.peft_name}")
-
-    def data_collator(self, batch):
-        """
-        Data collator that will dynamically pad the inputs received.
-            set padding side = left, pad on the left side of the sequences
-            if chat task, set prompt ids to -100 of the labels
-            if not, set labels = input_ids
-        """
-        len_ids = [len(example) for example in batch]
-        longest = max(len_ids)
-        input_ids = []
-        labels_list = []
-        for ids_l, example in sorted(zip(len_ids, batch), key=lambda x: -x[0]):
-            ids = list(example)
-            seq_len = ids.index(self.tokenizer.bos_token_id) + 1  # is equal to prompt length
-            pad_ids = ids + [self.tokenizer.pad_token_id] * (longest - ids_l)
-            tensor_ids = torch.LongTensor(pad_ids)
-            if not self.args.is_train_on_prompt:
-                labels = ([-100] * (seq_len - 1) + ids[(seq_len - 1):] + [-100] * (longest - ids_l))
-                labels = torch.LongTensor(labels)
-            else:
-                labels = tensor_ids
-
-            input_ids.append(tensor_ids)
-            labels_list.append(labels)
-        input_ids = torch.stack(input_ids)
-        labels = torch.stack(labels_list)
-        return {"input_ids": input_ids, "labels": labels}
 
     def find_all_linear_names(self, int4=False, int8=False):
         cls = torch.nn.Linear
@@ -369,6 +342,7 @@ class ChatGlmModel:
         train_dataset = self.load_and_cache_examples(train_data)
         if verbose:
             logger.debug(f"train_dataset len: {len(train_dataset)}, train_dataset[0]: {train_dataset[0]}")
+            logger.debug(f"text of train_dataset[0]: {self.tokenizer.decode(train_dataset[0]['input_ids'])}")
         eval_dataset = None
         if eval_data is not None:
             eval_dataset = self.load_and_cache_examples(eval_data, evaluate=True)
@@ -413,6 +387,12 @@ class ChatGlmModel:
         if training_args.local_rank <= 0:
             logger.info(f"Training/evaluation parameters {training_args}")
 
+        data_collator = DataCollatorForSeq2Seq(
+            self.tokenizer,
+            return_tensors="pt",
+            padding="max_length",
+            max_length=self.args.max_seq_length + self.args.max_length
+        )
         if self.args.use_peft:
             trainer = SavePeftModelTrainer(
                 model=self.model,
@@ -420,7 +400,7 @@ class ChatGlmModel:
                 eval_dataset=eval_dataset if eval_data is not None else None,
                 args=training_args,
                 tokenizer=self.tokenizer,
-                data_collator=self.data_collator,
+                data_collator=data_collator,
             )
         else:
             trainer = Trainer(
@@ -429,14 +409,17 @@ class ChatGlmModel:
                 eval_dataset=eval_dataset if eval_data is not None else None,
                 args=training_args,
                 tokenizer=self.tokenizer,
-                data_collator=self.data_collator,
+                data_collator=data_collator,
             )
 
         # Training
         logger.info("*** Train ***")
+        logger.debug(f"Train dataloader example: {list(trainer.get_train_dataloader())[0]}")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
-        self.handle_metrics("train", metrics, output_dir)
         self.results.update(metrics)
+        trainer.log_metrics("train", metrics)
+        trainer.save_metrics("train", metrics)
+        trainer.save_state()
         self.save_model(model=self.model)
 
         if eval_data is not None:
@@ -450,8 +433,9 @@ class ChatGlmModel:
                 perplexity = float("inf")
             metrics["perplexity"] = perplexity
             logger.debug(f"eval metrics: {metrics}")
-            self.handle_metrics("eval", metrics, output_dir)
             self.results.update(metrics)
+            trainer.log_metrics("eval", metrics)
+            trainer.save_metrics("eval", metrics)
 
         if verbose and training_args.local_rank <= 0:
             logger.debug(f"metrics: {self.results}")
@@ -461,25 +445,6 @@ class ChatGlmModel:
                 )
             )
         return global_step, training_loss
-
-    @staticmethod
-    def handle_metrics(split, metrics, output_dir):
-        """
-        Log and save metrics
-
-        Args:
-        - split: one of train, val, test
-        - metrics: metrics dict
-        - output_dir: where to save the metrics
-        """
-
-        logger.info(f"***** {split} metrics *****")
-        for key in sorted(metrics.keys()):
-            logger.info(f"  {key} = {metrics[key]}")
-        output_file = os.path.join(output_dir, f"{split}_results.txt")
-        with open(output_file, "w") as writer:
-            for key in sorted(metrics.keys()):
-                writer.write("{} = {}\n".format(key, str(metrics[key])))
 
     def process_response(self, response):
         """Process response text."""
@@ -496,8 +461,9 @@ class ChatGlmModel:
             response = re.sub(r"%s([\u4e00-\u9fff])" % item[0], r"%s\1" % item[1], response)
         return response
 
-    @torch.no_grad()
-    def predict(self, sentences: List[str], keep_prompt: bool = False, max_length: int = None, **kwargs):
+    @torch.inference_mode()
+    def predict(self, sentences: List[str], keep_prompt: bool = False,
+                max_length: int = None, add_system_prompt=False, **kwargs):
         """
         Performs predictions on a list of text.
 
@@ -505,6 +471,7 @@ class ChatGlmModel:
             sentences: A python list of text (str) to be sent to the model for prediction. 
             keep_prompt: Whether to keep the prompt in the generated text.
             max_length: The maximum length of the generated text.
+            add_system_prompt: Whether to add the system prompt to the prompt text.
 
         Returns:
             preds: A python list of the generated sequences.
@@ -526,6 +493,8 @@ class ChatGlmModel:
                 desc="Generating outputs",
                 disable=self.args.silent,
         ):
+            if add_system_prompt:
+                batch = [PROMPT_DICT['prompt_no_input'].format(instruction=s) for s in batch]
             inputs = self.tokenizer(batch, padding=True, return_tensors='pt').to(self.device)
             gen_kwargs = {
                 "max_new_tokens": max_length if max_length else self.args.max_length,
@@ -555,15 +524,16 @@ class ChatGlmModel:
                 all_outputs.append(total_sequence)
         return all_outputs
 
-    @torch.no_grad()
-    def chat(self, query: str, history: List[Tuple[str, str]] = None,
-             keep_prompt: bool = False, max_length: int = 128, **kwargs):
+    @torch.inference_mode()
+    def chat(self, query: str, history: List[Tuple[str, str]] = None, keep_prompt: bool = False,
+             max_length: int = 2048, add_system_prompt=True, **kwargs):
         """
         Chat with the model
         :param query:
         :param history:
         :param keep_prompt:
         :param max_length:
+        :param add_system_prompt:
         :param kwargs:
         :return: response, history
         """
@@ -573,12 +543,50 @@ class ChatGlmModel:
             prompt = query
         else:
             prompt = ""
-            for i, (old_query, response) in enumerate(history):
-                prompt += "[Round {}]\n问：{}\n答：{}\n".format(i, old_query, response)
-            prompt += "[Round {}]\n问：{}\n答：".format(len(history), query)
-        response = self.predict([prompt], keep_prompt=keep_prompt, max_length=len(prompt) + max_length, **kwargs)[0]
+            for i, (q, a) in enumerate(history):
+                prompt += "\n### Human: {}\n### Assistant: {}\n".format(q, a)
+            prompt += "\n### Human: {}\n### Assistant: ".format(query)
+        if add_system_prompt:
+            prompt = PROMPT_DICT['prompt_multi_round_no_input'].format(instruction=prompt, output_text="")
+        response = self.predict([prompt], keep_prompt=keep_prompt, max_length=max_length, **kwargs)[0]
         history = history + [(query, response)]
         return response, history
+
+    @torch.inference_mode()
+    def stream_chat(self, query: str, history: List[Tuple[str, str]] = None,
+                    max_length: int = 2048, add_system_prompt=True, **kwargs):
+        """Chat with the model in a streaming fashion"""
+        if history is None:
+            history = []
+        gen_kwargs = {
+            "max_new_tokens": max_length if max_length else self.args.max_length,
+            "temperature": self.args.temperature,
+            "top_p": self.args.top_p,
+            "do_sample": self.args.do_sample,
+            "repetition_penalty": self.args.repetition_penalty,
+            "length_penalty": self.args.length_penalty,
+            "num_beams": self.args.num_beams,
+            "eos_token_id": self.tokenizer.eos_token_id,
+            "pad_token_id": self.tokenizer.pad_token_id,
+            "num_return_sequences": self.args.num_return_sequences,
+            **kwargs
+        }
+        if not history:
+            prompt = query
+        else:
+            prompt = ""
+            for i, (q, a) in enumerate(history):
+                prompt += "\n### Human: {}\n### Assistant: {}\n".format(q, a)
+            prompt += "\n### Human: {}\n### Assistant: ".format(query)
+        if add_system_prompt:
+            prompt = PROMPT_DICT['prompt_multi_round_no_input'].format(instruction=prompt, output_text="")
+        inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+        for outputs in self.model.stream_generate(**inputs, **gen_kwargs):
+            outputs = outputs.tolist()[0][len(inputs["input_ids"][0]):]
+            response = self.tokenizer.decode(outputs)
+            response = self.process_response(response)
+            new_history = history + [(query, response)]
+            yield response, new_history
 
     def load_and_cache_examples(
             self, data, evaluate=False, no_cache=False, verbose=True, silent=False
@@ -600,19 +608,11 @@ class ChatGlmModel:
 
         mode = "dev" if evaluate else "train"
 
-        if self.args.use_hf_datasets:
-            dataset = load_hf_dataset(data, tokenizer, self.args, mode)
-            return dataset
-        elif args.dataset_class:
+        if args.dataset_class:
             CustomDataset = args.dataset_class
             return CustomDataset(tokenizer, args, data, mode)
         else:
-            return ChatGlmDataset(
-                tokenizer,
-                self.args,
-                data,
-                mode,
-            )
+            return ChatGlmDataset(tokenizer, args, data, mode)
 
     def save_model(
             self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None

@@ -25,7 +25,7 @@ from transformers import GenerationConfig, DataCollatorForSeq2Seq
 from transformers import Trainer, TrainingArguments, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
 
-from textgen.bloom.bloom_utils import load_hf_dataset, BloomDataset
+from textgen.bloom.bloom_utils import BloomDataset, PROMPT_DICT
 from textgen.config.model_args import BloomArgs
 
 has_cuda = torch.cuda.is_available()
@@ -92,6 +92,7 @@ class BloomModel:
         else:
             if torch.backends.mps.is_available():
                 self.device = torch.device("mps")
+                self.device_map = {"": "mps"}
             else:
                 self.device = "cpu"
                 self.device_map = {"": "cpu"}
@@ -352,6 +353,7 @@ class BloomModel:
         train_dataset = self.load_and_cache_examples(train_data)
         if verbose:
             logger.debug(f"train_dataset len: {len(train_dataset)}, train_dataset[0]: {train_dataset[0]}")
+            logger.debug(f"text of train_dataset[0]: {self.tokenizer.decode(train_dataset[0]['input_ids'])}")
         eval_dataset = None
         if eval_data is not None:
             eval_dataset = self.load_and_cache_examples(eval_data, evaluate=True)
@@ -423,10 +425,12 @@ class BloomModel:
 
         # Training
         logger.info("*** Train ***")
+        logger.debug(f"Train dataloader example: {list(trainer.get_train_dataloader())[0]}")
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
-        metrics['train_samples'] = len(train_dataset)
-        self.handle_metrics("train", metrics, output_dir)
         self.results.update(metrics)
+        trainer.log_metrics("train", metrics)
+        trainer.save_metrics("train", metrics)
+        trainer.save_state()
         self.save_model(model=self.model)
 
         if eval_data is not None:
@@ -441,8 +445,9 @@ class BloomModel:
                 perplexity = float("inf")
             metrics["perplexity"] = perplexity
             logger.debug(f"eval metrics: {metrics}")
-            self.handle_metrics("eval", metrics, output_dir)
             self.results.update(metrics)
+            trainer.log_metrics("eval", metrics)
+            trainer.save_metrics("eval", metrics)
 
         if verbose and training_args.local_rank <= 0:
             logger.debug(f"metrics: {self.results}")
@@ -453,27 +458,9 @@ class BloomModel:
             )
         return global_step, training_loss
 
-    @staticmethod
-    def handle_metrics(split, metrics, output_dir):
-        """
-        Log and save metrics
-
-        Args:
-        - split: one of train, val, test
-        - metrics: metrics dict
-        - output_dir: where to save the metrics
-        """
-
-        logger.info(f"***** {split} metrics *****")
-        for key in sorted(metrics.keys()):
-            logger.info(f"  {key} = {metrics[key]}")
-        output_file = os.path.join(output_dir, f"{split}_results.txt")
-        with open(output_file, "w") as writer:
-            for key in sorted(metrics.keys()):
-                writer.write("{} = {}\n".format(key, str(metrics[key])))
-
-    @torch.no_grad()
-    def predict(self, sentences: List[str], keep_prompt: bool = False, max_length: int = None, **kwargs):
+    @torch.inference_mode()
+    def predict(self, sentences: List[str], keep_prompt: bool = False, max_length: int = None,
+                add_system_prompt=False, **kwargs):
         """
         Performs predictions on a list of text.
 
@@ -481,6 +468,7 @@ class BloomModel:
             sentences: A python list of text (str) to be sent to the model for prediction. Note that the prefix should be prepended to the text.
             keep_prompt: Whether to keep the prompt in the generated text.
             max_length: The maximum length of the generated text.
+            add_system_prompt: Whether to add the system prompt to the prompt text. default: False
 
         Returns:
             preds: A python list of the generated sequences.
@@ -502,6 +490,8 @@ class BloomModel:
                 desc="Generating outputs",
                 disable=self.args.silent,
         ):
+            if add_system_prompt:
+                batch = [PROMPT_DICT['prompt_no_input'].format(instruction=s) for s in batch]
             inputs = self.tokenizer(batch, padding=True, return_tensors='pt').to(self.device)
             generation_config = GenerationConfig(
                 max_new_tokens=max_length if max_length else self.args.max_length,
@@ -532,27 +522,21 @@ class BloomModel:
                 all_outputs.append(total_sequence)
         return all_outputs
 
-    @torch.no_grad()
-    def chat(self, query: str, history: List[Tuple[str, str]] = None,
-             keep_prompt: bool = False, max_length: int = 128, **kwargs):
-        """
-        Chat with the model
-        :param query:
-        :param history:
-        :param keep_prompt:
-        :param max_length:
-        :param kwargs:
-        :return: response, history
-        """
+    @torch.inference_mode()
+    def chat(self, query: str, history: List[Tuple[str, str]] = None, keep_prompt: bool = False,
+             max_length: int = 2048, add_system_prompt=True, **kwargs):
+        """Chat with the model."""
         if history is None:
             history = []
         if not history:
             prompt = query
         else:
             prompt = ""
-            for i, (old_query, response) in enumerate(history):
-                prompt += "[Round {}]\n问：{}\n答：{}\n".format(i, old_query, response)
-            prompt += "[Round {}]\n问：{}\n答：".format(len(history), query)
+            for i, (q, a) in enumerate(history):
+                prompt += "\n### Human: {}\n### Assistant: {}\n".format(q, a)
+            prompt += "\n### Human: {}\n### Assistant: ".format(query)
+        if add_system_prompt:
+            prompt = PROMPT_DICT['prompt_multi_round_no_input'].format(instruction=prompt, output_text="")
         response = self.predict([prompt], keep_prompt=keep_prompt, max_length=len(prompt) + max_length, **kwargs)[0]
         history = history + [(query, response)]
         return response, history
@@ -577,19 +561,11 @@ class BloomModel:
 
         mode = "dev" if evaluate else "train"
 
-        if self.args.use_hf_datasets:
-            dataset = load_hf_dataset(data, tokenizer, self.args, mode)
-            return dataset
-        elif args.dataset_class:
+        if args.dataset_class:
             CustomDataset = args.dataset_class
             return CustomDataset(tokenizer, args, data, mode)
         else:
-            return BloomDataset(
-                tokenizer,
-                self.args,
-                data,
-                mode,
-            )
+            return BloomDataset(tokenizer, args, data, mode)
 
     def save_model(
             self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
