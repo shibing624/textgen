@@ -7,7 +7,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='textgen',
-    version='0.2.7',
+    version='1.0.0',
     description='Text Generation Model',
     long_description=readme,
     long_description_content_type='text/markdown',
@@ -28,12 +28,12 @@ setup(
     install_requires=[
         'loguru',
         'jieba>=0.39',
-        'transformers>=4.28.1',
+        'transformers',
         'datasets',
         'gensim>=4.0.0',
         'text2vec',
         'tensorboard',
-        'tqdm>=4.47.0',
+        'tqdm',
         'pandas',
         'wandb>=0.10.32',
         'sacremoses',

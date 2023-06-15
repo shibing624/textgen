@@ -21,6 +21,12 @@
 
 **TextGen**实现了多种文本生成模型，包括：LLaMA、ChatGLM、UDA、GPT2、Seq2Seq、BART、T5、SongNet等模型，开箱即用。
 
+## 🔥 News
+[2023/06/15] v1.0版本: 新增ChatGLM/LLaMA/Bloom模型的多轮对话微调训练，并发布医疗问诊LoRA模型。详见[Release-v1.0](https://github.com/shibing624/MedicalGPT/releases/tag/1.0.0)
+
+[2023/06/02] v0.2.7版本: 新增ChatGLM/LLaMA/Bloom模型的SFT微调训练，并发布适用于通用对话和中文纠错的LoRA模型。详见[Release-v0.2.7](https://github.com/shibing624/MedicalGPT/releases/tag/0.2.7)
+
+
 ## 😊 Feature
 
 - [ChatGLM](textgen/chatglm)：本项目基于PyTorch实现了ChatGLM-6B模型LoRA微调训练和预测，可以用于句子纠错、对话等文本生成任务
@@ -588,7 +594,7 @@ output:
 
 ## ✅ Todo
 
-1. [ ] add multiple rounds of dialogue data fine-tuning method
+1. [x] add multiple rounds of dialogue data fine-tuning method
 2. [x] add reward model finetuning, go to [shibing624/MeidcalGPT](https://github.com/shibing624/MedicalGPT)
 3. [x] add rl finetuning, go to [shibing624/MeidcalGPT](https://github.com/shibing624/MedicalGPT)
 4. [x] add medical reward dataset

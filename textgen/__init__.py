@@ -4,7 +4,7 @@
 @description: 
 """
 
-__version__ = '0.2.7'
+__version__ = '1.0.0'
 
 from textgen.augment.text_augment import TextAugment
 
