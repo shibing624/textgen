@@ -153,8 +153,7 @@ class GptModel:
             self.load_peft_model()
         # Set padding side equal to Collator padding side
         self.tokenizer.padding_side = "left"
-        if self.tokenizer.pad_token_id is None:
-            self.tokenizer.pad_token_id = 0
+        self.tokenizer.pad_token_id = 0
 
     def load_peft_model(self):
         """Load peft model"""
@@ -365,6 +364,8 @@ class GptModel:
         else:
             logger.warning("Now full model params fine-tune, which is slow, set `use_peft=True` for lora fine-tune.")
         os.makedirs(output_dir, exist_ok=True)
+        logger.debug(f"Tokenizer: {self.tokenizer}")
+        logger.debug(f"Model: {self.model}")
 
         # load dataset
         train_dataset = self.load_and_cache_examples(train_data)
