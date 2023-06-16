@@ -65,20 +65,26 @@ def preprocess_data(data):
             input_tokens = tokenizer.convert_ids_to_tokens(example["input_ids"])
             matches = re.finditer(r'### (?!Assistant:)(.*?)</s>', prompt, re.DOTALL)
             for match in matches:
-                start_idx, end_idx = None, None
+                start_pos, end_pos = match.span()
+                start_idx = None
+                end_idx = None
+                current_pos = 0
+                current_idx = 0
 
-                start_pos = match.end()
-                spans = tokenizer(prompt).span_tokenize(prompt)
-                for i, (joined_start, joined_end) in enumerate(spans):
-                    if joined_end >= start_pos:
-                        start_idx = i
-                        break
-                if start_idx is not None:
-                    end_idx = min(start_idx - 1, len(input_tokens) - 1)
-                end_pos = sum([len(s) for s in input_tokens[:start_idx + 1]])
-                start_pos = sum([len(s) for s in input_tokens[:start_idx]])
-                # Update labels based on start_idx and end_idx
-                labels[start_idx:end_idx - 1] = [IGNORE_INDEX] * (end_pos - start_pos)
+                while current_pos < start_pos:
+                    current_pos += len(input_tokens[current_idx]) + 1
+                    current_idx += 1
+                start_idx = current_idx
+
+                while current_pos < end_pos:
+                    current_pos += len(input_tokens[current_idx]) + 1
+                    current_idx += 1
+                end_idx = current_idx - 1
+
+                if start_idx is not None and end_idx is not None:
+                    for i in range(start_idx, end_idx - 1):
+                        labels[i] = IGNORE_INDEX
+        # Padding labels to full max length
         example['labels'] = [IGNORE_INDEX] * (full_max_length - len(labels)) + labels
     else:
         full_prompt = prompt + target_text + tokenizer.eos_token

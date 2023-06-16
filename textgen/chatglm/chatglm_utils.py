@@ -85,6 +85,7 @@ def preprocess_data(data):
                 if start_idx is not None and end_idx is not None:
                     for i in range(start_idx, end_idx - 1):
                         labels[i] = IGNORE_INDEX
+        # Padding labels to full max length
         example['labels'] = [IGNORE_INDEX] * (full_max_length - len(labels)) + labels
     else:
         full_prompt = prompt + target_text + tokenizer.eos_token
