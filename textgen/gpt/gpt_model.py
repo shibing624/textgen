@@ -28,7 +28,7 @@ from transformers import (
     LlamaTokenizerFast,
     BloomTokenizerFast,
     BloomForCausalLM,
-AutoModelForCausalLM,
+    AutoModelForCausalLM,
     AutoTokenizer,
 )
 from transformers import Trainer, TrainingArguments, AutoConfig
@@ -132,13 +132,14 @@ class GptModel:
             load_in_8bit=self.args.int8,
             torch_dtype=self.torch_dtype,
             device_map=self.device_map,
+            trust_remote_code=True,
         )
 
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
-            self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name)
+            self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name, trust_remote_code=True)
         else:
-            self.tokenizer = tokenizer_class.from_pretrained(model_name)
+            self.tokenizer = tokenizer_class.from_pretrained(model_name, trust_remote_code=True)
             self.args.tokenizer_name = self.args.model_name
 
         self.args.model_type = model_type
@@ -154,7 +155,6 @@ class GptModel:
         self.tokenizer.padding_side = "left"
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token_id = 0
-
 
     def load_peft_model(self):
         """Load peft model"""
