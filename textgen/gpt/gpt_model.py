@@ -31,7 +31,7 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
 )
-from transformers import Trainer, TrainingArguments, AutoConfig
+from transformers import Trainer, TrainingArguments
 from transformers.trainer import TRAINING_ARGS_NAME
 
 from textgen.config.model_args import GptArgs
@@ -42,10 +42,10 @@ os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 MODEL_CLASSES = {
-    "llama": (AutoConfig, LlamaForCausalLM, LlamaTokenizerFast),
-    "bloom": (AutoConfig, BloomForCausalLM, BloomTokenizerFast),
-    "baichuan": (AutoConfig, AutoModelForCausalLM, AutoTokenizer),
-    "auto": (AutoConfig, AutoModelForCausalLM, AutoTokenizer),
+    "llama": (LlamaForCausalLM, LlamaTokenizerFast),
+    "bloom": (BloomForCausalLM, BloomTokenizerFast),
+    "baichuan": (AutoModelForCausalLM, AutoTokenizer),
+    "auto": (AutoModelForCausalLM, AutoTokenizer),
 }
 
 
@@ -118,28 +118,29 @@ class GptModel:
             self.device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)}
 
         self.results = {}
-        config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
+        model_class, tokenizer_class = MODEL_CLASSES[model_type]
         if model_name is None:
             model_name = self.args.model_name_or_path
-        config = AutoConfig.from_pretrained(model_name, **kwargs)
 
         if torch.cuda.is_bf16_supported() and not self.args.bf16:
             logger.warning("GPU supports bf16, you can enable bf16.")
         self.torch_dtype = torch.bfloat16 if self.args.bf16 else (torch.float16 if self.args.fp16 else torch.float32)
         self.model = model_class.from_pretrained(
             model_name,
-            config=config,
             load_in_8bit=self.args.int8,
             torch_dtype=self.torch_dtype,
             device_map=self.device_map,
-            trust_remote_code=True,
+            trust_remote_code=self.args.trust_remote_code,
+            **kwargs,
         )
 
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
-            self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name, trust_remote_code=True)
+            self.tokenizer = tokenizer_class.from_pretrained(
+                self.args.tokenizer_name, trust_remote_code=self.args.trust_remote_code)
         else:
-            self.tokenizer = tokenizer_class.from_pretrained(model_name, trust_remote_code=True)
+            self.tokenizer = tokenizer_class.from_pretrained(
+                model_name, trust_remote_code=self.args.trust_remote_code)
             self.args.tokenizer_name = self.args.model_name
 
         self.args.model_type = model_type

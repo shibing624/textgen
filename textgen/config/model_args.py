@@ -459,3 +459,4 @@ class GptArgs(ModelArgs):
     resume_from_checkpoint: str = None
     gradient_checkpointing: bool = True
     torch_compile: bool = False
+    trust_remote_code: bool = True
