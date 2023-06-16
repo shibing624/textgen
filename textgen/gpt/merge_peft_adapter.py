@@ -22,7 +22,7 @@ import peft
 import torch
 from huggingface_hub import hf_hub_download
 from peft import PeftModel
-from transformers import LlamaForCausalLM, LlamaTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--base_model_name_or_path', default=None, required=True, type=str, help="Base model name or path")
@@ -217,7 +217,7 @@ if __name__ == '__main__':
     if offload_dir is not None:
         # Load with offloading, which is useful for low-RAM machines.
         # Note that if you have enough RAM, please use original method instead, as it is faster.
-        base_model = LlamaForCausalLM.from_pretrained(
+        base_model = AutoModelForCausalLM.from_pretrained(
             base_model_path,
             load_in_8bit=False,
             torch_dtype=torch.float16,
@@ -228,7 +228,7 @@ if __name__ == '__main__':
         )
     else:
         # Original method without offloading
-        base_model = LlamaForCausalLM.from_pretrained(
+        base_model = AutoModelForCausalLM.from_pretrained(
             base_model_path,
             load_in_8bit=False,
             torch_dtype=torch.float16,
@@ -246,7 +246,7 @@ if __name__ == '__main__':
     tokenizer = None
     for lora_index, lora_model_path in enumerate(lora_model_paths):
         print(f"Loading LoRA {lora_model_path}")
-        tokenizer = LlamaTokenizer.from_pretrained(lora_model_path)
+        tokenizer = AutoTokenizer.from_pretrained(lora_model_path)
         if base_model.get_input_embeddings().weight.size(0) != len(tokenizer):
             base_model.resize_token_embeddings(len(tokenizer))
             print(f"Extended vocabulary size to {len(tokenizer)}")
@@ -296,14 +296,11 @@ if __name__ == '__main__':
                 )
                 assert base_model_sd[original_key].dtype == torch.float16
 
-        # did we do anything?
-        assert not torch.allclose(first_weight_old, first_weight)
-
     tokenizer.save_pretrained(output_dir)
 
     if output_type == 'huggingface':
         print("Saving to Hugging Face format...")
-        LlamaForCausalLM.save_pretrained(base_model, output_dir)
+        AutoModelForCausalLM.save_pretrained(base_model, output_dir)
     else:  # output_type=='pth'
         print("Saving to pth format...")
 

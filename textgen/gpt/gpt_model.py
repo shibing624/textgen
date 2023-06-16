@@ -23,12 +23,19 @@ from peft import (
 )
 from tqdm.auto import tqdm
 from transformers import GenerationConfig, DataCollatorForSeq2Seq
-from transformers import LlamaForCausalLM, LlamaTokenizerFast
+from transformers import (
+    LlamaForCausalLM,
+    LlamaTokenizerFast,
+    BloomTokenizerFast,
+    BloomForCausalLM,
+AutoModelForCausalLM,
+    AutoTokenizer,
+)
 from transformers import Trainer, TrainingArguments, AutoConfig
 from transformers.trainer import TRAINING_ARGS_NAME
 
-from textgen.config.model_args import LlamaArgs
-from textgen.llama.llama_utils import LlamaInstructionDataset, PROMPT_DICT
+from textgen.config.model_args import GptArgs
+from textgen.gpt.gpt_utils import InstructionDataset, PROMPT_DICT
 
 has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
@@ -36,14 +43,17 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 MODEL_CLASSES = {
     "llama": (AutoConfig, LlamaForCausalLM, LlamaTokenizerFast),
+    "bloom": (AutoConfig, BloomForCausalLM, BloomTokenizerFast),
+    "baichuan": (AutoConfig, AutoModelForCausalLM, AutoTokenizer),
+    "auto": (AutoConfig, AutoModelForCausalLM, AutoTokenizer),
 }
 
 
-class LlamaModel:
+class GptModel:
     def __init__(
             self,
-            model_type: str = "llama",
-            model_name: str = "shibing624/chinese-alpaca-plus-7b-hf",
+            model_type,
+            model_name,
             peft_name: Optional[str] = None,
             args: Optional[dict] = None,
             use_cuda: Optional[bool] = has_cuda,
@@ -52,10 +62,10 @@ class LlamaModel:
     ):
 
         """
-        Initializes a LlamaModel model.
+        Initializes a GptModel model.
 
         Args:
-            model_type: The type of model (llama)
+            model_type: The type of model (llama, bloom, baichuan, auto)
             model_name: The exact architecture and trained weights to use. This may be a Hugging Face Transformers compatible pre-trained model, a community model, or the path to a directory containing model files.
             peft_name (optional): Peft model name
             args (optional): Default args will be used if this parameter is not provided. If provided, it should be a dict containing the args that should be changed in the default args.
@@ -68,7 +78,7 @@ class LlamaModel:
 
         if isinstance(args, dict):
             self.args.update_from_dict(args)
-        elif isinstance(args, LlamaArgs):
+        elif isinstance(args, GptArgs):
             self.args = args
 
         if self.args.manual_seed:
@@ -137,14 +147,14 @@ class LlamaModel:
         else:
             self.args.model_name = model_name
 
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
-
         self.peft_name = peft_name
         if self.args.use_peft and self.peft_name:
             self.load_peft_model()
         # Set padding side equal to Collator padding side
         self.tokenizer.padding_side = "left"
+        if self.tokenizer.pad_token_id is None:
+            self.tokenizer.pad_token_id = 0
+
 
     def load_peft_model(self):
         """Load peft model"""
@@ -252,10 +262,8 @@ class LlamaModel:
             self.model.is_parallelizable = True
             self.model.model_parallel = True
 
-        resume_from_checkpoint = self.args.resume_from_checkpoint
         if 'all' in self.args.lora_target_modules:
             self.args.lora_target_modules = self.find_all_linear_names(self.args.int4, self.args.int8)
-
         # setup peft
         if self.args.use_peft:
             peft_type = self.args.peft_type.upper()
@@ -335,6 +343,7 @@ class LlamaModel:
                 self.model = self.model.merge_and_unload()
             self.model = get_peft_model(self.model, peft_config)
 
+            resume_from_checkpoint = self.args.resume_from_checkpoint
             if resume_from_checkpoint:
                 # Check the available weights and load them
                 checkpoint_name = os.path.join(resume_from_checkpoint, "pytorch_model.bin")  # Full checkpoint
@@ -448,6 +457,7 @@ class LlamaModel:
             if self.args.fp16:
                 self.model.half()
             metrics = trainer.evaluate(metric_key_prefix="eval")
+            metrics['eval_samples'] = len(eval_dataset)
             try:
                 perplexity = math.exp(metrics["eval_loss"])
             except OverflowError:
@@ -543,7 +553,6 @@ class LlamaModel:
             )
             outputs = self.model.generate(
                 input_ids=inputs['input_ids'].to(self.device),
-                attention_mask=inputs['attention_mask'].to(self.device),
                 generation_config=generation_config
             )
             for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs.sequences)):
@@ -616,7 +625,7 @@ class LlamaModel:
             CustomDataset = args.dataset_class
             return CustomDataset(tokenizer, args, data, mode)
         else:
-            return LlamaInstructionDataset(tokenizer, args, data, mode)
+            return InstructionDataset(tokenizer, args, data, mode)
 
     def save_model(
             self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
@@ -647,7 +656,7 @@ class LlamaModel:
         self.args.save(output_dir)
 
     def _load_model_args(self, input_dir):
-        args = LlamaArgs()
+        args = GptArgs()
         args.load(input_dir)
         return args
 

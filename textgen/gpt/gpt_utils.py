@@ -3,7 +3,6 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-
 import os
 import pickle
 import re
@@ -51,34 +50,35 @@ def preprocess_data(data):
     IGNORE_INDEX = -100
     EOS_TOKEN = tokenizer.eos_token
     full_max_length = args.max_seq_length + args.max_length
+
     prompt, round_type = generate_prompt(instruction, input_text, target_text)
     if round_type == 'multi_round':
         prompt = re.sub(r'(?<!\n)\n### ', f'\n{EOS_TOKEN}### ', prompt)
         prompt += EOS_TOKEN
-        example = tokenizer(prompt, max_length=full_max_length, truncation=True, padding=False,
-                            return_offsets_mapping=True)
+        example = tokenizer(prompt, max_length=full_max_length, truncation=True, padding=False)
         labels = example['input_ids'].copy()
+
         if not args.is_train_on_prompt:
-            source_len = len(
-                tokenizer(PROMPT_DICT['prompt_multi_round_no_input'].split('\n\n')[0] + '\n\n')['input_ids'])
+            source_len = len(tokenizer(
+                PROMPT_DICT['prompt_multi_round_no_input'].split('\n\n')[0] + '\n\n')['input_ids'])
             labels[:source_len] = [IGNORE_INDEX] * source_len
-            offsets = example["offset_mapping"]
-
-            matches = re.finditer(r'### (?!Assistant:)(.*?)<\/s>', prompt, re.DOTALL)
+            input_tokens = tokenizer.convert_ids_to_tokens(example["input_ids"])
+            matches = re.finditer(r'### (?!Assistant:)(.*?)</s>', prompt, re.DOTALL)
             for match in matches:
-                start_pos, end_pos = match.span()
-                start_idx = None
-                end_idx = None
+                start_idx, end_idx = None, None
 
-                for i, (start, end) in enumerate(offsets):
-                    if start <= start_pos < end:
+                start_pos = match.end()
+                spans = tokenizer(prompt).span_tokenize(prompt)
+                for i, (joined_start, joined_end) in enumerate(spans):
+                    if joined_end >= start_pos:
                         start_idx = i
-                    if start <= end_pos < end:
-                        end_idx = i
-
-                if start_idx is not None and end_idx is not None:
-                    for i in range(start_idx, end_idx - 1):
-                        labels[i] = IGNORE_INDEX
+                        break
+                if start_idx is not None:
+                    end_idx = min(start_idx - 1, len(input_tokens) - 1)
+                end_pos = sum([len(s) for s in input_tokens[:start_idx + 1]])
+                start_pos = sum([len(s) for s in input_tokens[:start_idx]])
+                # Update labels based on start_idx and end_idx
+                labels[start_idx:end_idx - 1] = [IGNORE_INDEX] * (end_pos - start_pos)
         example['labels'] = [IGNORE_INDEX] * (full_max_length - len(labels)) + labels
     else:
         full_prompt = prompt + target_text + tokenizer.eos_token
@@ -99,23 +99,19 @@ def preprocess_data(data):
                 add_special_tokens=False
             )
             user_prompt_len = len(user_example["input_ids"])
-            # set labels to full max length to adjust for DataCollatorForSeq2Seq padding
+            # Padding labels to full max length to equalize the length of input_ids after collator
             example["labels"] = [IGNORE_INDEX] * (full_max_length - len(example['labels']) + user_prompt_len) + \
                                 example["labels"][user_prompt_len:]
-    return {
-        "input_ids": example["input_ids"],
-        "attention_mask": example["attention_mask"],
-        "labels": example['labels'],
-    }
+    return {"input_ids": example['input_ids'], "labels": example["labels"]}
 
 
-def preprocess_batch_for_hf_dataset(example, tokenizer, args):
+def preprocess_batch_for_hf_instruction_dataset(example, tokenizer, args):
     data = (example["instruction"], example["input"], example["output"], tokenizer, args)
     example = preprocess_data(data)
     return example
 
 
-def load_hf_dataset(tokenizer, args, data, mode):
+def load_hf_instruction_dataset(tokenizer, args, data, mode):
     if isinstance(data, str):
         if data.endswith('.json') or data.endswith('.jsonl'):
             dataset = load_dataset("json", data_files=data)
@@ -137,14 +133,14 @@ def load_hf_dataset(tokenizer, args, data, mode):
         dataset = HFDataset.from_pandas(data)
 
     dataset = dataset.shuffle().map(
-        lambda x: preprocess_batch_for_hf_dataset(x, tokenizer=tokenizer, args=args),
+        lambda x: preprocess_batch_for_hf_instruction_dataset(x, tokenizer=tokenizer, args=args),
         batched=False, remove_columns=dataset.column_names
     ).filter(lambda x: len(x['input_ids']) > 0)
 
     return dataset
 
 
-class BloomDataset(Dataset):
+class InstructionDataset(Dataset):
     def __init__(self, tokenizer, args, data, mode):
         cached_features_file = os.path.join(
             args.cache_dir,
@@ -162,9 +158,9 @@ class BloomDataset(Dataset):
             with open(cached_features_file, "rb") as handle:
                 self.examples = pickle.load(handle)
         else:
-            logger.info(" Creating features from dataset file at %s" % args.cache_dir)
+            logger.debug(" Creating features from dataset file at %s" % args.cache_dir)
 
-            self.examples = list(load_hf_dataset(tokenizer, args, data, mode))
+            self.examples = list(load_hf_instruction_dataset(tokenizer, args, data, mode))
             if not args.no_cache:
                 logger.info(" Saving features into cached file %s" % cached_features_file)
                 with open(cached_features_file, "wb") as handle:

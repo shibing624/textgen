@@ -9,7 +9,7 @@ import sys
 from loguru import logger
 
 sys.path.append('../..')
-from textgen import LlamaModel
+from textgen import GptModel
 
 
 def main():
@@ -42,12 +42,12 @@ def main():
             "num_train_epochs": args.num_epochs,
             "output_dir": args.output_dir,
         }
-        model = LlamaModel(args.model_type, args.model_name, args=model_args)
+        model = GptModel(args.model_type, args.model_name, args=model_args)
 
         model.train_model(args.train_file)
     if args.do_predict:
         if model is None:
-            model = LlamaModel(
+            model = GptModel(
                 args.model_type, args.model_name,
                 peft_name=args.output_dir,
                 args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length, }

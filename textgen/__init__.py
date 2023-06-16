@@ -35,8 +35,6 @@ from textgen.unsup_generation.tgls_model import TglsModel
 from textgen.config.model_args import ChatGlmArgs
 from textgen.chatglm.chatglm_model import ChatGlmModel
 
-from textgen.config.model_args import LlamaArgs
-from textgen.llama.llama_model import LlamaModel
+from textgen.config.model_args import GptArgs
+from textgen.gpt.gpt_model import GptModel
 
-from textgen.config.model_args import BloomArgs
-from textgen.bloom.bloom_model import BloomModel

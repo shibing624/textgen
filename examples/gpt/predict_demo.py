@@ -6,14 +6,14 @@
 import sys
 
 sys.path.append('../..')
-from textgen import LlamaModel
+from textgen import GptModel
 
 
 def generate_prompt(instruction):
     return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response: """
 
 
-model = LlamaModel("llama", "shibing624/chinese-alpaca-plus-7b-hf")
+model = GptModel("llama", "shibing624/chinese-alpaca-plus-7b-hf")
 predict_sentence = generate_prompt("失眠怎么办？")
 r = model.predict([predict_sentence])
 print(r)

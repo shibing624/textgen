@@ -173,14 +173,14 @@ example: [examples/llama/predict_demo.py](https://github.com/shibing624/textgen/
 import sys
 
 sys.path.append('../..')
-from textgen import LlamaModel
+from textgen import GptModel
 
 
 def generate_prompt(instruction):
   return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response:"""
 
 
-model = LlamaModel("llama", "decapoda-research/llama-7b-hf", peft_name="ziqingyang/chinese-alpaca-lora-7b")
+model = GptModel("llama", "decapoda-research/llama-7b-hf", peft_name="ziqingyang/chinese-alpaca-lora-7b")
 predict_sentence = generate_prompt("问：用一句话描述地球为什么是独一无二的。\n答：")
 r = model.predict([predict_sentence])
 print(r)  # ['地球是唯一一颗拥有生命的行星。']

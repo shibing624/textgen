@@ -4,43 +4,42 @@
 @description: 
 """
 import argparse
-import os
 import sys
-from pathlib import Path
 
-from datasets import load_dataset, concatenate_datasets
+import pandas as pd
 from loguru import logger
 
 sys.path.append('../..')
-from textgen import LlamaModel
+from textgen import GptModel
 
 
-def load_data(data_dir):
-    path = Path(data_dir)
-    files = [os.path.join(path, file.name) for file in path.glob("*.json")]
-    logger.info(f"training files: {' '.join(files)}")
-    all_datasets = []
-    for file in files:
-        raw_dataset = load_dataset("json", data_files=file)
-        all_datasets.append(raw_dataset["train"])
-    all_datasets = concatenate_datasets(all_datasets)
-    logger.debug(f"all_datasets size:{all_datasets}, first line: {next(iter(all_datasets))}")
-    return all_datasets.to_pandas()
+def load_data(file_path):
+    data = []
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip('\n')
+            terms = line.split('\t')
+            instruction = '对下面中文拼写纠错：'
+            if len(terms) == 2:
+                data.append([instruction, terms[0], terms[1]])
+            else:
+                logger.warning(f'line error: {line}')
+    return data
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_data_dir', default='../data/json_files/', type=str, help='Training data file')
-    parser.add_argument('--test_data_dir', default='../data/json_files/', type=str, help='Test data file')
+    parser.add_argument('--train_file', default='../data/zh_csc_train.tsv', type=str, help='Training data file')
+    parser.add_argument('--test_file', default='../data/zh_csc_test.tsv', type=str, help='Test data file')
     parser.add_argument('--model_type', default='llama', type=str, help='Transformers model type')
     parser.add_argument('--model_name', default='shibing624/chinese-alpaca-plus-7b-hf', type=str,
                         help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--is_train_on_prompt', action='store_true', help='Whether to compute loss on prompt')
-    parser.add_argument('--output_dir', default='./outputs-mydata/', type=str, help='Model output directory')
-    parser.add_argument('--max_seq_length', default=256, type=int, help='Input max sequence length')
-    parser.add_argument('--max_length', default=256, type=int, help='Output max sequence length')
+    parser.add_argument('--output_dir', default='./outputs-demo/', type=str, help='Model output directory')
+    parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
+    parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=0.2, type=float, help='Number of training epochs')
     parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     parser.add_argument('--eval_steps', default=50, type=int, help='Eval every X steps')
@@ -54,6 +53,7 @@ def main():
         model_args = {
             "use_peft": True,
             "overwrite_output_dir": True,
+            "reprocess_input_data": True,
             "max_seq_length": args.max_seq_length,
             "max_length": args.max_length,
             "per_device_train_batch_size": args.batch_size,
@@ -65,20 +65,22 @@ def main():
             "eval_steps": args.eval_steps,
             "save_steps": args.save_steps,
         }
-        model = LlamaModel(args.model_type, args.model_name, args=model_args)
-        train_df = load_data(args.train_data_dir)
-        logger.debug('train_df: {}'.format(train_df))
+        model = GptModel(args.model_type, args.model_name, args=model_args)
+        train_data = load_data(args.train_file)
+        logger.debug('train_data: {}'.format(train_data[:10]))
+        train_df = pd.DataFrame(train_data, columns=["instruction", "input", "output"])
         eval_df = train_df[:10]
         train_df = train_df[10:]
         model.train_model(train_df, eval_data=eval_df)
     if args.do_predict:
         if model is None:
-            model = LlamaModel(
+            model = GptModel(
                 args.model_type, args.model_name,
                 peft_name=args.output_dir,
                 args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length, }
             )
-        test_df = load_data(args.test_data_dir)[:10]
+        test_data = load_data(args.test_file)[:10]
+        test_df = pd.DataFrame(test_data, columns=["instruction", "input", "output"])
         logger.debug('test_df: {}'.format(test_df))
 
         def get_prompt(arr):
@@ -93,11 +95,13 @@ def main():
         out_df = test_df[['instruction', 'input', 'output', 'predict_after']]
         out_df.to_json('test_result.json', force_ascii=False, orient='records', lines=True)
 
-        # Chat with model
-        response, history = model.chat('What is the sum of 1 and 2?', add_system_prompt=True)
+        def generate_prompt(instruction):
+            return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{instruction}\n\n### Response: """
+
+        response = model.predict([generate_prompt("给出三个保持健康的秘诀。")])
         print(response)
-        response, history = model.chat('what is the multiplication result of two num? please think step by step.',
-                                       history=history, add_system_prompt=True)
+        response = model.predict([generate_prompt(
+            "给定一篇文章，纠正里面的语法错误。\n我去年很喜欢在公园里跑步，但因为最近天气太冷所以我不去了。")])
         print(response)
 
 

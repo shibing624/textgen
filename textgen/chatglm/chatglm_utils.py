@@ -63,9 +63,8 @@ def preprocess_data(data):
             source_len = len(tokenizer(
                 PROMPT_DICT['prompt_multi_round_no_input'].split('\n\n')[0] + '\n\n')['input_ids'])
             labels[:source_len] = [IGNORE_INDEX] * source_len
-
-            matches = re.finditer(r'### (?!Assistant:)(.*?)</s>', prompt, re.DOTALL)
             input_tokens = tokenizer.convert_ids_to_tokens(example["input_ids"])
+            matches = re.finditer(r'### (?!Assistant:)(.*?)</s>', prompt, re.DOTALL)
             for match in matches:
                 start_pos, end_pos = match.span()
                 start_idx = None

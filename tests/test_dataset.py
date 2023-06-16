@@ -12,7 +12,7 @@ from transformers import AutoTokenizer
 
 sys.path.append('..')
 from textgen.llama.llama_utils import LlamaPretrainingDataset
-from textgen import LlamaArgs
+from textgen import GptArgs
 
 
 def load_data(file_path):
@@ -21,7 +21,7 @@ def load_data(file_path):
 
 def test_data():
     tokenizer = AutoTokenizer.from_pretrained('shibing624/chinese-alpaca-plus-7b-hf')
-    args = LlamaArgs()
+    args = GptArgs()
     args.model_name = 'shibing624/chinese-alpaca-plus-7b-hf'
     args.no_cache = True
     print('args', args)
