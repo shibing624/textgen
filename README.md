@@ -212,7 +212,7 @@ example: [examples/llama/training_llama_demo.py](https://github.com/shibing624/t
 
 执行以下命令：
 ```shell
-python -m textgen/llama/merge_peft_adapter.py \
+python -m textgen/gpt/merge_peft_adapter.py \
     --base_model_name_or_path path_to_original_base_model_dir \
     --peft_model_path path_to_chinese_llama_or_alpaca_lora \
     --output_type [pth|huggingface]

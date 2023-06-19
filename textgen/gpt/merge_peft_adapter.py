@@ -300,7 +300,7 @@ if __name__ == '__main__':
 
     if output_type == 'huggingface':
         print("Saving to Hugging Face format...")
-        AutoModelForCausalLM.save_pretrained(base_model, output_dir)
+        base_model.save_pretrained(output_dir)
     else:  # output_type=='pth'
         print("Saving to pth format...")
 
