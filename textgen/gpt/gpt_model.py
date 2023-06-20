@@ -356,7 +356,7 @@ class GptModel:
                 # The two files above have a different name depending on how they were saved, but are actually the same.
                 if os.path.exists(checkpoint_name):
                     logger.info(f"Restarting from {checkpoint_name}")
-                    adapters_weights = torch.load(checkpoint_name)
+                    adapters_weights = torch.load(checkpoint_name, map_location='cpu')
                     set_peft_model_state_dict(self.model, adapters_weights)
                 else:
                     logger.warning(f"Checkpoint {checkpoint_name} not found")
