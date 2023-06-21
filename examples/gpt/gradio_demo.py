@@ -228,9 +228,8 @@ def main(
                 label="Output",
             )
         ],
-        title="🦙🌲 Alpaca-LoRA",
-        description="Alpaca-LoRA is a 7B-parameter LLaMA model finetuned to follow instructions. It is trained on the [Stanford Alpaca](https://github.com/tatsu-lab/stanford_alpaca) dataset and makes use of the Huggingface LLaMA implementation. For more information, please visit [the project's website](https://github.com/tloen/alpaca-lora).",
-        # noqa: E501
+        title="textgen",
+        description="LLM text generation, with optional LORA.",
     ).queue().launch(server_name=server_name, share=share_gradio)
 
 
