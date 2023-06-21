@@ -10,7 +10,7 @@ import sys
 import pandas as pd
 
 sys.path.append('..')
-from textgen import LlamaModel, ChatGlmModel
+from textgen import GptModel, ChatGlmModel
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
 
@@ -28,7 +28,7 @@ sentences = [i.strip() for i in open(os.path.join(pwd_path, '../examples/data/ll
 
 
 def test_llama_13b_lora():
-    m = LlamaModel('llama', "decapoda-research/llama-13b-hf", peft_name='shibing624/llama-13b-belle-zh-lora')
+    m = GptModel('llama', "decapoda-research/llama-13b-hf", peft_name='shibing624/llama-13b-belle-zh-lora')
 
     predict_sentences = [llama_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
@@ -44,7 +44,7 @@ def test_llama_13b_lora():
 
 
 def test_llama_7b_alpaca_plus():
-    m = LlamaModel('llama', "shibing624/chinese-alpaca-plus-7b-hf", args={'use_peft': False})
+    m = GptModel('llama', "shibing624/chinese-alpaca-plus-7b-hf", args={'use_peft': False})
     predict_sentences = [llama_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
@@ -58,7 +58,7 @@ def test_llama_7b_alpaca_plus():
 
 
 def test_llama_13b_alpaca_plus():
-    m = LlamaModel('llama', "shibing624/chinese-alpaca-plus-13b-hf", args={'use_peft': False})
+    m = GptModel('llama', "shibing624/chinese-alpaca-plus-13b-hf", args={'use_peft': False})
     predict_sentences = [llama_generate_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):

@@ -390,7 +390,7 @@ class ChatGlmArgs(ModelArgs):
     gradient_accumulation_steps = 1
     gradient_checkpointing: bool = True
     torch_compile: bool = False
-    save_total_limit = 3
+    save_total_limit = 10
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
@@ -453,7 +453,7 @@ class GptArgs(ModelArgs):
     per_device_train_batch_size = 2
     eval_batch_size: int = 4
     gradient_accumulation_steps = 1
-    save_total_limit = 3
+    save_total_limit = 10
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
