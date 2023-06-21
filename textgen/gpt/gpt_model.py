@@ -166,19 +166,6 @@ class GptModel:
         )
         logger.info(f"Loaded peft model from {self.peft_name}")
 
-    def resize_model_embeddings(self, tokenizer_vocab_size):
-        """Resizes model embeddings to match the tokenizer vocab size."""
-        model_vocab_size = self.model.get_input_embeddings().weight.size(0)
-        if model_vocab_size != tokenizer_vocab_size:
-            logger.debug(
-                f"Resize model embeddings to fit tokenizer, "
-                f"Vocab of the base model: {model_vocab_size}, "
-                f"Vocab of the tokenizer: {tokenizer_vocab_size}"
-            )
-            self.model.resize_token_embeddings(tokenizer_vocab_size)
-            assert self.model.get_input_embeddings().weight.size(0) == len(self.tokenizer)
-            logger.debug(f"Model token embeddings updated, size: {len(self.tokenizer)}")
-
     def find_all_linear_names(self, int4=False, int8=False):
         cls = torch.nn.Linear
         if int4 or int8:
