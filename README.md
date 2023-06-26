@@ -119,7 +119,7 @@ python setup.py install
 
 #### 使用 ChatGLM-6B 微调后的模型
 
-example: [examples/chatglm/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/predict_demo.py)
+example: [examples/chatglm/inference_demo.py](https://github.com/shibing624/textgen/blob/main/examples/chatglm/inference_demo.py)
 
 ```python
 from textgen import ChatGlmModel
@@ -173,7 +173,7 @@ python -m textgen/chatglm/merge_peft_adapter.py \
 
 #### 使用 LLaMA 微调后的模型
 
-example: [examples/llama/predict_demo.py](https://github.com/shibing624/textgen/blob/main/examples/llama/predict_demo.py)
+example: [examples/gpt/inference_demo.py](https://github.com/shibing624/textgen/blob/main/examples/gpt/inference_demo.py)
 
 <details>
 <summary>show code example and result</summary>
