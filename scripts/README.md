@@ -1,9 +1,9 @@
 # Tools 
 
 以医疗为例生成领域数据集，给出数据生成脚本： 
-- ChatGPT对话调用脚本 [answer_by_chatgpt.py](https://github.com/shibing624/textgen/blob/main/textgen/tools/answer_by_chatgpt.py)
-- SFT指令微调数据集生成脚本 [generate_sft_data.py](https://github.com/shibing624/textgen/blob/main/textgen/tools/generate_sft_data.py)
-- SFT指令数据集GPT评分脚本 [evaluate_sft_data.py](https://github.com/shibing624/textgen/blob/main/textgen/tools/evaluate_sft_data.py)
+- ChatGPT对话调用脚本 [answer_by_chatgpt.py](https://github.com/shibing624/textgen/blob/main/scripts/answer_by_chatgpt.py)
+- SFT指令微调数据集生成脚本 [generate_sft_data.py](https://github.com/shibing624/textgen/blob/main/scripts/generate_sft_data.py)
+- SFT指令数据集GPT评分脚本 [evaluate_sft_data.py](https://github.com/shibing624/textgen/blob/main/scripts/evaluate_sft_data.py)
 
 ## 字段
 
@@ -17,7 +17,7 @@ output: 输出
 
 ## 使用方法
 #### ChatGPT对话调用脚本 answer_by_chatgpt.py
-[answer_by_chatgpt.py](https://github.com/shibing624/textgen/blob/main/textgen/tools/answer_by_chatgpt.py) 利用ChatGPT生成医疗问题的答案，并输出为指令数据集的格式。
+[answer_by_chatgpt.py](https://github.com/shibing624/textgen/blob/main/scripts/answer_by_chatgpt.py) 利用ChatGPT生成医疗问题的答案，并输出为指令数据集的格式。
 
 ```bash
 pip install -r requirements.txt
@@ -31,7 +31,7 @@ python answer_by_chatgpt.py --input_file ./medical_question.txt --output_file ./
 
 下面是医疗领域的指令微调数据构建方法：
 
-[generate_sft_data.py](https://github.com/shibing624/textgen/blob/main/textgen/tools/generate_sft_data.py) 利用few-shot技术，使用ChatGPT生成指令微调数据集。
+[generate_sft_data.py](https://github.com/shibing624/textgen/blob/main/scripts/generate_sft_data.py) 利用few-shot技术，使用ChatGPT生成指令微调数据集。
 
 ```bash
 pip install -r requirements.txt
@@ -46,7 +46,7 @@ python generate_sft_data.py --seed_file ./seed_medical_sft_data.jsonl --output_f
 
 #### SFT指令数据集GPT评分脚本 evaluate_sft_data.py
 
-[evaluate_sft_data.py](https://github.com/shibing624/textgen/blob/main/textgen/tools/evaluate_sft_data.py) 中可以使用ChatGPT和GPT4模型评分，评分结果保存在`scores.jsonl`中。
+[evaluate_sft_data.py](https://github.com/shibing624/textgen/blob/main/scripts/evaluate_sft_data.py) 中可以使用ChatGPT和GPT4模型评分，评分结果保存在`scores.jsonl`中。
 
 ```bash 
 pip install -r requirements.txt
