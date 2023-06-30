@@ -21,7 +21,7 @@ from peft import (
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
 )
-from tqdm.auto import tqdm
+from tqdm import tqdm
 from transformers import GenerationConfig, DataCollatorForSeq2Seq
 from transformers import (
     LlamaForCausalLM,
@@ -467,7 +467,7 @@ class GptModel:
             self,
             sentences: List[str],
             keep_prompt: bool = False,
-            add_system_prompt=False,
+            add_system_prompt: bool =False,
             max_length: int = 256,
             temperature: float = 0.95,
             top_p: float = 0.9,

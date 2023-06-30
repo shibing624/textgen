@@ -21,7 +21,7 @@ from peft import (
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
 )
-from tqdm.auto import tqdm
+from tqdm import tqdm
 from transformers import Trainer, TrainingArguments, AutoTokenizer, AutoModel, DataCollatorForSeq2Seq
 from transformers.trainer import TRAINING_ARGS_NAME
 
