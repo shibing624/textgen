@@ -22,7 +22,6 @@ from peft import (
     set_peft_model_state_dict,
 )
 from tqdm import tqdm
-from transformers import GenerationConfig, DataCollatorForSeq2Seq
 from transformers import (
     LlamaForCausalLM,
     LlamaTokenizerFast,
@@ -30,8 +29,13 @@ from transformers import (
     BloomForCausalLM,
     AutoModelForCausalLM,
     AutoTokenizer,
+    Trainer,
+    TrainingArguments,
+    GenerationConfig,
+    DataCollatorForSeq2Seq,
+    BitsAndBytesConfig,
+    deepspeed,
 )
-from transformers import Trainer, TrainingArguments
 from transformers.trainer import TRAINING_ARGS_NAME
 
 from textgen.config.model_args import GptArgs
@@ -131,6 +135,12 @@ class GptModel:
             torch_dtype=self.torch_dtype,
             device_map=self.device_map,
             trust_remote_code=self.args.trust_remote_code,
+            quantization_config=BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=self.torch_dtype,
+            ) if self.args.qlora else None,
             **kwargs,
         )
 
@@ -233,18 +243,40 @@ class GptModel:
                 "Output directory ({}) already exists and is not empty."
                 " Set args.overwrite_output_dir = True to overcome.".format(output_dir)
             )
-        # update model train config
-        if self.args.gradient_checkpointing:
-            self.model.gradient_checkpointing_enable()
-            self.model.config.use_cache = False
-        else:
-            self.model.config.use_cache = True
-        self.model.enable_input_require_grads()
-        if not self.ddp and torch.cuda.device_count() > 1:
-            # keeps Trainer from trying its own DataParallelism when more than 1 gpu is available
-            self.model.is_parallelizable = True
-            self.model.model_parallel = True
 
+        # Setup train args
+        training_args = TrainingArguments(
+            output_dir=output_dir,
+            learning_rate=self.args.learning_rate,
+            num_train_epochs=self.args.num_train_epochs,
+            logging_dir=f"{output_dir}/logs",
+            logging_steps=self.args.logging_steps,
+            max_steps=self.args.max_steps,
+            per_device_train_batch_size=self.args.per_device_train_batch_size,
+            per_device_eval_batch_size=self.args.per_device_train_batch_size,
+            gradient_checkpointing=self.args.gradient_checkpointing,
+            torch_compile=self.args.torch_compile,
+            gradient_accumulation_steps=self.args.gradient_accumulation_steps,
+            warmup_steps=self.args.warmup_steps,
+            save_steps=self.args.save_steps,
+            optim=self.args.optimizer,
+            save_strategy=self.args.save_strategy,
+            evaluation_strategy='steps' if eval_data is not None else 'no',
+            eval_steps=self.args.eval_steps if eval_data is not None else None,
+            load_best_model_at_end=True if eval_data is not None else False,
+            ddp_find_unused_parameters=False if self.ddp else None,
+            save_total_limit=self.args.save_total_limit,
+            fp16=self.args.fp16,
+            bf16=self.args.bf16,
+            remove_unused_columns=self.args.remove_unused_columns,
+            report_to=self.args.report_to,
+            overwrite_output_dir=self.args.overwrite_output_dir,
+            no_cuda=True if self.device == "cpu" else False,
+            **kwargs
+        )
+        resume_from_checkpoint = self.args.resume_from_checkpoint
+        if self.args.qlora and (len(training_args.fsdp) > 0 or deepspeed.is_deepspeed_zero3_enabled()):
+            logger.warning("FSDP and ZeRO3 are both currently incompatible with QLoRA.")
         if 'all' in self.args.lora_target_modules:
             self.args.lora_target_modules = self.find_all_linear_names(self.args.int4, self.args.int8)
         # setup peft
@@ -326,7 +358,6 @@ class GptModel:
                 self.model = self.model.merge_and_unload()
             self.model = get_peft_model(self.model, peft_config)
 
-            resume_from_checkpoint = self.args.resume_from_checkpoint
             if resume_from_checkpoint:
                 # Check the available weights and load them
                 checkpoint_name = os.path.join(resume_from_checkpoint, "pytorch_model.bin")  # Full checkpoint
@@ -362,36 +393,6 @@ class GptModel:
             if verbose:
                 logger.debug(f"eval_dataset len: {len(eval_dataset)}, eval_dataset[0]: {eval_dataset[0]}")
 
-        # start train
-        training_args = TrainingArguments(
-            output_dir=output_dir,
-            learning_rate=self.args.learning_rate,
-            num_train_epochs=self.args.num_train_epochs,
-            logging_dir=f"{output_dir}/logs",
-            logging_steps=self.args.logging_steps,
-            max_steps=self.args.max_steps,
-            per_device_train_batch_size=self.args.per_device_train_batch_size,
-            per_device_eval_batch_size=self.args.per_device_train_batch_size,
-            gradient_checkpointing=self.args.gradient_checkpointing,
-            torch_compile=self.args.torch_compile,
-            gradient_accumulation_steps=self.args.gradient_accumulation_steps,
-            warmup_steps=self.args.warmup_steps,
-            save_steps=self.args.save_steps,
-            optim=self.args.optimizer,
-            save_strategy=self.args.save_strategy,
-            evaluation_strategy='steps' if eval_data is not None else 'no',
-            eval_steps=self.args.eval_steps if eval_data is not None else None,
-            load_best_model_at_end=True if eval_data is not None else False,
-            ddp_find_unused_parameters=False if self.ddp else None,
-            save_total_limit=self.args.save_total_limit,
-            fp16=self.args.fp16,
-            bf16=self.args.bf16,
-            remove_unused_columns=self.args.remove_unused_columns,
-            report_to=self.args.report_to,
-            overwrite_output_dir=self.args.overwrite_output_dir,
-            no_cuda=True if self.device == "cpu" else False,
-            **kwargs
-        )
         # Log on each process the small summary:
         logger.warning(
             f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}, "
@@ -399,6 +400,18 @@ class GptModel:
         )
         if training_args.local_rank <= 0:
             logger.info(f"Training/evaluation parameters {training_args}")
+
+        # Update model train config
+        if self.args.gradient_checkpointing:
+            self.model.gradient_checkpointing_enable()
+            self.model.config.use_cache = False
+        else:
+            self.model.config.use_cache = True
+        self.model.enable_input_require_grads()
+        if torch.cuda.device_count() > 1:
+            # keeps Trainer from trying its own DataParallelism when more than 1 gpu is available
+            self.model.is_parallelizable = True
+            self.model.model_parallel = True
 
         # Initialize our Trainer
         data_collator = DataCollatorForSeq2Seq(
@@ -467,7 +480,7 @@ class GptModel:
             self,
             sentences: List[str],
             keep_prompt: bool = False,
-            add_system_prompt: bool =False,
+            add_system_prompt: bool = False,
             max_length: int = 256,
             temperature: float = 0.95,
             top_p: float = 0.9,

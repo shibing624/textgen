@@ -394,6 +394,7 @@ class ChatGlmArgs(ModelArgs):
     remove_unused_columns = False
     logging_steps = 50
     resume_from_checkpoint: str = None
+    qlora: bool = False
 
 
 @dataclass
@@ -460,3 +461,4 @@ class GptArgs(ModelArgs):
     gradient_checkpointing: bool = True
     torch_compile: bool = False
     trust_remote_code: bool = True
+    qlora: bool = False
