@@ -622,8 +622,11 @@ output:
 ```
 
 ## 🤗 License
+This repository is licensed under [The Apache License 2.0](LICENSE).
 
-授权协议为 [The Apache License 2.0](/LICENSE)，可免费用做商业用途。请在产品说明中附加textgen的链接和授权协议。
+Please follow the [Model Card](https://github.com/facebookresearch/llama/blob/main/MODEL_CARD.md) to use the LLaMA model.
+
+Please follow the [RAIL License](https://huggingface.co/spaces/bigscience/license) to use the BLOOM & BLOOMZ model.
 
 ## 😍 Contribute
 
