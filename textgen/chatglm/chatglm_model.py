@@ -118,7 +118,7 @@ class ChatGlmModel:
         if model_name is None:
             model_name = self.args.model_name_or_path
 
-        if torch.cuda.is_available() and  torch.cuda.is_bf16_supported() and not self.args.bf16:
+        if torch.cuda.is_available() and torch.cuda.is_bf16_supported() and not self.args.bf16:
             logger.warning("GPU supports bf16, you can enable bf16.")
         self.torch_dtype = torch.bfloat16 if self.args.bf16 else (torch.float16 if self.args.fp16 else torch.float32)
         self.model = model_class.from_pretrained(
