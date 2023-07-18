@@ -126,7 +126,7 @@ class GptModel:
         if model_name is None:
             model_name = self.args.model_name_or_path
 
-        if torch.cuda.is_bf16_supported() and not self.args.bf16:
+        if torch.cuda.is_available() and torch.cuda.is_bf16_supported() and not self.args.bf16:
             logger.warning("GPU supports bf16, you can enable bf16.")
         self.torch_dtype = torch.bfloat16 if self.args.bf16 else (torch.float16 if self.args.fp16 else torch.float32)
         self.model = model_class.from_pretrained(
@@ -408,7 +408,7 @@ class GptModel:
         else:
             self.model.config.use_cache = True
         self.model.enable_input_require_grads()
-        if torch.cuda.device_count() > 1:
+        if torch.cuda.is_available() and torch.cuda.device_count() > 1:
             # keeps Trainer from trying its own DataParallelism when more than 1 gpu is available
             self.model.is_parallelizable = True
             self.model.model_parallel = True
