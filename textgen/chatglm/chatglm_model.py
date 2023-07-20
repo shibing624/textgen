@@ -23,6 +23,7 @@ from peft import (
 )
 from tqdm import tqdm
 from transformers import (
+    AutoConfig,
     Trainer,
     TrainingArguments,
     AutoTokenizer,
@@ -41,7 +42,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 MODEL_CLASSES = {
-    "chatglm": (AutoModel, AutoTokenizer),
+    "chatglm": (AutoConfig, AutoModel, AutoTokenizer),
 }
 
 
@@ -114,15 +115,17 @@ class ChatGlmModel:
             self.device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)}
 
         self.results = {}
-        model_class, tokenizer_class = MODEL_CLASSES[model_type]
+        config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
         if model_name is None:
             model_name = self.args.model_name_or_path
 
         if torch.cuda.is_available() and torch.cuda.is_bf16_supported() and not self.args.bf16:
             logger.warning("GPU supports bf16, you can enable bf16.")
         self.torch_dtype = torch.bfloat16 if self.args.bf16 else (torch.float16 if self.args.fp16 else torch.float32)
+        self.config = config_class.from_pretrained(model_name, **kwargs)
         self.model = model_class.from_pretrained(
             model_name,
+            config=self.config,
             load_in_8bit=self.args.int8,
             torch_dtype=self.torch_dtype,
             device_map=self.device_map,
@@ -133,7 +136,6 @@ class ChatGlmModel:
                 bnb_4bit_quant_type="nf4",
                 bnb_4bit_compute_dtype=self.torch_dtype,
             ) if self.args.qlora else None,
-            **kwargs,
         )
 
         if self.args.int8 or self.args.int4:

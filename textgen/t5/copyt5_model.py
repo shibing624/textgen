@@ -106,18 +106,19 @@ class CopyT5Model:
 
         self.results = {}
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
+        self.config = config_class.from_pretrained(model_name, **kwargs)
         if model_name is None:
             self.config = self.args.config
             self.model = model_class(config=self.config)
         else:
-            self.model = model_class.from_pretrained(model_name)
+            self.model = model_class.from_pretrained(model_name, config=self.config)
 
         if tokenizer is None:
             self.tokenizer_class = tokenizer_class
             if self.args.tokenizer_name:
                 self.tokenizer = tokenizer_class.from_pretrained(self.args.tokenizer_name)
             else:
-                self.tokenizer = tokenizer_class.from_pretrained(model_name, **kwargs)
+                self.tokenizer = tokenizer_class.from_pretrained(model_name)
                 self.args.tokenizer_name = self.args.model_name
         else:
             self.tokenizer = tokenizer
