@@ -166,7 +166,8 @@ class GptModel:
             self.load_peft_model()
         # Set padding side equal to Collator padding side
         self.tokenizer.padding_side = "left"
-        self.tokenizer.pad_token_id = 0
+        if self.tokenizer.pad_token_id is None:
+            self.tokenizer.pad_token_id = 0
 
     def load_peft_model(self):
         """Load peft model"""

@@ -183,6 +183,8 @@ class ChatGlmModel:
                 # last layer is not add to lora_module_names
                 if 'lm_head' in name:
                     continue
+                if 'output_layer' in name:
+                    continue
                 names = name.split('.')
                 lora_module_names.add(names[0] if len(names) == 1 else names[-1])
         return sorted(lora_module_names)
