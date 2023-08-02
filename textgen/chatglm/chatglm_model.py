@@ -122,7 +122,7 @@ class ChatGlmModel:
         if torch.cuda.is_available() and torch.cuda.is_bf16_supported() and not self.args.bf16:
             logger.warning("GPU supports bf16, you can enable bf16.")
         self.torch_dtype = torch.bfloat16 if self.args.bf16 else (torch.float16 if self.args.fp16 else torch.float32)
-        self.config = config_class.from_pretrained(model_name, **kwargs)
+        self.config = config_class.from_pretrained(model_name, trust_remote_code=True, **kwargs)
         self.model = model_class.from_pretrained(
             model_name,
             config=self.config,
@@ -405,7 +405,6 @@ class ChatGlmModel:
             # keeps Trainer from trying its own DataParallelism when more than 1 gpu is available
             self.model.is_parallelizable = True
             self.model.model_parallel = True
-        self.model.lm_head = CastOutputToFloat(self.model.lm_head)
 
         data_collator = DataCollatorForSeq2Seq(
             self.tokenizer,

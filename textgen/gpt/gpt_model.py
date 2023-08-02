@@ -130,7 +130,7 @@ class GptModel:
         if torch.cuda.is_available() and torch.cuda.is_bf16_supported() and not self.args.bf16:
             logger.warning("GPU supports bf16, you can enable bf16.")
         self.torch_dtype = torch.bfloat16 if self.args.bf16 else (torch.float16 if self.args.fp16 else torch.float32)
-        self.config = config_class.from_pretrained(model_name, **kwargs)
+        self.config = config_class.from_pretrained(model_name, trust_remote_code=self.args.trust_remote_code, **kwargs)
         self.model = model_class.from_pretrained(
             model_name,
             config=self.config,
@@ -484,12 +484,12 @@ class GptModel:
             keep_prompt: bool = False,
             add_system_prompt: bool = False,
             max_length: int = 256,
-            temperature: float = 0.95,
+            temperature: float = 0.7,
             top_p: float = 0.9,
             top_k: int = 40,
             do_sample: bool = True,
-            repetition_penalty: float = 1.3,
-            length_penalty: float = 2.0,
+            repetition_penalty: float = 1.0,
+            length_penalty: float = 1.0,
             num_beams: int = 1,
             num_return_sequences: int = 1,
             **kwargs
