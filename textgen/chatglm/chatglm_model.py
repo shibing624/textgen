@@ -435,7 +435,13 @@ class ChatGlmModel:
 
         # Training
         logger.info("*** Train ***")
-        logger.debug(f"Train dataloader example: {next(iter(trainer.get_train_dataloader()))}")
+        sample = next(iter(trainer.get_train_dataloader()))
+        logger.debug(f"Train dataloader example: {sample}")
+        logger.debug(f"Detail input_ids: {sample['input_ids'][:3]}, \nlabels: {sample['labels'][:3]}")
+        logger.debug(f"Decode input_ids[0]: {self.tokenizer.decode(sample['input_ids'][0])}")
+        replaced_labels = [label if label != -100 else self.tokenizer.pad_token_id for label in sample['labels'][0]]
+        logger.debug(f"Decode labels[0]: {self.tokenizer.decode(replaced_labels)}")
+
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
         self.results.update(metrics)
         trainer.log_metrics("train", metrics)
