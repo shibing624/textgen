@@ -23,6 +23,8 @@
 
 ## 🔥 News
 [2023/08/02] v1.0.2版本: 新增支持ChatGLM2和LLaMA2模型的SFT微调训练，详见[Release-v1.0.2](https://github.com/shibing624/textgen/releases/tag/1.0.2)
+[2023/06/15] v1.0.0版本: 新增ChatGLM/LLaMA/Bloom模型的多轮对话微调训练，并发布医疗问诊LoRA模型[shibing624/ziya-llama-13b-medical-lora](https://huggingface.co/shibing624/ziya-llama-13b-medical-lora)。详见[Release-v1.0.0](https://github.com/shibing624/textgen/releases/tag/1.0.0)
+[2023/06/02] v0.2.7版本: 新增ChatGLM/LLaMA/Bloom模型的SFT微调训练，并发布适用于通用对话和中文纠错的LoRA模型。详见[Release-v0.2.7](https://github.com/shibing624/textgen/releases/tag/0.2.7)
 
 
 ## 😊 Feature
