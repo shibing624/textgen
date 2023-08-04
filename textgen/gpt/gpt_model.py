@@ -490,15 +490,9 @@ class GptModel:
             sentences: List[str],
             keep_prompt: bool = False,
             add_system_prompt: bool = False,
-            max_length: int = 256,
+            max_length: int = 512,
             temperature: float = 0.7,
-            top_p: float = 0.9,
-            top_k: int = 40,
-            do_sample: bool = True,
             repetition_penalty: float = 1.0,
-            length_penalty: float = 1.0,
-            num_beams: int = 1,
-            num_return_sequences: int = 1,
             **kwargs
     ) -> List[str]:
         """
@@ -545,15 +539,7 @@ class GptModel:
             generation_config = GenerationConfig(
                 max_new_tokens=max_length if max_length else self.args.max_length,
                 temperature=temperature if temperature is not None else self.args.temperature,
-                top_p=top_p if top_p else self.args.top_p,
-                top_k=top_k if top_k else self.args.top_k,
-                do_sample=do_sample if do_sample is not None else self.args.do_sample,
                 repetition_penalty=repetition_penalty if repetition_penalty else self.args.repetition_penalty,
-                length_penalty=length_penalty if length_penalty else self.args.length_penalty,
-                num_beams=num_beams if num_beams else self.args.num_beams,
-                eos_token_id=self.tokenizer.eos_token_id,
-                pad_token_id=self.tokenizer.pad_token_id,
-                num_return_sequences=num_return_sequences if num_return_sequences else self.args.num_return_sequences,
                 return_dict_in_generate=True,
                 output_scores=True,
                 **kwargs,

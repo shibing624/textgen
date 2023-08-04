@@ -496,12 +496,7 @@ class ChatGlmModel:
             add_system_prompt=False,
             max_length: int = 256,
             temperature: float = 0.95,
-            top_p: float = 0.7,
-            top_k: int = 40,
-            do_sample: bool = True,
             repetition_penalty: float = 1.0,
-            length_penalty: float = 2.0,
-            num_beams: int = 1,
             num_return_sequences: int = 1,
             **kwargs
     ) -> List[str]:
@@ -514,12 +509,7 @@ class ChatGlmModel:
             add_system_prompt: Whether to add the system prompt to the prompt text.
             max_length: The maximum length of the generated text.
             temperature: The value used to module the next token probabilities.
-            top_p: The cumulative probability of parameter highest probability vocabulary tokens to keep for nucleus sampling.
-            top_k: The number of highest probability vocabulary tokens to keep for top-k-filtering.
-            do_sample: Whether or not to use sampling ; use greedy decoding otherwise.
             repetition_penalty: The parameter for repetition penalty. 1.0 means no penalty.
-            length_penalty: The parameter that penalizes longer sequences.
-            num_beams: The number of beams to use for beam search. 1 means no beam search.
             num_return_sequences: The number of independently computed returned sequences for each element in the batch.
             **kwargs: Additional arguments for generating sequences.
 
@@ -549,14 +539,7 @@ class ChatGlmModel:
             gen_kwargs = {
                 "max_new_tokens": max_length if max_length else self.args.max_length,
                 "temperature": temperature if temperature is not None else self.args.temperature,
-                "top_p": top_p if top_p else self.args.top_p,
-                "top_k": top_k if top_k else self.args.top_k,
-                "do_sample": do_sample if do_sample is not None else self.args.do_sample,
                 "repetition_penalty": repetition_penalty if repetition_penalty else self.args.repetition_penalty,
-                "length_penalty": length_penalty if length_penalty else self.args.length_penalty,
-                "num_beams": num_beams if num_beams else self.args.num_beams,
-                "eos_token_id": self.tokenizer.eos_token_id,
-                "pad_token_id": self.tokenizer.pad_token_id,
                 "num_return_sequences": num_return_sequences if num_return_sequences else self.args.num_return_sequences,
                 **kwargs
             }
@@ -617,12 +600,7 @@ class ChatGlmModel:
             add_system_prompt=True,
             max_length: int = 2048,
             temperature: float = 0.95,
-            top_p: float = 0.7,
-            top_k: int = 40,
-            do_sample: bool = True,
             repetition_penalty: float = 1.0,
-            length_penalty: float = 2.0,
-            num_beams: int = 1,
             num_return_sequences: int = 1,
             **kwargs
     ):
@@ -632,14 +610,7 @@ class ChatGlmModel:
         gen_kwargs = {
             "max_new_tokens": max_length if max_length else self.args.max_length,
             "temperature": temperature if temperature is not None else self.args.temperature,
-            "top_p": top_p if top_p else self.args.top_p,
-            "top_k": top_k if top_k else self.args.top_k,
-            "do_sample": do_sample if do_sample is not None else self.args.do_sample,
             "repetition_penalty": repetition_penalty if repetition_penalty else self.args.repetition_penalty,
-            "length_penalty": length_penalty if length_penalty else self.args.length_penalty,
-            "num_beams": num_beams if num_beams else self.args.num_beams,
-            "eos_token_id": self.tokenizer.eos_token_id,
-            "pad_token_id": self.tokenizer.pad_token_id,
             "num_return_sequences": num_return_sequences if num_return_sequences else self.args.num_return_sequences,
             **kwargs
         }

@@ -15,12 +15,16 @@ from textgen import GptModel, ChatGlmModel
 pwd_path = os.path.abspath(os.path.dirname(__file__))
 
 
-def llama_generate_prompt(instruction):
+def get_alpaca_prompt(instruction):
     return f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:{instruction}\n\n### Response: """
 
 
-def chatglm_generate_prompt(instruction):
+def get_chatglm_prompt(instruction):
     return f"""{instruction}\n答："""
+
+
+def get_vicuna_prompt(instruction):
+    return f"""A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions. USER: {instruction} ASSISTANT: """
 
 
 sentences = [i.strip() for i in open(os.path.join(pwd_path, '../examples/data/llm_benchmark_test.txt')).readlines() if
@@ -30,7 +34,7 @@ sentences = [i.strip() for i in open(os.path.join(pwd_path, '../examples/data/ll
 def test_llama_13b_lora():
     m = GptModel('llama', "decapoda-research/llama-13b-hf", peft_name='shibing624/llama-13b-belle-zh-lora')
 
-    predict_sentences = [llama_generate_prompt(s) for s in sentences]
+    predict_sentences = [get_alpaca_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
         print('input:', s, '\noutput:', i)
@@ -45,7 +49,7 @@ def test_llama_13b_lora():
 
 def test_llama_7b_alpaca_plus():
     m = GptModel('llama', "shibing624/chinese-alpaca-plus-7b-hf", args={'use_peft': False})
-    predict_sentences = [llama_generate_prompt(s) for s in sentences]
+    predict_sentences = [get_alpaca_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
         print('input:', s, '\noutput:', i)
@@ -59,7 +63,7 @@ def test_llama_7b_alpaca_plus():
 
 def test_llama_13b_alpaca_plus():
     m = GptModel('llama', "shibing624/chinese-alpaca-plus-13b-hf", args={'use_peft': False})
-    predict_sentences = [llama_generate_prompt(s) for s in sentences]
+    predict_sentences = [get_alpaca_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
         print('input:', s, '\noutput:', i)
@@ -73,7 +77,7 @@ def test_llama_13b_alpaca_plus():
 
 def test_chatglm_6b():
     m = ChatGlmModel('chatglm', "THUDM/chatglm-6b", peft_name=None, args={'use_peft': False})
-    predict_sentences = [chatglm_generate_prompt(s) for s in sentences]
+    predict_sentences = [get_chatglm_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
         print('input:', s, '\noutput:', i)
@@ -89,7 +93,7 @@ def test_chatglm_6b():
 def test_chatglm_6b_lora():
     m = ChatGlmModel('chatglm', "THUDM/chatglm-6b", peft_name='shibing624/chatglm-6b-belle-zh-lora',
                      args={'use_peft': True}, )
-    predict_sentences = [chatglm_generate_prompt(s) for s in sentences]
+    predict_sentences = [get_chatglm_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
         print('input:', s, '\noutput:', i)
