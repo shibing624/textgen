@@ -10,7 +10,7 @@
 
 # TextGen: Implementation of Text Generation models
 [![PyPI version](https://badge.fury.io/py/textgen.svg)](https://badge.fury.io/py/textgen)
-[![Downloads](https://pepy.tech/badge/textgen)](https://pepy.tech/project/textgen)
+[![Downloads](https://static.pepy.tech/badge/textgen)](https://pepy.tech/project/textgen)
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![License Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![python_version](https://img.shields.io/badge/Python-3.8%2B-green.svg)](requirements.txt)
