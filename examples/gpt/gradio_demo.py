@@ -3,297 +3,137 @@
 @author:XuMing(xuming624@qq.com)
 @description: 
 """
-import os
-import traceback
-from queue import Queue
+import argparse
+import sys
 from threading import Thread
 
 import gradio as gr
+import mdtex2html
 import torch
-import transformers
-from peft import PeftModel
-from transformers import GenerationConfig, AutoModelForCausalLM, AutoTokenizer
+from transformers import TextIteratorStreamer
 
-if torch.cuda.is_available():
-    device = "cuda"
-else:
-    device = "cpu"
-
-try:
-    if torch.backends.mps.is_available():
-        device = "mps"
-except:
-    pass
-
-PROMPT_DICT = {
-    "prompt_input": (
-        "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n### Input:\n{input_text}\n\n### Response: "
-    ),
-    "prompt_no_input": (
-        "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n\n### Response: "
-    ),
-}
+sys.path.append('../..')
+from textgen import GptModel, get_conv_template
 
 
-def predict(
-        instruction,
+@torch.inference_mode()
+def stream_generate_answer(
         model,
         tokenizer,
-        prompter="prompt_no_input",
-        input=None,
-        temperature=0.1,
-        top_p=0.75,
-        top_k=40,
-        num_beams=4,
-        max_new_tokens=128,
-        stream_output=False,
-        **kwargs,
+        prompt,
+        device,
+        max_new_tokens=512,
+        temperature=0.7,
+        top_p=0.8,
+        repetition_penalty=1.0,
+        context_len=2048
 ):
-    prompt = PROMPT_DICT.get(prompter).format(instruction=instruction, input_text=input)
-    inputs = tokenizer(prompt, return_tensors="pt")
-    input_ids = inputs["input_ids"].to(device)
-    generation_config = GenerationConfig(
+    streamer = TextIteratorStreamer(tokenizer, timeout=60.0, skip_prompt=True, skip_special_tokens=True)
+    input_ids = tokenizer(prompt).input_ids
+    max_src_len = context_len - max_new_tokens - 8
+    input_ids = input_ids[-max_src_len:]
+    generation_kwargs = dict(
+        input_ids=torch.as_tensor([input_ids]).to(device),
+        max_new_tokens=max_new_tokens,
         temperature=temperature,
         top_p=top_p,
-        top_k=top_k,
-        num_beams=num_beams,
-        **kwargs,
+        repetition_penalty=repetition_penalty,
+        streamer=streamer,
     )
 
-    generate_params = {
-        "input_ids": input_ids,
-        "generation_config": generation_config,
-        "return_dict_in_generate": True,
-        "output_scores": True,
-        "max_new_tokens": max_new_tokens,
-    }
+    thread = Thread(target=model.generate, kwargs=generation_kwargs)
+    thread.start()
 
-    if stream_output:
-        # Stream the reply 1 token at a time.
-        # This is based on the trick of using 'stopping_criteria' to create an iterator,
-        # from https://github.com/oobabooga/text-generation-webui/blob/ad37f396fc8bcbab90e11ecf17c56c97bfbd4a9c/modules/text_generation.py#L216-L243.
+    yield from streamer
 
-        def generate_with_callback(callback=None, **kwargs):
-            kwargs.setdefault(
-                "stopping_criteria", transformers.StoppingCriteriaList()
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model_type', default='llama', type=str)
+    parser.add_argument('--base_model', default='shibing624/chinese-alpaca-plus-7b-hf', type=str)
+    parser.add_argument('--lora_model', default="", type=str, help="If not set, perform inference on the base model")
+    parser.add_argument('--template_name', default="vicuna", type=str,
+                        help="Prompt template name, eg: alpaca, vicuna, baichuan-chat, chatglm2 etc.")
+    args = parser.parse_args()
+    print(args)
+    m = GptModel(args.model_type, args.base_model, peft_name=args.lora_model)
+
+    def postprocess(self, y):
+        if y is None:
+            return []
+        for i, (message, response) in enumerate(y):
+            y[i] = (
+                None if message is None else mdtex2html.convert((message)),
+                None if response is None else mdtex2html.convert(response),
             )
-            kwargs["stopping_criteria"].append(
-                Stream(callback_func=callback)
-            )
-            with torch.no_grad():
-                model.generate(**kwargs)
+        return y
 
-        def generate_with_streaming(**kwargs):
-            return Iteratorize(
-                generate_with_callback, kwargs, callback=None
-            )
+    gr.Chatbot.postprocess = postprocess
 
-        with generate_with_streaming(**generate_params) as generator:
-            for output in generator:
-                # new_tokens = len(output) - len(input_ids[0])
-                decoded_output = tokenizer.decode(output)
+    def reset_user_input():
+        return gr.update(value='')
 
-                if output[-1] in [tokenizer.eos_token_id]:
-                    break
+    def reset_state():
+        return [], []
 
-                yield decoded_output
-        return  # early return for stream_output
+    prompt_template = get_conv_template(args.template_name)
 
-    # Without streaming
-    with torch.no_grad():
-        generation_output = model.generate(
-            input_ids=input_ids,
-            generation_config=generation_config,
-            return_dict_in_generate=True,
-            output_scores=True,
-            max_new_tokens=max_new_tokens,
-        )
-    s = generation_output.sequences[0]
-    output = tokenizer.decode(s)
-    yield output
-
-
-def main(
-        load_8bit: bool = False,
-        base_model: str = "",
-        lora_weights: str = "",
-        server_name: str = "0.0.0.0",  # Allows to listen on all interfaces by providing '0.
-        share_gradio: bool = False,
-):
-    base_model = base_model or os.environ.get("BASE_MODEL", "")
-    assert (
-        base_model
-    ), "Please specify a --base_model, e.g. --base_model='decapoda-research/llama-7b-hf'"
-
-    tokenizer = AutoTokenizer.from_pretrained(base_model)
-    if device == "cuda":
-        model = AutoModelForCausalLM.from_pretrained(
-            base_model,
-            load_in_8bit=load_8bit,
-            torch_dtype=torch.float16,
-            device_map="auto",
-        )
-        if lora_weights:
-            model = PeftModel.from_pretrained(
-                model,
-                lora_weights,
-                torch_dtype=torch.float16,
-            )
-    elif device == "mps":
-        model = AutoModelForCausalLM.from_pretrained(
-            base_model,
-            device_map={"": device},
-            torch_dtype=torch.float16,
-        )
-        if lora_weights:
-            model = PeftModel.from_pretrained(
-                model,
-                lora_weights,
-                device_map={"": device},
-                torch_dtype=torch.float16,
-            )
-    else:
-        model = AutoModelForCausalLM.from_pretrained(
-            base_model, device_map={"": device}, low_cpu_mem_usage=True
-        )
-        if lora_weights:
-            model = PeftModel.from_pretrained(
-                model,
-                lora_weights,
-                device_map={"": device},
-            )
-
-    model.config.pad_token_id = tokenizer.pad_token_id = 0  # unk
-
-    if not load_8bit:
-        model.half()  # seems to fix bugs for some users.
-
-    model.eval()
-
-    def evaluate(
-            instruction,
-            input=None,
-            temperature=0.1,
-            top_p=0.75,
-            top_k=40,
-            num_beams=4,
-            max_new_tokens=128,
-            stream_output=False,
-            **kwargs
+    def predict(
+            input,
+            chatbot,
+            history,
+            max_new_tokens,
+            temperature,
+            top_p
     ):
-        return predict(
-            instruction,
-            model,
-            tokenizer,
-            input=input,
-            temperature=temperature,
-            top_p=top_p,
-            top_k=top_k,
-            num_beams=num_beams,
-            max_new_tokens=max_new_tokens,
-            stream_output=stream_output,
-            **kwargs)
+        now_input = input
+        chatbot.append((input, ""))
+        history = history or []
+        history.append([now_input, ''])
 
-    gr.Interface(
-        fn=evaluate,
-        inputs=[
-            gr.components.Textbox(
-                lines=2,
-                label="Instruction",
-                placeholder="Tell me about alpacas.",
-            ),
-            gr.components.Textbox(lines=2, label="Input", placeholder="none"),
-            gr.components.Slider(
-                minimum=0, maximum=1, value=0.1, label="Temperature"
-            ),
-            gr.components.Slider(
-                minimum=0, maximum=1, value=0.75, label="Top p"
-            ),
-            gr.components.Slider(
-                minimum=0, maximum=100, step=1, value=40, label="Top k"
-            ),
-            gr.components.Slider(
-                minimum=1, maximum=4, step=1, value=4, label="Beams"
-            ),
-            gr.components.Slider(
-                minimum=1, maximum=2000, step=1, value=128, label="Max tokens"
-            ),
-            gr.components.Checkbox(label="Stream output"),
-        ],
-        outputs=[
-            gr.inputs.Textbox(
-                lines=5,
-                label="Output",
-            )
-        ],
-        title="textgen",
-        description="LLM text generation, with optional LORA.",
-    ).queue().launch(server_name=server_name, share=share_gradio)
+        prompt = prompt_template.get_prompt(messages=history)
+        response = ""
+        for new_text in stream_generate_answer(
+                m.model,
+                m.tokenizer,
+                prompt,
+                m.device,
+                max_new_tokens=max_new_tokens,
+                temperature=temperature,
+                top_p=top_p,
+        ):
+            response += new_text
+            new_history = history + [(now_input, response)]
+            chatbot[-1] = (now_input, response)
+            yield chatbot, new_history
 
-
-class Stream(transformers.StoppingCriteria):
-    def __init__(self, callback_func=None):
-        self.callback_func = callback_func
-
-    def __call__(self, input_ids, scores) -> bool:
-        if self.callback_func is not None:
-            self.callback_func(input_ids[0])
-        return False
-
-
-class Iteratorize:
-    """
-    Transforms a function that takes a callback
-    into a lazy iterator (generator).
-    """
-
-    def __init__(self, func, kwargs={}, callback=None):
-        self.mfunc = func
-        self.c_callback = callback
-        self.q = Queue()
-        self.sentinel = object()
-        self.kwargs = kwargs
-        self.stop_now = False
-
-        def _callback(val):
-            if self.stop_now:
-                raise ValueError
-            self.q.put(val)
-
-        def gentask():
-            try:
-                ret = self.mfunc(callback=_callback, **self.kwargs)
-            except ValueError:
-                pass
-            except:
-                traceback.print_exc()
-                pass
-
-            self.q.put(self.sentinel)
-            if self.c_callback:
-                self.c_callback(ret)
-
-        self.thread = Thread(target=gentask)
-        self.thread.start()
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        obj = self.q.get(True, None)
-        if obj is self.sentinel:
-            raise StopIteration
-        else:
-            return obj
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.stop_now = True
+    with gr.Blocks() as demo:
+        gr.HTML("""<h1 align="center">TextGen</h1>""")
+        gr.Markdown(
+            "> TextGen gradio demo")
+        chatbot = gr.Chatbot()
+        with gr.Row():
+            with gr.Column(scale=4):
+                with gr.Column(scale=12):
+                    user_input = gr.Textbox(show_label=False, placeholder="Input...", lines=10).style(
+                        container=False)
+                with gr.Column(min_width=32, scale=1):
+                    submitBtn = gr.Button("Submit", variant="primary")
+            with gr.Column(scale=1):
+                emptyBtn = gr.Button("Clear History")
+                max_length = gr.Slider(
+                    0, 4096, value=512, step=1.0, label="Maximum length", interactive=True)
+                top_p = gr.Slider(0, 1, value=0.8, step=0.01,
+                                  label="Top P", interactive=True)
+                temperature = gr.Slider(
+                    0, 1, value=0.7, step=0.01, label="Temperature", interactive=True)
+        history = gr.State([])
+        submitBtn.click(predict, [user_input, chatbot, history, max_length, temperature, top_p], [chatbot, history],
+                        show_progress=True)
+        submitBtn.click(reset_user_input, [], [user_input])
+        emptyBtn.click(reset_state, outputs=[chatbot, history], show_progress=True)
+    demo.queue().launch(share=False, inbrowser=True, server_name='0.0.0.0', server_port=8082)
 
 
 if __name__ == '__main__':
-    main(load_8bit=False, base_model="shibing624/chinese-alpaca-plus-7b-hf")
+    main()

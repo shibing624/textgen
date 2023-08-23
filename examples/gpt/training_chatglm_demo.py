@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author:XuMing(xuming624@qq.com)
-@description: 
+@description:
 """
 import argparse
 import sys
@@ -16,12 +16,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_file', default='../data/sharegpt_zh_100_format.jsonl', type=str, help='Train file')
     parser.add_argument('--test_file', default='../data/sharegpt_zh_100_format.jsonl', type=str, help='Test file')
-    parser.add_argument('--model_type', default='llama', type=str, help='Transformers model type')
-    parser.add_argument('--model_name', default='shibing624/chinese-alpaca-plus-7b-hf', type=str,
+    parser.add_argument('--model_type', default='chatglm', type=str, help='Transformers model type')
+    parser.add_argument('--model_name', default='THUDM/chatglm-6b', type=str,
                         help='Transformers model or path')
     parser.add_argument('--do_train', action='store_true', help='Whether to run training.')
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
-    parser.add_argument('--output_dir', default='./outputs-llama-demo/', type=str, help='Model output directory')
+    parser.add_argument('--output_dir', default='./outputs-chatglm-demo/', type=str, help='Model output directory')
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=0.2, type=float, help='Number of training epochs')

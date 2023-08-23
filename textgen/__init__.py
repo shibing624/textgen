@@ -4,7 +4,7 @@
 @description: 
 """
 
-__version__ = '1.0.2'
+__version__ = '1.1.0'
 
 from textgen.augment.text_augment import TextAugment
 
@@ -32,9 +32,8 @@ from textgen.t5.copyt5_utils import ZHTokenizer
 
 from textgen.unsup_generation.tgls_model import TglsModel
 
-from textgen.config.model_args import ChatGlmArgs
-from textgen.chatglm.chatglm_model import ChatGlmModel
 
 from textgen.config.model_args import GptArgs
 from textgen.gpt.gpt_model import GptModel
+from textgen.gpt.gpt_utils import GptSupervisedDataset, get_conv_template
 

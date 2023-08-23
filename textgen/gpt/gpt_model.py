@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 @author:XuMing(xuming624@qq.com)
-@description:
-
-modified from https://github.com/tloen/alpaca-lora/blob/main/finetune.py
+@description: Multi round conversation SFT model
 """
 import math
 import os
 import random
+from threading import Thread
 from typing import List, Tuple, Optional
 
 import numpy as np
@@ -30,17 +29,19 @@ from transformers import (
     BloomForCausalLM,
     AutoModelForCausalLM,
     AutoTokenizer,
+    AutoModel,
     Trainer,
     TrainingArguments,
-    GenerationConfig,
+    TextIteratorStreamer,
     DataCollatorForSeq2Seq,
     BitsAndBytesConfig,
     deepspeed,
 )
+from transformers.deepspeed import is_deepspeed_zero3_enabled
 from transformers.trainer import TRAINING_ARGS_NAME
 
 from textgen.config.model_args import GptArgs
-from textgen.gpt.gpt_utils import InstructionDataset, PROMPT_DICT
+from textgen.gpt.gpt_utils import GptSupervisedDataset, IGNORE_INDEX, get_conv_template
 
 has_cuda = torch.cuda.is_available()
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
@@ -48,6 +49,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 MODEL_CLASSES = {
     "llama": (AutoConfig, LlamaForCausalLM, LlamaTokenizerFast),
+    "chatglm": (AutoConfig, AutoModel, AutoTokenizer),
     "bloom": (AutoConfig, BloomForCausalLM, BloomTokenizerFast),
     "baichuan": (AutoConfig, AutoModelForCausalLM, AutoTokenizer),
     "auto": (AutoConfig, AutoModelForCausalLM, AutoTokenizer),
@@ -130,12 +132,18 @@ class GptModel:
         if torch.cuda.is_available() and torch.cuda.is_bf16_supported() and not self.args.bf16:
             logger.warning("GPU supports bf16, you can enable bf16.")
         self.torch_dtype = torch.bfloat16 if self.args.bf16 else (torch.float16 if self.args.fp16 else torch.float32)
-        self.config = config_class.from_pretrained(model_name, trust_remote_code=self.args.trust_remote_code, **kwargs)
+        self.config = config_class.from_pretrained(
+            model_name,
+            trust_remote_code=self.args.trust_remote_code,
+            torch_dtype=self.torch_dtype,
+            **kwargs
+        )
         self.model = model_class.from_pretrained(
             model_name,
             config=self.config,
             load_in_8bit=self.args.int8,
             torch_dtype=self.torch_dtype,
+            low_cpu_mem_usage=(not is_deepspeed_zero3_enabled()),
             device_map=self.device_map,
             trust_remote_code=self.args.trust_remote_code,
             quantization_config=BitsAndBytesConfig(
@@ -164,8 +172,6 @@ class GptModel:
         self.peft_name = peft_name
         if self.args.use_peft and self.peft_name:
             self.load_peft_model()
-        # Set padding side equal to Collator padding side
-        self.tokenizer.padding_side = "left"
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token_id = 0
 
@@ -210,10 +216,8 @@ class GptModel:
         Trains the model using 'train_data'
 
         Args:
-            train_data: Pandas DataFrame containing the 3 columns - `instruction`, `input`, `output`.
-                        - `instruction`: The instruction text. (E.g. `"correct the following:"`)
-                        - `input`: The input text sequence. `instruction` is automatically prepended to form the full input. (<instruction> `\n` <input>)
-                        - `output`: The target sequence
+            train_data: json file path or Pandas DataFrame containing 1 columns - `conversations`.
+                format: {"conversations":[{"from":"human","value":"Mike的妈妈有4个孩子; 其中3个是 Luis、Drake 和 Matilda。 第4个孩子叫什么？"},{"from":"gpt","value":"Mike。"}]}
             output_dir: The directory where model files will be saved. If not given, self.args.output_dir will be used.
             args (optional): Optional changes to the args dict of the model. Any changes made will persist for the model.
             eval_data (optional): A DataFrame against which evaluation will be performed when evaluate_during_training is enabled. Is required if evaluate_during_training is enabled.
@@ -411,18 +415,13 @@ class GptModel:
         else:
             self.model.config.use_cache = True
         self.model.enable_input_require_grads()
-        if torch.cuda.is_available() and torch.cuda.device_count() > 1:
+        if not self.ddp and torch.cuda.device_count() > 1:
             # keeps Trainer from trying its own DataParallelism when more than 1 gpu is available
             self.model.is_parallelizable = True
             self.model.model_parallel = True
 
         # Initialize our Trainer
-        data_collator = DataCollatorForSeq2Seq(
-            self.tokenizer,
-            return_tensors="pt",
-            padding="max_length",
-            max_length=self.args.max_seq_length + self.args.max_length
-        )
+        data_collator = DataCollatorForSeq2Seq(self.tokenizer, label_pad_token_id=IGNORE_INDEX)
 
         if self.args.use_peft:
             trainer = SavePeftModelTrainer(
@@ -449,7 +448,8 @@ class GptModel:
         logger.debug(f"Train dataloader example: {sample}")
         logger.debug(f"Detail input_ids: {sample['input_ids'][:3]}, \nlabels: {sample['labels'][:3]}")
         logger.debug(f"Decode input_ids[0]: {self.tokenizer.decode(sample['input_ids'][0])}")
-        replaced_labels = [label if label != -100 else self.tokenizer.pad_token_id for label in sample['labels'][0]]
+        replaced_labels = [label if label != IGNORE_INDEX else self.tokenizer.pad_token_id for label in
+                           sample['labels'][0]]
         logger.debug(f"Decode labels[0]: {self.tokenizer.decode(replaced_labels)}")
 
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
@@ -489,7 +489,7 @@ class GptModel:
             self,
             sentences: List[str],
             keep_prompt: bool = False,
-            add_system_prompt: bool = False,
+            prompt_template_name: str = 'vicuna',
             max_length: int = 512,
             temperature: float = 0.7,
             repetition_penalty: float = 1.0,
@@ -501,16 +501,10 @@ class GptModel:
         Args:
             sentences: A python list of text (str) to be sent to the model for prediction. Note that the prefix should be prepended to the text.
             keep_prompt: Whether to keep the prompt in the generated text.
-            add_system_prompt: Whether to add the system prompt to the prompt text.
+            prompt_template_name: The name of the prompt template to use.
             max_length: The maximum length of the generated text.
             temperature: The value used to module the next token probabilities.
-            top_p: The cumulative probability of parameter highest probability vocabulary tokens to keep for nucleus sampling.
-            top_k: The number of highest probability vocabulary tokens to keep for top-k-filtering.
-            do_sample: Whether or not to use sampling ; use greedy decoding otherwise.
             repetition_penalty: The parameter for repetition penalty. 1.0 means no penalty.
-            length_penalty: The parameter that penalizes longer sequences.
-            num_beams: The number of beams to use for beam search. 1 means no beam search.
-            num_return_sequences: The number of independently computed returned sequences for each element in the batch.
             **kwargs: Additional arguments for generating sequences.
 
         Returns:
@@ -522,6 +516,7 @@ class GptModel:
         if self.args.fp16:
             self.model.half()
         self.model.eval()
+        prompt_template = get_conv_template(prompt_template_name or self.args.prompt_template_name)
 
         all_outputs = []
         # Batching
@@ -533,20 +528,20 @@ class GptModel:
                 desc="Generating outputs",
                 disable=self.args.silent,
         ):
-            if add_system_prompt:
-                batch = [PROMPT_DICT['prompt_no_input'].format(instruction=s) for s in batch]
+            if prompt_template_name:
+                batch = [prompt_template.get_prompt(messages=[[s, '']]) for s in batch]
             inputs = self.tokenizer(batch, padding=True, return_tensors='pt')
-            generation_config = GenerationConfig(
+            generation_kwargs = dict(
                 max_new_tokens=max_length if max_length else self.args.max_length,
                 temperature=temperature if temperature is not None else self.args.temperature,
                 repetition_penalty=repetition_penalty if repetition_penalty else self.args.repetition_penalty,
                 return_dict_in_generate=True,
                 output_scores=True,
-                **kwargs,
             )
             outputs = self.model.generate(
                 input_ids=inputs['input_ids'].to(self.device),
-                generation_config=generation_config
+                **generation_kwargs,
+                **kwargs,
             )
             for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs.sequences)):
                 # Decode text
@@ -566,33 +561,56 @@ class GptModel:
             query: str,
             history: List[Tuple[str, str]] = None,
             keep_prompt: bool = False,
-            add_system_prompt=True,
-            max_length: int = 2048,
+            prompt_template_name: str = "vicuna",
+            max_new_tokens=512,
+            temperature=0.7,
+            repetition_penalty=1.0,
+            context_len: int = 2048,
             **kwargs
     ):
         """
-        Chat with the model
+        Chat model with multi turn conversation.
         :param query:
         :param history:
         :param keep_prompt:
-        :param max_length:
-        :param add_system_prompt:
+        :param context_len:
+        :param prompt_template_name:
         :param kwargs:
         :return: response, history
         """
+        prompt_template = get_conv_template(prompt_template_name or self.args.prompt_template_name)
+
         if history is None:
             history = []
-        if not history:
-            prompt = query
-        else:
-            prompt = ""
-            for i, (q, a) in enumerate(history):
-                prompt += "\n### Human: {}\n### Assistant: {}\n".format(q, a)
-            prompt += "\n### Human: {}\n### Assistant: ".format(query)
-        if add_system_prompt:
-            prompt = PROMPT_DICT['prompt_multi_round_no_input'].format(instruction=prompt, output_text="")
-        response = self.predict([prompt], keep_prompt=keep_prompt, max_length=len(prompt) + max_length, **kwargs)[0]
-        history = history + [(query, response)]
+        history.append([query, ''])
+        prompt = prompt_template.get_prompt(messages=history)
+        streamer = TextIteratorStreamer(self.tokenizer, timeout=60.0, skip_prompt=True, skip_special_tokens=True)
+        input_ids = self.tokenizer(prompt).input_ids
+        max_src_len = context_len - max_new_tokens - 8
+        input_ids = input_ids[-max_src_len:]
+        generation_kwargs = dict(
+            input_ids=torch.as_tensor([input_ids]).to(self.device),
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            repetition_penalty=repetition_penalty,
+            streamer=streamer,
+            **kwargs,
+        )
+        thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
+        thread.start()
+        stop_str = self.tokenizer.eos_token or "</s>"
+        generated_text = ""
+        for new_text in streamer:
+            stop = False
+            pos = new_text.find(stop_str)
+            if pos != -1:
+                new_text = new_text[:pos]
+                stop = True
+            generated_text += new_text
+            if stop:
+                break
+        response = generated_text.strip()
+        history = history + [[query, response]]
         return response, history
 
     def load_and_cache_examples(
@@ -618,7 +636,7 @@ class GptModel:
             CustomDataset = args.dataset_class
             return CustomDataset(tokenizer, args, data, mode)
         else:
-            return InstructionDataset(tokenizer, args, data, mode)
+            return GptSupervisedDataset(tokenizer, args, data, mode)
 
     def save_model(
             self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None

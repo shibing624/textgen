@@ -22,7 +22,7 @@
 **TextGen**实现了多种文本生成模型，包括：LLaMA、ChatGLM、UDA、GPT2、Seq2Seq、BART、T5、SongNet等模型，开箱即用。
 
 ## 🔥 News
-[2023/08/08] v1.1.0版本: 发布基于ShareGPT4数据集微调的中英文Vicuna-13B模型[shibing624/vicuna-baichuan-13b-chat](https://huggingface.co/shibing624/vicuna-baichuan-13b-chat)，和对应的LoRA模型[shibing624/vicuna-baichuan-13b-chat-lora](https://huggingface.co/shibing624/vicuna-baichuan-13b-chat-lora)，支持多轮对话，评测效果有提升，详见[Release-v1.1.0](https://github.com/shibing624/textgen/releases/tag/1.1.0)
+[2023/08/23] v1.1.0版本: 发布基于ShareGPT4数据集微调的中英文Vicuna-13B模型[shibing624/vicuna-baichuan-13b-chat](https://huggingface.co/shibing624/vicuna-baichuan-13b-chat)，和对应的LoRA模型[shibing624/vicuna-baichuan-13b-chat-lora](https://huggingface.co/shibing624/vicuna-baichuan-13b-chat-lora)，支持多轮对话，评测效果有提升，详见[Release-v1.1.0](https://github.com/shibing624/textgen/releases/tag/1.1.0)
 
 [2023/08/02] v1.0.2版本: 新增支持ChatGLM2和LLaMA2模型的SFT微调训练，详见[Release-v1.0.2](https://github.com/shibing624/textgen/releases/tag/1.0.2)
 

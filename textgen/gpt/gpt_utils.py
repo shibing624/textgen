@@ -5,119 +5,345 @@
 """
 import os
 import pickle
-import re
+from dataclasses import dataclass
+from typing import List, Optional, Dict, Sequence
 
 import datasets
 from datasets import Dataset as HFDataset
 from datasets import load_dataset
 from loguru import logger
 from torch.utils.data import Dataset
+from transformers.trainer_pt_utils import LabelSmoother
 
-PROMPT_DICT = {
-    "prompt_input": (
-        "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n{input_text}\n\n### Response: "
-    ),
-    "prompt_no_input": (
-        "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n\n### Response: "
-    ),
-    "prompt_multi_round_no_input": (
-        "Below is an multi-round dialogue between human and assistant. "
-        "Write a response as an assistant that appropriately completes the human request in each round by incorporating previous context.\n\n"
-        "{instruction}{output_text}"
-    ),
-}
+IGNORE_INDEX = LabelSmoother.ignore_index
 
 
-def generate_prompt(instruction, input_text, output_text):
-    """Generate prompt for instruction."""
-    if 'Human:' in instruction and 'Assistant:' in instruction:
-        instruction = instruction.replace('Human:', '### Human:')
-        instruction = instruction.replace('Assistant:', '### Assistant:')
-        prompt = PROMPT_DICT['prompt_multi_round_no_input'].format(instruction=instruction, output_text=output_text)
-        return prompt, 'multi_round'
-    else:
-        if input_text:
-            prompt = PROMPT_DICT["prompt_input"].format(instruction=instruction, input_text=input_text)
-        else:
-            prompt = PROMPT_DICT["prompt_no_input"].format(instruction=instruction)
-        return prompt, 'single_round'
+@dataclass
+class Conversation:
+    """A class that manages prompt templates and keeps all conversation history."""
+
+    # The name of this template
+    name: str
+    # The system prompt
+    system_prompt: str
+    # All messages. format: list of [question, answer]
+    messages: Optional[List[Sequence[str]]]
+    # The roles of the speakers
+    roles: Optional[Sequence[str]]
+    # Conversation prompt
+    prompt: str
+    # Separator
+    sep: str
+
+    def get_prompt(
+            self,
+            messages: Optional[List[Sequence[str]]] = None,
+            system_prompt: Optional[str] = ""
+    ) -> str:
+        """
+        Returns a string containing prompt without response.
+        """
+        return "".join(self._format_example(messages, system_prompt))
+
+    def get_dialog(
+            self,
+            messages: Optional[List[Sequence[str]]] = None,
+            system_prompt: Optional[str] = ""
+    ) -> List[str]:
+        """
+        Returns a list containing 2 * n elements where the 2k-th is a query and the (2k+1)-th is a response.
+        """
+        return self._format_example(messages, system_prompt)
+
+    def _format_example(
+            self,
+            messages: Optional[List[Sequence[str]]] = None,
+            system_prompt: Optional[str] = ""
+    ) -> List[str]:
+        system_prompt = system_prompt or self.system_prompt
+        system_prompt = system_prompt + self.sep if system_prompt else ""  # add separator for non-empty system prompt
+        messages = messages or self.messages
+        convs = []
+        for turn_idx, [user_query, bot_resp] in enumerate(messages):
+            if turn_idx == 0:
+                convs.append(system_prompt + self.prompt.format(query=user_query))
+                convs.append(bot_resp)
+            else:
+                convs.append(self.sep + self.prompt.format(query=user_query))
+                convs.append(bot_resp)
+        return convs
+
+    def append_message(self, query: str, answer: str):
+        """Append a new message."""
+        self.messages.append([query, answer])
 
 
-def preprocess_data(data):
-    instruction, input_text, target_text, tokenizer, args = data
-    IGNORE_INDEX = -100
-    EOS_TOKEN = tokenizer.eos_token
-    full_max_length = args.max_seq_length + args.max_length
-
-    prompt, round_type = generate_prompt(instruction, input_text, target_text)
-    if round_type == 'multi_round':
-        prompt = re.sub(r'(?<!\n)\n### ', f'\n{EOS_TOKEN}### ', prompt)
-        prompt += EOS_TOKEN
-        example = tokenizer(prompt, max_length=full_max_length, truncation=True, padding=False)
-        labels = example['input_ids'].copy()
-
-        if not args.is_train_on_prompt:
-            source_len = len(tokenizer(
-                PROMPT_DICT['prompt_multi_round_no_input'].split('\n\n')[0] + '\n\n')['input_ids'])
-            labels[:source_len] = [IGNORE_INDEX] * source_len
-            input_tokens = tokenizer.convert_ids_to_tokens(example["input_ids"])
-            matches = re.finditer(r'### (?!Assistant:)(.*?)</s>', prompt, re.DOTALL)
-            for match in matches:
-                start_pos, end_pos = match.span()
-                start_idx = None
-                end_idx = None
-                current_pos = 0
-                current_idx = 0
-
-                while current_pos < start_pos:
-                    current_pos += len(input_tokens[current_idx]) + 1
-                    current_idx += 1
-                start_idx = current_idx
-
-                while current_pos < end_pos:
-                    current_pos += len(input_tokens[current_idx]) + 1
-                    current_idx += 1
-                end_idx = current_idx - 1
-
-                if start_idx is not None and end_idx is not None:
-                    for i in range(start_idx, end_idx - 1):
-                        labels[i] = IGNORE_INDEX
-        # Padding labels to full max length
-        example['labels'] = [IGNORE_INDEX] * (full_max_length - len(labels)) + labels
-    else:
-        full_prompt = prompt + target_text + tokenizer.eos_token
-        example = tokenizer(
-            full_prompt,
-            truncation=True,
-            max_length=full_max_length,
-            padding=False,
-            add_special_tokens=False
-        )
-        example["labels"] = example["input_ids"].copy()
-        if not args.is_train_on_prompt:
-            user_example = tokenizer(
-                prompt,
-                truncation=True,
-                max_length=args.max_seq_length,
-                padding=False,
-                add_special_tokens=False
-            )
-            user_prompt_len = len(user_example["input_ids"])
-            # Padding labels to full max length to equalize the length of input_ids after collator
-            example["labels"] = [IGNORE_INDEX] * (full_max_length - len(example['labels']) + user_prompt_len) + \
-                                example["labels"][user_prompt_len:]
-    return {"input_ids": example['input_ids'], "labels": example["labels"]}
+# A global registry for all conversation templates
+conv_templates: Dict[str, Conversation] = {}
 
 
-def preprocess_batch_for_hf_instruction_dataset(example, tokenizer, args):
-    data = (example["instruction"], example["input"], example["output"], tokenizer, args)
-    example = preprocess_data(data)
-    return example
+def register_conv_template(template: Conversation):
+    """Register a new conversation template."""
+    conv_templates[template.name] = template
 
 
-def load_hf_instruction_dataset(tokenizer, args, data, mode):
+"""Vicuna v1.1 template
+Supports: https://huggingface.co/lmsys/vicuna-7b-delta-v1.1
+          https://huggingface.co/lmsys/vicuna-13b-delta-v1.1
+"""
+register_conv_template(
+    Conversation(
+        name="vicuna",
+        system_prompt="A chat between a curious user and an artificial intelligence assistant. "
+                      "The assistant gives helpful, detailed, and polite answers to the user's questions.",
+        messages=[],
+        roles=("USER", "ASSISTANT"),
+        prompt="USER: {query} ASSISTANT: ",
+        sep="</s>",
+    )
+)
+
+"""Alpaca template"""
+register_conv_template(
+    Conversation(
+        name="alpaca",
+        system_prompt="Below is an instruction that describes a task. "
+                      "Write a response that appropriately completes the request.",
+        messages=[],
+        roles=("### Instruction", "### Response"),
+        prompt="### Instruction:\n{query}\n\n### Response:\n",
+        sep="\n\n",
+    )
+)
+
+"""Baichuan-13B-Chat template
+source: https://huggingface.co/baichuan-inc/Baichuan-13B-Chat/blob/f5f47be2adbbdceb784f334d6fa1ca2c73e65097/modeling_baichuan.py#L507
+Support: https://huggingface.co/baichuan-inc/Baichuan-13B-Chat
+"""
+register_conv_template(
+    Conversation(
+        name="baichuan-chat",
+        system_prompt="",
+        messages=[],
+        roles=(" <reserved_102> ", " <reserved_103> "),
+        prompt=" <reserved_102> {query} <reserved_103> ",
+        sep="</s>",
+    )
+)
+
+"""ziya template"""
+register_conv_template(
+    Conversation(
+        name="ziya",
+        system_prompt="",
+        messages=[],
+        roles=("<human>", "<bot>"),
+        prompt="<human>:{query}\n<bot>:",
+        sep="\n",
+    )
+)
+
+"""Linly template"""
+register_conv_template(
+    Conversation(
+        name="linly",
+        system_prompt="",
+        messages=[],
+        roles=("User", "Bot"),
+        prompt="User: {query}\nBot: ",
+        sep="\n",
+    )
+)
+
+"""ChatGLM1 template
+source: https://huggingface.co/THUDM/chatglm-6b/blob/main/modeling_chatglm.py#L1307
+"""
+register_conv_template(
+    Conversation(
+        name="chatglm",
+        system_prompt="",
+        messages=[],
+        roles=("问", "答"),
+        prompt="问：{query}\n答：",
+        sep="\n",
+    )
+)
+
+"""ChatGLM2 template
+source: https://huggingface.co/THUDM/chatglm2-6b/blob/main/modeling_chatglm.py#L1007
+"""
+register_conv_template(
+    # source:
+    Conversation(
+        name="chatglm2",
+        system_prompt="",
+        messages=[],
+        roles=("问", "答"),
+        prompt="问：{query}\n\n答：",
+        sep="\n\n",
+    )
+)
+
+"""Phoenix default template"""
+register_conv_template(
+    Conversation(
+        name="phoenix",
+        system_prompt="A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.\n\n",
+        messages=[],
+        roles=("Human", "Assistant"),
+        prompt="Human: <s>{query}</s>Assistant: ",
+        sep="</s>",
+    )
+)
+
+"""
+Supports: https://huggingface.co/BelleGroup/BELLE-LLaMA-EXT-13B
+"""
+register_conv_template(
+    Conversation(
+        name="belle",
+        system_prompt="",
+        messages=[],
+        roles=("Human", "Belle"),
+        prompt="Human: {query}\n\nBelle: ",
+        sep="\n\n",
+    )
+)
+
+"""
+Supports: https://huggingface.co/qhduan/aquilachat-7b
+"""
+register_conv_template(
+    Conversation(
+        name="aquila",
+        system_prompt="A chat between a curious human and an artificial intelligence assistant. "
+                      "The assistant gives helpful, detailed, and polite answers to the human's questions.",
+        messages=[],
+        roles=("Human", "Assistant"),
+        prompt="Human: {query}###Assistant: ",
+        sep="###",
+    )
+)
+
+"""
+Supports: https://huggingface.co/internlm/internlm-chat-7b
+"""
+register_conv_template(
+    Conversation(
+        name="intern",
+        system_prompt="",
+        messages=[],
+        roles=("<|User|>", "<|Bot|>"),
+        prompt="<|User|>:{query}<eoh>\n<|Bot|>:",
+        sep="<eoa>\n",
+    )
+)
+
+# StarChat template
+register_conv_template(
+    Conversation(
+        name="starchat",
+        system_prompt="<system>\n",
+        messages=[],
+        roles=("<|user|>", "<|assistant|>"),
+        prompt="<|user|>\n{query}<|end|>\n<|assistant|>\n",
+        sep="<|end|>\n",
+    )
+)
+
+# llama2 template
+# reference: https://github.com/facebookresearch/llama/blob/cfc3fc8c1968d390eb830e65c63865e980873a06/llama/generation.py#L212
+register_conv_template(
+    Conversation(
+        name="llama-2",
+        system_prompt="<<SYS>>\nYou are a helpful, respectful and honest assistant. "
+                      "Always answer as helpfully as possible, while being safe. "
+                      "Your answers should not include any harmful, unethical, racist, sexist, "
+                      "toxic, dangerous, or illegal content. "
+                      "Please ensure that your responses are socially unbiased and positive in nature.\n\n"
+                      "If a question does not make any sense, or is not factually coherent, "
+                      "explain why instead of answering something not correct. "
+                      "If you don't know the answer to a question, please don't share false information.\n<</SYS>>\n\n",
+        messages=[],
+        roles=("[INST]", "[/INST]"),
+        prompt=" [INST] {query} [/INST] ",
+        sep="</s>",
+    )
+)
+
+
+def get_conv_template(name: str) -> Conversation:
+    """Get a conversation template."""
+    return conv_templates[name]
+
+
+def preprocess_function(examples, tokenizer, args):
+    """
+    Preprocessing the datasets.
+        part of code modified from https://github.com/lm-sys/FastChat
+    """
+    input_ids_list = []
+    targets_list = []
+    roles = ["human", "gpt"]
+    prompt_template = get_conv_template(args.prompt_template_name)
+    max_length = args.max_source_length + args.max_target_length
+
+    def get_dialog(examples):
+        for i, source in enumerate(examples['conversations']):
+            if len(source) < 2:
+                continue
+            data_role = source[0].get("from", "")
+            if data_role not in roles or data_role != roles[0]:
+                # Skip the first one if it is not from human
+                source = source[1:]
+            if len(source) < 2:
+                continue
+            messages = []
+            for j, sentence in enumerate(source):
+                data_role = sentence.get("from", "")
+                if data_role not in roles:
+                    logger.warning(f"unknown role: {data_role}, {i}. (ignored)")
+                    break
+                if data_role == roles[j % 2]:
+                    messages.append(sentence["value"])
+            if len(messages) < 2 or len(messages) % 2 != 0:
+                continue
+            # Convert the list to pairs of elements
+            history_messages = [[messages[k], messages[k + 1]] for k in range(0, len(messages), 2)]
+            dialog = prompt_template.get_dialog(history_messages)
+            yield dialog
+
+    for dialog in get_dialog(examples):
+        input_ids, labels = [], []
+
+        for i in range(len(dialog) // 2):
+            source_ids = tokenizer.encode(text=dialog[2 * i], add_special_tokens=(i == 0))
+            target_ids = tokenizer.encode(text=dialog[2 * i + 1], add_special_tokens=False)
+
+            if len(source_ids) > args.max_source_length:
+                source_ids = source_ids[:args.max_source_length]
+            if len(target_ids) > args.max_target_length - 1:  # eos token
+                target_ids = target_ids[:args.max_target_length - 1]
+            if len(source_ids) > 0 and source_ids[0] == tokenizer.eos_token_id:
+                source_ids = source_ids[1:]
+            if len(target_ids) > 0 and target_ids[-1] == tokenizer.eos_token_id:
+                target_ids = target_ids[:-1]
+            if len(input_ids) + len(source_ids) + len(target_ids) + 1 > max_length:
+                break
+
+            input_ids += source_ids + target_ids + [tokenizer.eos_token_id]  # add eos token for each turn
+            labels += [IGNORE_INDEX] * len(source_ids) + target_ids + [tokenizer.eos_token_id]
+
+        input_ids_list.append(input_ids)
+        targets_list.append(labels)
+
+    return dict(
+        input_ids=input_ids_list,
+        labels=targets_list,
+    )
+
+
+def load_supervised_dataset(tokenizer, args, data, mode):
     if isinstance(data, str):
         if data.endswith('.json') or data.endswith('.jsonl'):
             dataset = load_dataset("json", data_files=data)
@@ -139,14 +365,23 @@ def load_hf_instruction_dataset(tokenizer, args, data, mode):
         dataset = HFDataset.from_pandas(data)
 
     dataset = dataset.shuffle().map(
-        lambda x: preprocess_batch_for_hf_instruction_dataset(x, tokenizer=tokenizer, args=args),
-        batched=False, remove_columns=dataset.column_names
-    ).filter(lambda x: len(x['input_ids']) > 0)
+        lambda x: preprocess_function(x, tokenizer=tokenizer, args=args),
+        batched=True,
+        num_proc=args.preprocessing_num_workers,
+        remove_columns=dataset.column_names,
+        desc="Running tokenizer on dataset",
+    )
+    logger.debug(f"Num train_samples: {len(dataset)}")
+    logger.debug("Tokenized training example:")
+    logger.debug(f"Decode input_ids[0]: {tokenizer.decode(dataset[0]['input_ids'])}")
+    replaced_labels = [label if label != IGNORE_INDEX else tokenizer.pad_token_id
+                       for label in list(dataset[0]['labels'])]
+    logger.debug(f"Decode labels[0]: {tokenizer.decode(replaced_labels)}")
 
     return dataset
 
 
-class InstructionDataset(Dataset):
+class GptSupervisedDataset(Dataset):
     def __init__(self, tokenizer, args, data, mode):
         cached_features_file = os.path.join(
             args.cache_dir,
@@ -166,7 +401,7 @@ class InstructionDataset(Dataset):
         else:
             logger.debug(" Creating features from dataset file at %s" % args.cache_dir)
 
-            self.examples = list(load_hf_instruction_dataset(tokenizer, args, data, mode))
+            self.examples = list(load_supervised_dataset(tokenizer, args, data, mode))
             if not args.no_cache:
                 logger.info(" Saving features into cached file %s" % cached_features_file)
                 with open(cached_features_file, "wb") as handle:

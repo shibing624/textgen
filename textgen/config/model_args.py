@@ -333,71 +333,6 @@ class SongNetArgs(LanguageModelingArgs):
 
 
 @dataclass
-class ChatGlmArgs(ModelArgs):
-    """
-    Model args for a ChatGLMModel
-    """
-
-    model_class: str = "ChatGlmArgs"
-    dataset_class: Dataset = None
-    learning_rate: float = 2e-5
-    fp16: bool = True
-    bf16: bool = False
-    int8: bool = False
-    int4: bool = False
-    debug: bool = False
-    max_seq_length: int = 256  # max length of input sequence
-    max_length = 384  # max length of the sequence to be generated
-    do_sample: bool = True
-    early_stopping: bool = True
-    is_train_on_prompt: bool = False  # if compute loss with prompt labels
-    evaluate_generated_text: bool = True
-    report_to = "tensorboard"
-    optimizer: str = "adamw_torch"
-    save_strategy: str = "steps"
-    evaluation_strategy: str = "no"
-    eval_steps: int = 50
-    save_steps: int = 400
-    max_eval_samples: int = 20
-    length_penalty: float = 2.0
-    num_beams: int = 1
-    num_return_sequences: int = 1
-    repetition_penalty: float = 1.0
-    temperature: float = 0.95
-    special_tokens_list: list = field(default_factory=list)
-    top_k: float = None
-    top_p: float = 0.7
-    model_name_or_path: Optional[str] = field(default="THUDM/chatglm-6b")
-    use_peft: bool = True
-    peft_type: str = "LORA"
-    peft_bin_name: str = "adapter_model.bin"
-    lora_r: int = 8
-    lora_alpha = 16
-    lora_dropout = 0.05
-    lora_target_modules = ["all"]  # ["all"] or ["query_key_value"]
-    lora_bias = "none"
-    adalora_init_r: int = 12
-    adalora_tinit: int = 200
-    adalora_tfinal: int = 1000
-    adalora_delta_t: int = 10
-    lora_beta: float = 0.85
-    num_virtual_tokens: int = 20
-    prompt_encoder_hidden_size: int = 128
-    num_train_epochs = 1
-    max_steps = -1
-    per_device_train_batch_size = 2
-    eval_batch_size: int = 4
-    gradient_accumulation_steps = 1
-    gradient_checkpointing: bool = True
-    torch_compile: bool = False
-    save_total_limit = 10
-    remove_unused_columns = False
-    logging_steps = 50
-    resume_from_checkpoint: str = None
-    qlora: bool = False
-
-
-@dataclass
 class GptArgs(ModelArgs):
     """
     Model args for a GptModel
@@ -412,11 +347,10 @@ class GptArgs(ModelArgs):
     int4: bool = False
     debug: bool = False
     max_seq_length: int = 256  # max length of input sequence
-    max_length = 256  # max length of the sequence to be generated
+    max_length: int = 256  # max length of the sequence to be generated
     do_sample: bool = True
     early_stopping: bool = True
     evaluate_generated_text: bool = True
-    is_train_on_prompt: bool = False  # if compute loss with prompt labels
     warmup_steps: int = 50
     report_to = "tensorboard"
     optimizer: str = "adamw_torch"
@@ -462,3 +396,5 @@ class GptArgs(ModelArgs):
     torch_compile: bool = False
     trust_remote_code: bool = True
     qlora: bool = False
+    preprocessing_num_workers: int = 4
+    prompt_template_name: str = "vicuna"
