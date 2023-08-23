@@ -22,7 +22,7 @@ else:
 try:
     if torch.backends.mps.is_available():
         device = "mps"
-except:  # noqa: E722
+except:
     pass
 
 PROMPT_DICT = {
