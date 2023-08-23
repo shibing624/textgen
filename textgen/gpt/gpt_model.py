@@ -384,7 +384,8 @@ class GptModel:
 
             self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
         else:
-            logger.warning("Now full model params fine-tune, which is slow, set `use_peft=True` for lora fine-tune.")
+            logger.info("Fine-tuning method: Full parameters training")
+            self.model = self.model.float()
         os.makedirs(output_dir, exist_ok=True)
         logger.debug(f"Tokenizer: {self.tokenizer}")
         logger.debug(f"Model: {self.model}")

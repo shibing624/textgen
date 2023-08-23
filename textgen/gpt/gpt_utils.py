@@ -286,7 +286,9 @@ def preprocess_function(examples, tokenizer, args):
     targets_list = []
     roles = ["human", "gpt"]
     prompt_template = get_conv_template(args.prompt_template_name)
-    max_length = args.max_source_length + args.max_target_length
+    max_source_length = args.max_seq_length
+    max_target_length = args.max_length
+    max_full_length = max_source_length + max_target_length
 
     def get_dialog(examples):
         for i, source in enumerate(examples['conversations']):
@@ -320,15 +322,15 @@ def preprocess_function(examples, tokenizer, args):
             source_ids = tokenizer.encode(text=dialog[2 * i], add_special_tokens=(i == 0))
             target_ids = tokenizer.encode(text=dialog[2 * i + 1], add_special_tokens=False)
 
-            if len(source_ids) > args.max_source_length:
-                source_ids = source_ids[:args.max_source_length]
-            if len(target_ids) > args.max_target_length - 1:  # eos token
-                target_ids = target_ids[:args.max_target_length - 1]
+            if len(source_ids) > max_source_length:
+                source_ids = source_ids[:max_source_length]
+            if len(target_ids) > max_target_length - 1:  # eos token
+                target_ids = target_ids[:max_target_length - 1]
             if len(source_ids) > 0 and source_ids[0] == tokenizer.eos_token_id:
                 source_ids = source_ids[1:]
             if len(target_ids) > 0 and target_ids[-1] == tokenizer.eos_token_id:
                 target_ids = target_ids[:-1]
-            if len(input_ids) + len(source_ids) + len(target_ids) + 1 > max_length:
+            if len(input_ids) + len(source_ids) + len(target_ids) + 1 > max_full_length:
                 break
 
             input_ids += source_ids + target_ids + [tokenizer.eos_token_id]  # add eos token for each turn
