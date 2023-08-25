@@ -49,7 +49,7 @@ def main():
             "save_steps": args.save_steps,
         }
         model = GptModel(args.model_type, args.model_name, args=model_args)
-        model.train_model(args.train_file, eval_data=args.test_file)
+        model.train_model(args.train_file)
     if args.do_predict:
         if model is None:
             model = GptModel(
