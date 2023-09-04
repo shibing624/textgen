@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--do_predict', action='store_true', help='Whether to run predict.')
     parser.add_argument('--bf16', action='store_true', help='Whether to use bf16 mixed precision training.')
     parser.add_argument('--output_dir', default='./outputs-chatglm-demo/', type=str, help='Model output directory')
+    parser.add_argument('--prompt_template_name', default='vicuna', type=str, help='Prompt template name')
     parser.add_argument('--max_seq_length', default=128, type=int, help='Input max sequence length')
     parser.add_argument('--max_length', default=128, type=int, help='Output max sequence length')
     parser.add_argument('--num_epochs', default=0.2, type=float, help='Number of training epochs')
@@ -49,6 +50,7 @@ def main():
             "eval_steps": args.eval_steps,
             "save_steps": args.save_steps,
             "bf16": args.bf16,
+            "prompt_template_name": args.prompt_template_name,
         }
         model = GptModel(args.model_type, args.model_name, args=model_args)
         model.train_model(args.train_file)
