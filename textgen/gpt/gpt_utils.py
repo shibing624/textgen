@@ -320,6 +320,7 @@ register_conv_template(
     )
 )
 
+
 def get_conv_template(name: str) -> Conversation:
     """Get a conversation template."""
     return conv_templates[name]
@@ -345,9 +346,7 @@ def preprocess_function(examples, tokenizer, args):
             data_role = source[0].get("from", "")
             if data_role not in roles or data_role != roles[0]:
                 # Skip the first one if it is not from human
-                source = source[1:]
-            if len(source) < 2:
-                continue
+                break
             messages = []
             for j, sentence in enumerate(source):
                 data_role = sentence.get("from", "")
@@ -356,12 +355,11 @@ def preprocess_function(examples, tokenizer, args):
                     break
                 if data_role == roles[j % 2]:
                     messages.append(sentence["value"])
-            if len(messages) < 2 or len(messages) % 2 != 0:
+            if len(messages) % 2 != 0:
                 continue
             # Convert the list to pairs of elements
             history_messages = [[messages[k], messages[k + 1]] for k in range(0, len(messages), 2)]
-            dialog = prompt_template.get_dialog(history_messages)
-            yield dialog
+            yield prompt_template.get_dialog(history_messages)
 
     for dialog in get_dialog(examples):
         input_ids, labels = [], []

@@ -348,22 +348,16 @@ class GptArgs(ModelArgs):
     debug: bool = False
     max_seq_length: int = 256  # max length of input sequence
     max_length: int = 256  # max length of the sequence to be generated
-    do_sample: bool = True
-    early_stopping: bool = True
-    evaluate_generated_text: bool = True
     warmup_steps: int = 50
     report_to = "tensorboard"
     optimizer: str = "adamw_torch"
     save_strategy: str = "steps"
     eval_steps: int = 200
     save_steps: int = 400
-    pad_to_multiple_of: int = 8
     max_eval_samples: int = 20
-    length_penalty: float = 2.0
-    num_beams: int = 1
     num_return_sequences: int = 1
-    repetition_penalty: float = 1.3
-    temperature: float = 0.4
+    repetition_penalty: float = 1.0
+    temperature: float = 0.7
     special_tokens_list: list = field(default_factory=list)
     top_k: float = 40
     top_p: float = 0.9
