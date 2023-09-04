@@ -585,7 +585,7 @@ class GptModel:
             history = []
         history.append([query, ''])
         prompt = prompt_template.get_prompt(messages=history)
-        streamer = TextIteratorStreamer(self.tokenizer, timeout=60.0, skip_prompt=True, skip_special_tokens=True)
+        streamer = TextIteratorStreamer(self.tokenizer, timeout=60.0, skip_prompt=True, skip_special_tokens=False)
         input_ids = self.tokenizer(prompt).input_ids
         max_src_len = context_len - max_new_tokens - 8
         input_ids = input_ids[-max_src_len:]

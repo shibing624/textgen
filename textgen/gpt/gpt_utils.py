@@ -34,6 +34,8 @@ class Conversation:
     prompt: str
     # Separator
     sep: str
+    # Stop token, default is tokenizer.eos_token
+    stop_str: Optional[str] = "</s>"
 
     def get_prompt(
             self,
@@ -125,7 +127,7 @@ register_conv_template(
         name="baichuan-chat",
         system_prompt="",
         messages=[],
-        roles=(" <reserved_102> ", " <reserved_103> "),
+        roles=("<reserved_102>", "<reserved_103>"),
         prompt=" <reserved_102> {query} <reserved_103> ",
         sep="</s>",
     )
@@ -184,7 +186,7 @@ register_conv_template(
     )
 )
 
-"""Phoenix default template"""
+"""Phoenix template"""
 register_conv_template(
     Conversation(
         name="phoenix",
@@ -196,7 +198,7 @@ register_conv_template(
     )
 )
 
-"""
+"""belle template
 Supports: https://huggingface.co/BelleGroup/BELLE-LLaMA-EXT-13B
 """
 register_conv_template(
@@ -210,7 +212,7 @@ register_conv_template(
     )
 )
 
-"""
+"""aquila template
 Supports: https://huggingface.co/qhduan/aquilachat-7b
 """
 register_conv_template(
@@ -225,7 +227,7 @@ register_conv_template(
     )
 )
 
-"""
+"""intern template
 Supports: https://huggingface.co/internlm/internlm-chat-7b
 """
 register_conv_template(
@@ -236,10 +238,11 @@ register_conv_template(
         roles=("<|User|>", "<|Bot|>"),
         prompt="<|User|>:{query}<eoh>\n<|Bot|>:",
         sep="<eoa>\n",
+        stop_str="<eoa>",
     )
 )
 
-# StarChat template
+"""StarChat template"""
 register_conv_template(
     Conversation(
         name="starchat",
@@ -248,14 +251,16 @@ register_conv_template(
         roles=("<|user|>", "<|assistant|>"),
         prompt="<|user|>\n{query}<|end|>\n<|assistant|>\n",
         sep="<|end|>\n",
+        stop_str="<|end|>",
     )
 )
 
-# llama2 template
-# reference: https://github.com/facebookresearch/llama/blob/cfc3fc8c1968d390eb830e65c63865e980873a06/llama/generation.py#L212
+"""llama2 template
+reference: https://github.com/facebookresearch/llama/blob/cfc3fc8c1968d390eb830e65c63865e980873a06/llama/generation.py#L212
+"""
 register_conv_template(
     Conversation(
-        name="llama-2",
+        name="llama2",
         system_prompt="<<SYS>>\nYou are a helpful, respectful and honest assistant. "
                       "Always answer as helpfully as possible, while being safe. "
                       "Your answers should not include any harmful, unethical, racist, sexist, "
@@ -271,6 +276,49 @@ register_conv_template(
     )
 )
 
+"""llama2-zh template
+Sources: https://github.com/ymcui/Chinese-LLaMA-Alpaca-2
+Supports: https://huggingface.co/ziqingyang/chinese-alpaca-2-7b
+"""
+register_conv_template(
+    Conversation(
+        name="llama2-zh",
+        system_prompt="<<SYS>>\nYou are a helpful assistant. 你是一个乐于助人的助手。\n<</SYS>>\n\n",
+        messages=[],
+        roles=("[INST]", "[/INST]"),
+        prompt=" [INST] {query} [/INST] ",
+        sep="</s>",
+    )
+)
+"""XVERSE template
+Supports: https://huggingface.co/xverse/XVERSE-13B-Chat
+"""
+register_conv_template(
+    Conversation(
+        name="xverse",
+        system_prompt="",
+        messages=[],
+        roles=("Human", "Assistant"),
+        prompt="Human: {query}\n\nAssistant: ",
+        sep="</s>",
+    )
+)
+
+"""Qwen template
+Supports: https://huggingface.co/Qwen/Qwen-7B-Chat
+chatml: https://xbot123.com/645a461b922f176d7cfdbc2d/
+"""
+register_conv_template(
+    Conversation(
+        name="chatml",
+        system_prompt="You are a helpful assistant.",
+        messages=[],
+        roles=("user", "assistant"),
+        prompt="<|im_start|>user\n{query}<|im_end|>\n<|im_start|>assistant\n",
+        sep="<|im_end|>\n",
+        stop_str="<|im_end|>",
+    )
+)
 
 def get_conv_template(name: str) -> Conversation:
     """Get a conversation template."""
