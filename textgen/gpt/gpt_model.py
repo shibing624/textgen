@@ -162,6 +162,15 @@ class GptModel:
             self.tokenizer = tokenizer_class.from_pretrained(
                 model_name, trust_remote_code=self.args.trust_remote_code)
             self.args.tokenizer_name = self.args.model_name
+        if self.tokenizer.eos_token_id is None:
+            self.tokenizer.eos_token = "</s>"  # eos token is required for SFT
+            logger.debug("Add eos token: {}".format(self.tokenizer.eos_token))
+        if self.tokenizer.pad_token_id is None:
+            if self.tokenizer.unk_token_id is not None:
+                self.tokenizer.pad_token = self.tokenizer.unk_token
+            else:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+            logger.debug("Add pad token: {}".format(self.tokenizer.pad_token))
 
         self.args.model_type = model_type
         if model_name is None:
@@ -172,8 +181,6 @@ class GptModel:
         self.peft_name = peft_name
         if self.args.use_peft and self.peft_name:
             self.load_peft_model()
-        if self.tokenizer.pad_token_id is None:
-            self.tokenizer.pad_token_id = 0
 
     def load_peft_model(self):
         """Load peft model"""
@@ -388,7 +395,6 @@ class GptModel:
             self.model = self.model.float()
         os.makedirs(output_dir, exist_ok=True)
         logger.debug(f"Tokenizer: {self.tokenizer}")
-        logger.debug(f"Model: {self.model}")
 
         # load dataset
         train_dataset = self.load_and_cache_examples(train_data)
@@ -457,6 +463,7 @@ class GptModel:
         self.results.update(metrics)
         trainer.log_metrics("train", metrics)
         trainer.save_metrics("train", metrics)
+        self.model.config.use_cache = True  # enable cache after training
         trainer.save_state()
         self.save_model(model=self.model)
 
@@ -569,23 +576,15 @@ class GptModel:
             context_len: int = 2048,
             **kwargs
     ):
-        """
-        Chat model with multi turn conversation.
-        :param query:
-        :param history:
-        :param keep_prompt:
-        :param context_len:
-        :param prompt_template_name:
-        :param kwargs:
-        :return: response, history
-        """
+        """Chat model with multi turn conversation."""
         prompt_template = get_conv_template(prompt_template_name or self.args.prompt_template_name)
 
         if history is None:
             history = []
         history.append([query, ''])
         prompt = prompt_template.get_prompt(messages=history)
-        streamer = TextIteratorStreamer(self.tokenizer, timeout=60.0, skip_prompt=True, skip_special_tokens=False)
+        streamer = TextIteratorStreamer(
+            self.tokenizer, timeout=60.0, skip_prompt=(not keep_prompt), skip_special_tokens=False)
         input_ids = self.tokenizer(prompt).input_ids
         max_src_len = context_len - max_new_tokens - 8
         input_ids = input_ids[-max_src_len:]
