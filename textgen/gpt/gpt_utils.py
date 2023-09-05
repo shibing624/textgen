@@ -390,7 +390,9 @@ def preprocess_function(examples, tokenizer, args):
         labels=targets_list,
     )
 
-
+def filter_empty_labels(example):
+    """Remove empty labels dataset."""
+    return not all(label == IGNORE_INDEX for label in example["labels"])
 def load_supervised_dataset(tokenizer, args, data, mode):
     if isinstance(data, str):
         if data.endswith('.json') or data.endswith('.jsonl'):
@@ -419,12 +421,7 @@ def load_supervised_dataset(tokenizer, args, data, mode):
         remove_columns=dataset.column_names,
         desc="Running tokenizer on dataset",
     )
-    logger.debug(f"Num train_samples: {len(dataset)}")
-    logger.debug("Tokenized training example:")
-    logger.debug(f"Decode input_ids[0]: {tokenizer.decode(dataset[0]['input_ids'])}")
-    replaced_labels = [label if label != IGNORE_INDEX else tokenizer.pad_token_id
-                       for label in list(dataset[0]['labels'])]
-    logger.debug(f"Decode labels[0]: {tokenizer.decode(replaced_labels)}")
+    dataset = dataset.filter(filter_empty_labels, num_proc=args.preprocessing_num_workers)
 
     return dataset
 
@@ -449,7 +446,7 @@ class GptSupervisedDataset(Dataset):
         else:
             logger.debug(" Creating features from dataset file at %s" % args.cache_dir)
 
-            self.examples = list(load_supervised_dataset(tokenizer, args, data, mode))
+            self.examples = load_supervised_dataset(tokenizer, args, data, mode)
             if not args.no_cache:
                 logger.info(" Saving features into cached file %s" % cached_features_file)
                 with open(cached_features_file, "wb") as handle:

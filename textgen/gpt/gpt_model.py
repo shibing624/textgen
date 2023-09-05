@@ -390,6 +390,7 @@ class GptModel:
                     set_peft_model_state_dict(self.model, adapters_weights)
                 else:
                     logger.warning(f"Checkpoint {checkpoint_name} not found")
+                    resume_from_checkpoint = None
 
             self.model.print_trainable_parameters()  # Be more transparent about the % of trainable params.
         else:
@@ -402,7 +403,11 @@ class GptModel:
         train_dataset = self.load_and_cache_examples(train_data)
         if verbose:
             logger.debug(f"train_dataset len: {len(train_dataset)}, train_dataset[0]: {train_dataset[0]}")
-            logger.debug(f"text of train_dataset[0]: {self.tokenizer.decode(train_dataset[0]['input_ids'])}")
+            logger.debug("Tokenized training example:")
+            logger.debug(f"Decode input_ids[0]: {self.tokenizer.decode(train_dataset[0]['input_ids'])}")
+            replaced_labels = [label if label != IGNORE_INDEX else self.tokenizer.pad_token_id
+                               for label in list(train_dataset[0]['labels'])]
+            logger.debug(f"Decode labels[0]: {self.tokenizer.decode(replaced_labels)}")
         eval_dataset = None
         if eval_data is not None:
             eval_dataset = self.load_and_cache_examples(eval_data, evaluate=True)
@@ -457,8 +462,8 @@ class GptModel:
         logger.debug(f"Train dataloader example: {sample}")
         logger.debug(f"Detail input_ids: {sample['input_ids'][:3]}, \nlabels: {sample['labels'][:3]}")
         logger.debug(f"Decode input_ids[0]: {self.tokenizer.decode(sample['input_ids'][0])}")
-        replaced_labels = [label if label != IGNORE_INDEX else self.tokenizer.pad_token_id for label in
-                           sample['labels'][0]]
+        replaced_labels = [label if label != IGNORE_INDEX else
+                           self.tokenizer.pad_token_id for label in sample['labels'][0]]
         logger.debug(f"Decode labels[0]: {self.tokenizer.decode(replaced_labels)}")
 
         (global_step, training_loss, metrics) = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
