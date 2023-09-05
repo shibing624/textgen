@@ -189,10 +189,6 @@ class GptModel:
         if self.args.use_peft and self.peft_name:
             self.load_peft_model()
 
-        # Warp the model with DataParallel
-        if torch.cuda.device_count() > 1:
-            self.model = torch.nn.DataParallel(self.model)
-
     def load_peft_model(self):
         """Load peft model"""
         self.model = PeftModel.from_pretrained(
