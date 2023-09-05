@@ -506,11 +506,11 @@ class GptModel:
     def predict(
             self,
             sentences: List[str],
-            keep_prompt: bool = False,
+            skip_prompt: bool = True,
             prompt_template_name: str = 'vicuna',
-            max_length: int = 512,
-            temperature: float = 0.7,
-            repetition_penalty: float = 1.0,
+            max_length: int = None,
+            temperature: float = None,
+            repetition_penalty: float = None,
             eval_batch_size: int = None,
             **kwargs
     ) -> List[str]:
@@ -519,11 +519,12 @@ class GptModel:
 
         Args:
             sentences: A python list of text (str) to be sent to the model for prediction. Note that the prefix should be prepended to the text.
-            keep_prompt: Whether to keep the prompt in the generated text.
+            skip_prompt: Whether to skip the prompt when generating text.
             prompt_template_name: The name of the prompt template to use.
             max_length: The maximum length of the generated text.
             temperature: The value used to module the next token probabilities.
             repetition_penalty: The parameter for repetition penalty. 1.0 means no penalty.
+            eval_batch_size: Batch size to use for evaluation.
             **kwargs: Additional arguments for generating sequences.
 
         Returns:
@@ -537,57 +538,41 @@ class GptModel:
 
         all_outputs = []
         # Batching
-        for batch in tqdm(
-                [
-                    sentences[i: i + eval_batch_size]
-                    for i in range(0, len(sentences), eval_batch_size)
-                ],
-                desc="Generating outputs",
-                disable=self.args.silent,
-        ):
-            if prompt_template_name:
-                batch = [prompt_template.get_prompt(messages=[[s, '']]) for s in batch]
-            input_ids = self.tokenizer(batch, padding=True, return_tensors='pt')['input_ids']
-            # Create DataLoader and DistributedSampler
-            dataset = TensorDataset(input_ids)
-            if self.ddp:
-                sampler = DistributedSampler(dataset, num_replicas=self.world_size, rank=self.local_rank, shuffle=False)
-            else:
-                sampler = None
-            dataloader = DataLoader(dataset, sampler=sampler, batch_size=eval_batch_size)
+        if prompt_template_name:
+            sentences = [prompt_template.get_prompt(messages=[[s, '']]) for s in sentences]
+        inputs = self.tokenizer(sentences, padding=True, return_tensors='pt')
+        # Create DataLoader and DistributedSampler
+        dataset = TensorDataset(inputs['input_ids'])
+        if self.ddp:
+            sampler = DistributedSampler(dataset, num_replicas=self.world_size, rank=self.local_rank, shuffle=False)
+        else:
+            sampler = None
+        dataloader = DataLoader(dataset, sampler=sampler, batch_size=eval_batch_size)
 
-            generation_kwargs = dict(
-                max_new_tokens=max_length if max_length else self.args.max_length,
-                temperature=temperature if temperature is not None else self.args.temperature,
-                repetition_penalty=repetition_penalty if repetition_penalty else self.args.repetition_penalty,
-                return_dict_in_generate=True,
-                output_scores=True,
-            )
-            local_outputs = []
-            for input_ids in dataloader:
-                input_ids = input_ids.to(self.local_rank)
-                outputs = self.model.generate(
-                    input_ids=input_ids,
-                    **generation_kwargs,
-                    **kwargs,
-                )
-                for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs.sequences)):
-                    # Decode text
-                    text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
-                    prompt_len = len(prompt_text)
-                    gen_text = text[prompt_len:]
-                    if keep_prompt:
-                        total_sequence = prompt_text + gen_text
-                    else:
-                        total_sequence = gen_text
-                    local_outputs.append(total_sequence)
+        generation_kwargs = dict(
+            max_new_tokens=max_length if max_length else self.args.max_length,
+            temperature=temperature if temperature is not None else self.args.temperature,
+            repetition_penalty=repetition_penalty if repetition_penalty else self.args.repetition_penalty,
+            return_dict_in_generate=True,
+            output_scores=True,
+        )
+        local_outputs = []
+        for input_ids in tqdm(dataloader, desc="Generating outputs", disable=self.args.silent):
+            input_ids = input_ids.to(self.local_rank)
+            outputs = self.model.generate(input_ids=input_ids, **generation_kwargs, **kwargs)
+            for idx, generated_sequence in enumerate(outputs.sequences):
+                # Decode text
+                if skip_prompt:
+                    generated_sequence = generated_sequence[len(input_ids[0]):]
+                gen_text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
+                local_outputs.append(gen_text)
 
-            if self.ddp:
-                # Gather outputs from all devices
-                all_outputs = [None] * self.world_size
-                dist.all_gather_object(all_outputs, local_outputs)
-            else:
-                all_outputs.extend(local_outputs)
+        if self.ddp:
+            # Gather outputs from all devices
+            all_outputs = [None] * self.world_size
+            dist.all_gather_object(all_outputs, local_outputs)
+        else:
+            all_outputs.extend(local_outputs)
         if self.local_rank == 0:
             return all_outputs
         else:
@@ -598,7 +583,7 @@ class GptModel:
             self,
             query: str,
             history: List[Tuple[str, str]] = None,
-            keep_prompt: bool = False,
+            skip_prompt: bool = True,
             prompt_template_name: str = "vicuna",
             max_new_tokens=512,
             temperature=0.7,
@@ -614,7 +599,7 @@ class GptModel:
         history.append([query, ''])
         prompt = prompt_template.get_prompt(messages=history)
         streamer = TextIteratorStreamer(
-            self.tokenizer, timeout=60.0, skip_prompt=(not keep_prompt), skip_special_tokens=False)
+            self.tokenizer, timeout=60.0, skip_prompt=skip_prompt, skip_special_tokens=False)
         input_ids = self.tokenizer(prompt).input_ids
         max_src_len = context_len - max_new_tokens - 8
         input_ids = input_ids[-max_src_len:]
