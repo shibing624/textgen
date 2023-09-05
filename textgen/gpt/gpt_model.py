@@ -508,6 +508,7 @@ class GptModel:
             max_length: int = 512,
             temperature: float = 0.7,
             repetition_penalty: float = 1.0,
+            eval_batch_size: int = None,
             **kwargs
     ) -> List[str]:
         """
@@ -526,19 +527,17 @@ class GptModel:
             preds: A python list of the generated sequences.
         """  # noqa: ignore flake8"
 
-        if self.device == 'cpu':
-            self.model.float()
-        if self.args.fp16:
-            self.model.half()
         self.model.eval()
         prompt_template = get_conv_template(prompt_template_name or self.args.prompt_template_name)
+        if not eval_batch_size:
+            eval_batch_size = self.args.eval_batch_size
 
         all_outputs = []
         # Batching
         for batch in tqdm(
                 [
-                    sentences[i: i + self.args.eval_batch_size]
-                    for i in range(0, len(sentences), self.args.eval_batch_size)
+                    sentences[i: i + eval_batch_size]
+                    for i in range(0, len(sentences), eval_batch_size)
                 ],
                 desc="Generating outputs",
                 disable=self.args.silent,

@@ -62,15 +62,14 @@ def main():
                 args={'use_peft': True, 'eval_batch_size': args.batch_size, "max_length": args.max_length, }
             )
 
-        response = model.predict(["介绍下北京"])
+        response = model.predict(["介绍下北京", "介绍下南京", "给出5个必去武汉的理由"])
         print(response)
 
         # Chat model with multi turns conversation
-        response, history = model.chat('What is the sum of 1 and 2?')
+        response, history = model.chat('请问1加2等于多少？')
         print(response)
-        response, history = model.chat('what is the multiplication result of two num? please think step by step.',
-                                       history=history)
-        print(response)
+        response, history = model.chat('两数相乘呢？', history=history)
+        print(response, history)
 
 
 if __name__ == '__main__':
