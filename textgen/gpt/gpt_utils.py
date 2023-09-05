@@ -390,9 +390,12 @@ def preprocess_function(examples, tokenizer, args):
         labels=targets_list,
     )
 
+
 def filter_empty_labels(example):
     """Remove empty labels dataset."""
     return not all(label == IGNORE_INDEX for label in example["labels"])
+
+
 def load_supervised_dataset(tokenizer, args, data, mode):
     if isinstance(data, str):
         if data.endswith('.json') or data.endswith('.jsonl'):
