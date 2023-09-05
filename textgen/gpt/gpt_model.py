@@ -21,6 +21,7 @@ from peft import (
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
 )
+from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader, TensorDataset, DistributedSampler
 from tqdm import tqdm
 from transformers import (
@@ -160,6 +161,8 @@ class GptModel:
                 bnb_4bit_compute_dtype=self.torch_dtype,
             ) if self.args.qlora else None,
         )
+        if self.ddp:
+            self.model = DistributedDataParallel(self.model, device_ids=[self.local_rank])
 
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
@@ -553,16 +556,21 @@ class GptModel:
             max_new_tokens=max_length if max_length else self.args.max_length,
             temperature=temperature if temperature is not None else self.args.temperature,
             repetition_penalty=repetition_penalty if repetition_penalty else self.args.repetition_penalty,
+            return_dict_in_generate=True,
+            output_scores=True,
         )
         local_outputs = []
         for input_ids, attention_mask in tqdm(dataloader, desc="Generating outputs", disable=self.args.silent):
-            generation_output = self.model.generate(input_ids=input_ids.to(self.local_rank), **generation_kwargs,
-                                                    **kwargs)
-            generated_sequence = generation_output[0]
-            if skip_prompt:
-                generated_sequence = generated_sequence[len(input_ids[0]):]
-            gen_text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
-            local_outputs.append(gen_text.encode("utf-8"))  # Encode strings as bytes
+            outputs = self.model.generate(
+                input_ids=input_ids.to(self.local_rank),
+                **generation_kwargs,
+                **kwargs
+            )
+            for idx, generated_sequence in enumerate(outputs.sequences):
+                if skip_prompt:
+                    generated_sequence = generated_sequence[len(input_ids[0]):]
+                gen_text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
+                local_outputs.append(gen_text.encode("utf-8"))  # Encode strings as bytes
 
         if self.ddp:
             # Gather outputs from all devices
