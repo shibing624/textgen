@@ -128,7 +128,7 @@ def main():
         ]
         for prompt in couplet_prompts:
             # Generate text using the model. Verbose set to False to prevent logging generated sequences.
-            generated = model.generate(prompt, verbose=False, add_cls_head=True, split_on_space=False, keep_prompt=True)
+            generated = model.generate(prompt, verbose=False, add_cls_head=True, split_on_space=False)
             print("inputs:", prompt)
             print("outputs:", generated)
 

@@ -161,8 +161,6 @@ class GptModel:
                 bnb_4bit_compute_dtype=self.torch_dtype,
             ) if self.args.qlora else None,
         )
-        if self.ddp:
-            self.model = DistributedDataParallel(self.model, device_ids=[self.local_rank])
 
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
@@ -200,7 +198,10 @@ class GptModel:
             torch_dtype=self.torch_dtype,
             device_map=self.device_map,
         )
+        self.model = self.model.merge_and_unload()
         logger.info(f"Loaded peft model from {self.peft_name}")
+        if self.ddp:
+            self.model = DistributedDataParallel(self.model, device_ids=[self.local_rank])
 
     def find_all_linear_names(self, int4=False, int8=False):
         cls = torch.nn.Linear
