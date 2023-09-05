@@ -509,7 +509,7 @@ class GptModel:
     def predict(
             self,
             sentences: List[str],
-            skip_prompt: bool = True,
+            skip_prompt: bool = False,
             prompt_template_name: str = 'vicuna',
             max_length: int = None,
             temperature: float = None,
@@ -568,16 +568,19 @@ class GptModel:
                 if skip_prompt:
                     generated_sequence = generated_sequence[len(input_ids[0]):]
                 gen_text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
-                local_outputs.append(gen_text.encode("utf-8"))  # Encode strings as bytes
+                local_outputs.append(gen_text)
 
+        all_outputs = []
         if self.ddp:
             # Gather outputs from all devices
-            all_outputs = [None] * self.world_size
-            dist.all_gather_object(all_outputs, local_outputs)
+            local_outputs_tensor = torch.tensor([len(output) for output in local_outputs], device=self.local_rank)
+            gather_list = [torch.zeros_like(local_outputs_tensor) for _ in
+                           range(self.world_size)] if self.local_rank == 0 else None
+            dist.gather(local_outputs_tensor, gather_list, dst=0)
             if self.local_rank == 0:
-                all_outputs = [output.decode("utf-8") for output in all_outputs]
+                all_outputs.extend([output.item() for gathered_outputs in gather_list for output in gathered_outputs])
         else:
-            all_outputs = [output.decode("utf-8") for output in local_outputs]
+            all_outputs = local_outputs
         if self.local_rank == 0:
             return all_outputs
         else:
