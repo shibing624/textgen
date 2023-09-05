@@ -5,10 +5,11 @@
 
 Usage:
 python merge_peft_adapter.py \
+    --model_type llama \
     --base_model_name_or_path path/to/llama/model \
     --tokenizer_path path/to/llama/tokenizer \
     --peft_model_path path/to/lora/model \
-    --output_dir path/to/output/dir
+    --output_dir merged
 
 after merged, chatglm and baichuan model need copy python script to output dir.
 """

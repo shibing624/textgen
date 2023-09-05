@@ -125,6 +125,8 @@ class GptModel:
         self.local_rank = int(os.environ.get("LOCAL_RANK", 0))
         self.ddp = self.world_size != 1
         if self.ddp:
+            # Initialize distributed environment
+            torch.distributed.init_process_group(backend="nccl")
             self.device_map = {"": self.local_rank}
 
         self.results = {}
@@ -542,7 +544,7 @@ class GptModel:
             sentences = [prompt_template.get_prompt(messages=[[s, '']]) for s in sentences]
         inputs = self.tokenizer(sentences, padding=True, return_tensors='pt')
         # Create DataLoader and DistributedSampler
-        dataset = TensorDataset(inputs['input_ids'])
+        dataset = TensorDataset(inputs['input_ids'], inputs['attention_mask'])
         if self.ddp:
             sampler = DistributedSampler(dataset, num_replicas=self.world_size, rank=self.local_rank, shuffle=False)
         else:
@@ -557,9 +559,8 @@ class GptModel:
             output_scores=True,
         )
         local_outputs = []
-        for input_ids in tqdm(dataloader, desc="Generating outputs", disable=self.args.silent):
-            input_ids = input_ids.to(self.local_rank)
-            outputs = self.model.generate(input_ids=input_ids, **generation_kwargs, **kwargs)
+        for input_ids, attention_mask in tqdm(dataloader, desc="Generating outputs", disable=self.args.silent):
+            outputs = self.model.generate(input_ids=input_ids.to(self.local_rank), **generation_kwargs, **kwargs)
             for idx, generated_sequence in enumerate(outputs.sequences):
                 # Decode text
                 if skip_prompt:
