@@ -538,8 +538,6 @@ class GptModel:
         if not eval_batch_size:
             eval_batch_size = self.args.eval_batch_size
 
-        all_outputs = []
-        # Batching
         if prompt_template_name:
             sentences = [prompt_template.get_prompt(messages=[[s, '']]) for s in sentences]
         inputs = self.tokenizer(sentences, padding=True, return_tensors='pt')
@@ -555,25 +553,25 @@ class GptModel:
             max_new_tokens=max_length if max_length else self.args.max_length,
             temperature=temperature if temperature is not None else self.args.temperature,
             repetition_penalty=repetition_penalty if repetition_penalty else self.args.repetition_penalty,
-            return_dict_in_generate=True,
-            output_scores=True,
         )
         local_outputs = []
         for input_ids, attention_mask in tqdm(dataloader, desc="Generating outputs", disable=self.args.silent):
-            outputs = self.model.generate(input_ids=input_ids.to(self.local_rank), **generation_kwargs, **kwargs)
-            for idx, generated_sequence in enumerate(outputs.sequences):
-                # Decode text
-                if skip_prompt:
-                    generated_sequence = generated_sequence[len(input_ids[0]):]
-                gen_text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
-                local_outputs.append(gen_text)
+            generation_output = self.model.generate(input_ids=input_ids.to(self.local_rank), **generation_kwargs,
+                                                    **kwargs)
+            generated_sequence = generation_output[0]
+            if skip_prompt:
+                generated_sequence = generated_sequence[len(input_ids[0]):]
+            gen_text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
+            local_outputs.append(gen_text.encode("utf-8"))  # Encode strings as bytes
 
         if self.ddp:
             # Gather outputs from all devices
             all_outputs = [None] * self.world_size
             dist.all_gather_object(all_outputs, local_outputs)
+            if self.local_rank == 0:
+                all_outputs = [output.decode("utf-8") for output in all_outputs]
         else:
-            all_outputs.extend(local_outputs)
+            all_outputs = [output.decode("utf-8") for output in local_outputs]
         if self.local_rank == 0:
             return all_outputs
         else:
