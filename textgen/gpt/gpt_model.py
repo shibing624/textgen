@@ -11,6 +11,7 @@ from typing import List, Tuple, Optional
 
 import numpy as np
 import torch
+import torch.distributed as dist
 from loguru import logger
 from peft import (
     get_peft_model,
@@ -20,6 +21,7 @@ from peft import (
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
 )
+from torch.utils.data import DataLoader, TensorDataset, DistributedSampler
 from tqdm import tqdm
 from transformers import (
     AutoConfig,
@@ -119,10 +121,11 @@ class GptModel:
         if not use_cuda:
             self.args.fp16 = False
             self.args.int8 = False
-        world_size = int(os.environ.get("WORLD_SIZE", 1))
-        self.ddp = world_size != 1
+        self.world_size = int(os.environ.get("WORLD_SIZE", 1))
+        self.local_rank = int(os.environ.get("LOCAL_RANK", 0))
+        self.ddp = self.world_size != 1
         if self.ddp:
-            self.device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)}
+            self.device_map = {"": self.local_rank}
 
         self.results = {}
         config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
@@ -544,7 +547,15 @@ class GptModel:
         ):
             if prompt_template_name:
                 batch = [prompt_template.get_prompt(messages=[[s, '']]) for s in batch]
-            inputs = self.tokenizer(batch, padding=True, return_tensors='pt')
+            input_ids = self.tokenizer(batch, padding=True, return_tensors='pt')['input_ids']
+            # Create DataLoader and DistributedSampler
+            dataset = TensorDataset(input_ids)
+            if self.ddp:
+                sampler = DistributedSampler(dataset, num_replicas=self.world_size, rank=self.local_rank, shuffle=False)
+            else:
+                sampler = None
+            dataloader = DataLoader(dataset, sampler=sampler, batch_size=eval_batch_size)
+
             generation_kwargs = dict(
                 max_new_tokens=max_length if max_length else self.args.max_length,
                 temperature=temperature if temperature is not None else self.args.temperature,
@@ -552,22 +563,35 @@ class GptModel:
                 return_dict_in_generate=True,
                 output_scores=True,
             )
-            outputs = self.model.generate(
-                input_ids=inputs['input_ids'].to(self.device),
-                **generation_kwargs,
-                **kwargs,
-            )
-            for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs.sequences)):
-                # Decode text
-                text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
-                prompt_len = len(prompt_text)
-                gen_text = text[prompt_len:]
-                if keep_prompt:
-                    total_sequence = prompt_text + gen_text
-                else:
-                    total_sequence = gen_text
-                all_outputs.append(total_sequence)
-        return all_outputs
+            local_outputs = []
+            for input_ids in dataloader:
+                input_ids = input_ids.to(self.local_rank)
+                outputs = self.model.generate(
+                    input_ids=input_ids,
+                    **generation_kwargs,
+                    **kwargs,
+                )
+                for idx, (prompt_text, generated_sequence) in enumerate(zip(batch, outputs.sequences)):
+                    # Decode text
+                    text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
+                    prompt_len = len(prompt_text)
+                    gen_text = text[prompt_len:]
+                    if keep_prompt:
+                        total_sequence = prompt_text + gen_text
+                    else:
+                        total_sequence = gen_text
+                    local_outputs.append(total_sequence)
+
+            if self.ddp:
+                # Gather outputs from all devices
+                all_outputs = [None] * self.world_size
+                dist.all_gather_object(all_outputs, local_outputs)
+            else:
+                all_outputs.extend(local_outputs)
+        if self.local_rank == 0:
+            return all_outputs
+        else:
+            return []
 
     @torch.inference_mode()
     def chat(
@@ -604,7 +628,7 @@ class GptModel:
         )
         thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
         thread.start()
-        stop_str = self.tokenizer.eos_token or "</s>"
+        stop_str = self.tokenizer.eos_token or prompt_template.stop_str
         generated_text = ""
         for new_text in streamer:
             stop = False
