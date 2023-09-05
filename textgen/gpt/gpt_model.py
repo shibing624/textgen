@@ -21,7 +21,6 @@ from peft import (
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
 )
-from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader, TensorDataset, DistributedSampler
 from tqdm import tqdm
 from transformers import (
@@ -190,6 +189,10 @@ class GptModel:
         if self.args.use_peft and self.peft_name:
             self.load_peft_model()
 
+        # Warp the model with DataParallel
+        if torch.cuda.device_count() > 1:
+            self.model = torch.nn.DataParallel(self.model)
+
     def load_peft_model(self):
         """Load peft model"""
         self.model = PeftModel.from_pretrained(
@@ -200,8 +203,6 @@ class GptModel:
         )
         self.model = self.model.merge_and_unload()
         logger.info(f"Loaded peft model from {self.peft_name}")
-        if self.ddp:
-            self.model = DistributedDataParallel(self.model, device_ids=[self.local_rank])
 
     def find_all_linear_names(self, int4=False, int8=False):
         cls = torch.nn.Linear
