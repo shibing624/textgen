@@ -511,6 +511,7 @@ class GptModel:
             temperature: float = None,
             repetition_penalty: float = None,
             eval_batch_size: int = None,
+            enable_deepspeed: bool = False,
             **kwargs
     ) -> List[str]:
         """
@@ -524,6 +525,7 @@ class GptModel:
             temperature: The value used to module the next token probabilities.
             repetition_penalty: The parameter for repetition penalty. 1.0 means no penalty.
             eval_batch_size: Batch size to use for evaluation.
+            enable_deepspeed: Whether to enable deepspeed.
             **kwargs: Additional arguments for generating sequences.
 
         Returns:
@@ -533,7 +535,7 @@ class GptModel:
         self.model.eval()
         if self.args.fp16:
             self.model.half()
-        if not self.is_inference:
+        if enable_deepspeed and not self.is_inference:
             try:
                 import deepspeed
 
