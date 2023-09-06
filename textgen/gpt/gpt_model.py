@@ -9,6 +9,7 @@ import random
 from threading import Thread
 from typing import List, Tuple, Optional
 
+import deepspeed
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -21,7 +22,6 @@ from peft import (
     prepare_model_for_int8_training,
     set_peft_model_state_dict,
 )
-from torch.utils.data import DataLoader, TensorDataset, DistributedSampler
 from tqdm import tqdm
 from transformers import (
     AutoConfig,
@@ -188,6 +188,7 @@ class GptModel:
         self.peft_name = peft_name
         if self.args.use_peft and self.peft_name:
             self.load_peft_model()
+        self.is_inference = False
 
     def load_peft_model(self):
         """Load peft model"""
@@ -535,56 +536,56 @@ class GptModel:
         """  # noqa: ignore flake8"
 
         self.model.eval()
+        if self.args.fp16:
+            self.model.half()
+        if not self.is_inference:
+            model = deepspeed.init_inference(
+                self.model,
+                tensor_parallel=dict(tp_size=self.world_size),
+                dtype=torch.half,
+                replace_with_kernel_inject=True
+            )
+            self.model = model.module
+            self.is_inference = True
         prompt_template = get_conv_template(prompt_template_name or self.args.prompt_template_name)
         if not eval_batch_size:
             eval_batch_size = self.args.eval_batch_size
 
-        if prompt_template_name:
-            sentences = [prompt_template.get_prompt(messages=[[s, '']]) for s in sentences]
-        inputs = self.tokenizer(sentences, padding=True, return_tensors='pt')
-        # Create DataLoader and DistributedSampler
-        dataset = TensorDataset(inputs['input_ids'], inputs['attention_mask'])
-        if self.ddp:
-            sampler = DistributedSampler(dataset, num_replicas=self.world_size, rank=self.local_rank, shuffle=False)
-        else:
-            sampler = None
-        dataloader = DataLoader(dataset, sampler=sampler, batch_size=eval_batch_size)
-
-        generation_kwargs = dict(
-            max_new_tokens=max_length if max_length else self.args.max_length,
-            temperature=temperature if temperature is not None else self.args.temperature,
-            repetition_penalty=repetition_penalty if repetition_penalty else self.args.repetition_penalty,
-            return_dict_in_generate=True,
-            output_scores=True,
-        )
-        local_outputs = []
-        for input_ids, attention_mask in tqdm(dataloader, desc="Generating outputs", disable=self.args.silent):
+        all_outputs = []
+        # Batching
+        for batch in tqdm(
+                [
+                    sentences[i: i + eval_batch_size]
+                    for i in range(0, len(sentences), eval_batch_size)
+                ],
+                desc="Generating outputs",
+                disable=self.args.silent,
+        ):
+            if prompt_template_name:
+                batch = [prompt_template.get_prompt(messages=[[s, '']]) for s in batch]
+            inputs = self.tokenizer(batch, padding=True, return_tensors='pt')
+            input_ids = inputs['input_ids'].to(self.local_rank)
+            generation_kwargs = dict(
+                max_new_tokens=max_length if max_length else self.args.max_length,
+                temperature=temperature if temperature is not None else self.args.temperature,
+                repetition_penalty=repetition_penalty if repetition_penalty else self.args.repetition_penalty,
+                return_dict_in_generate=True,
+                output_scores=True,
+            )
             outputs = self.model.generate(
-                input_ids=input_ids.to(self.local_rank),
+                input_ids=input_ids,
                 **generation_kwargs,
-                **kwargs
+                **kwargs,
             )
             for idx, generated_sequence in enumerate(outputs.sequences):
+                # Decode text
                 if skip_prompt:
-                    generated_sequence = generated_sequence[len(input_ids[0]):]
+                    input_tokens_lengths = [x.shape[0] for x in input_ids]
+                    generated_sequence = [generated_sequence[i:] for i in input_tokens_lengths]
                 gen_text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
-                local_outputs.append(gen_text)
+                all_outputs.append(gen_text)
 
-        all_outputs = []
-        if self.ddp:
-            # Gather outputs from all devices
-            local_outputs_tensor = torch.tensor([len(output) for output in local_outputs], device=self.local_rank)
-            gather_list = [torch.zeros_like(local_outputs_tensor) for _ in
-                           range(self.world_size)] if self.local_rank == 0 else None
-            dist.gather(local_outputs_tensor, gather_list, dst=0)
-            if self.local_rank == 0:
-                all_outputs.extend([output.item() for gathered_outputs in gather_list for output in gathered_outputs])
-        else:
-            all_outputs = local_outputs
-        if self.local_rank == 0:
-            return all_outputs
-        else:
-            return []
+        return all_outputs
 
     @torch.inference_mode()
     def chat(

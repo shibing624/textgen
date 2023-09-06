@@ -13,3 +13,4 @@ sacremoses
 Rouge
 cpm_kernels
 peft>=0.3.0
+deepspeed
