@@ -37,7 +37,6 @@ from transformers import (
     TextIteratorStreamer,
     DataCollatorForSeq2Seq,
     BitsAndBytesConfig,
-    deepspeed,
 )
 from transformers.deepspeed import is_deepspeed_zero3_enabled
 from transformers.trainer import TRAINING_ARGS_NAME
@@ -298,7 +297,7 @@ class GptModel:
             **kwargs
         )
         resume_from_checkpoint = self.args.resume_from_checkpoint
-        if self.args.qlora and (len(training_args.fsdp) > 0 or deepspeed.is_deepspeed_zero3_enabled()):
+        if self.args.qlora and (len(training_args.fsdp) > 0 or is_deepspeed_zero3_enabled()):
             logger.warning("FSDP and ZeRO3 are both currently incompatible with QLoRA.")
         if 'all' in self.args.lora_target_modules:
             self.args.lora_target_modules = self.find_all_linear_names(self.args.int4, self.args.int8)
