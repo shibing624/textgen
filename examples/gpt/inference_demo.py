@@ -28,6 +28,7 @@ def main():
     parser.add_argument('--data_file', default=None, type=str,
                         help="A file that contains instructions (one instruction per line)")
     parser.add_argument('--predictions_file', default='./predictions_result.jsonl', type=str)
+    parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     args = parser.parse_args()
     print(args)
 
@@ -56,8 +57,7 @@ def main():
             if len(raw_input_text.strip()) == 0:
                 break
             if args.single_round:
-                sents = [raw_input_text]
-                response = model.predict(sents, prompt_template_name=args.prompt_template_name)[0]
+                response = model.predict([raw_input_text], prompt_template_name=args.prompt_template_name)[0]
             else:
                 response, history = model.chat(
                     raw_input_text, history=history, prompt_template_name=args.prompt_template_name)
@@ -66,12 +66,16 @@ def main():
     else:
         print("Start inference.")
         results = []
-        responses = model.predict(examples, prompt_template_name=args.prompt_template_name)
+        responses = model.predict(
+            examples,
+            prompt_template_name=args.prompt_template_name,
+            eval_batch_size=args.batch_size
+        )
         for index, example, response in zip(range(len(examples)), examples, responses):
             print(f"======={index}=======")
             print(f"Input: {example}\n")
             print(f"Output: {response}\n")
-            results.append({"Input": examples, "Output": response})
+            results.append({"Input": example, "Output": response})
         with open(args.predictions_file, 'w', encoding='utf-8') as f:
             for entry in results:
                 json.dump(entry, f, ensure_ascii=False)
