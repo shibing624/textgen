@@ -30,6 +30,7 @@ def main():
     parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     parser.add_argument('--eval_steps', default=50, type=int, help='Eval every X steps')
     parser.add_argument('--save_steps', default=50, type=int, help='Save checkpoint every X steps')
+    parser.add_argument("--local_rank", type=int, help="Used by dist launchers")
     args = parser.parse_args()
     logger.info(args)
     model = None

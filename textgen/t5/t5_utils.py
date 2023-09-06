@@ -9,10 +9,9 @@ from multiprocessing import Pool
 
 from datasets import Dataset as HFDataset
 from datasets import load_dataset
+from loguru import logger
 from torch.utils.data import Dataset
 from tqdm.auto import tqdm
-from rouge import Rouge
-from loguru import logger
 
 
 def preprocess_batch_for_hf_dataset(dataset, tokenizer, args):
@@ -196,10 +195,16 @@ def f1_sim(text_a, text_b):
 def rouge_l_zh(target, pred):
     """计算Rouge-l得分，Rouge-l指标常用于评估自动文本摘要及翻译任务
     target: 真实标签
-    pred: 预测标签"""
+    pred: 预测标签
+    """
 
     if not (isinstance(target, str) or isinstance(pred, str)):
         logger.error("target或pred为非字符串！请检查!")
+        return 0
+    try:
+        from rouge import Rouge
+    except ImportError:
+        logger.error("require rouge package, please `pip install Rouge`")
         return 0
     rouge = Rouge()
     scores = rouge.get_scores(" ".join(list(pred)), " ".join(list(target)))

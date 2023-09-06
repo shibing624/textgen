@@ -9,7 +9,6 @@ import random
 from threading import Thread
 from typing import List, Tuple, Optional
 
-import deepspeed
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -509,7 +508,7 @@ class GptModel:
     def predict(
             self,
             sentences: List[str],
-            skip_prompt: bool = False,
+            skip_prompt: bool = True,
             prompt_template_name: str = 'vicuna',
             max_length: int = None,
             temperature: float = None,
@@ -538,13 +537,19 @@ class GptModel:
         if self.args.fp16:
             self.model.half()
         if not self.is_inference:
-            model = deepspeed.init_inference(
-                self.model,
-                tensor_parallel=dict(tp_size=self.world_size),
-                dtype=torch.half,
-                replace_with_kernel_inject=True
-            )
-            self.model = model.module
+            try:
+                import deepspeed
+
+                model = deepspeed.init_inference(
+                    self.model,
+                    tensor_parallel=dict(tp_size=self.world_size),
+                    dtype=torch.half,
+                    replace_with_kernel_inject=True
+                )
+                self.model = model.module
+            except ImportError:
+                logger.warning("Please install deepspeed to use accelerated inference. `pip install deepspeed`")
+                logger.debug("Using PyTorch native inference")
             self.is_inference = True
         prompt_template = get_conv_template(prompt_template_name or self.args.prompt_template_name)
         if not eval_batch_size:
