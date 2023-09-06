@@ -570,20 +570,23 @@ class GptModel:
                 max_new_tokens=max_length if max_length else self.args.max_length,
                 temperature=temperature if temperature is not None else self.args.temperature,
                 repetition_penalty=repetition_penalty if repetition_penalty else self.args.repetition_penalty,
-                return_dict_in_generate=True,
-                output_scores=True,
             )
             outputs = self.model.generate(
                 input_ids=input_ids,
                 **generation_kwargs,
                 **kwargs,
             )
-            for idx, generated_sequence in enumerate(outputs.sequences):
+            for prompt, generated_sequence in zip(batch, outputs):
                 # Decode text
-                if skip_prompt:
-                    input_tokens_lengths = [x.shape[0] for x in input_ids]
-                    generated_sequence = [generated_sequence[i:] for i in input_tokens_lengths]
-                gen_text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
+                prompt_len = len(input_ids[0])
+                generated_sequence = generated_sequence[prompt_len:]
+                gen_text = self.tokenizer.decode(generated_sequence, skip_special_tokens=False)
+                stop_str = self.tokenizer.eos_token or prompt_template.stop_str
+                pos = gen_text.find(stop_str)
+                if pos != -1:
+                    gen_text = gen_text[:pos]
+                if not skip_prompt:
+                    gen_text = prompt + gen_text
                 all_outputs.append(gen_text)
 
         return all_outputs
