@@ -11,7 +11,6 @@ from typing import List, Tuple, Optional
 
 import numpy as np
 import torch
-import torch.distributed as dist
 from loguru import logger
 from peft import (
     get_peft_model,
@@ -123,8 +122,6 @@ class GptModel:
         self.local_rank = int(os.environ.get("LOCAL_RANK", 0))
         self.ddp = self.world_size != 1
         if self.ddp:
-            # Initialize distributed environment
-            torch.distributed.init_process_group(backend="nccl")
             self.device_map = {"": self.local_rank}
 
         self.results = {}
