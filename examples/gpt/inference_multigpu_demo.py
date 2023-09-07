@@ -154,13 +154,13 @@ def main():
         data_loader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler, drop_last=True)
         responses = []
         for texts in data_loader:
-            logger.debug(f'local_rank: {local_rank}, texts size:{len(texts)}, top3: {texts[:3]}')
+            logger.debug(f'local_rank: {local_rank}, inputs size:{len(texts)}, top5: {texts[:5]}')
             inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(local_rank)
             outputs = model.generate(**inputs, **generation_kwargs)
             generated_outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
             responses.extend(generated_outputs)
             logger.debug(
-                f'local_rank: {local_rank}, outputs size:{len(generated_outputs)}, top3: {generated_outputs[:3]}'
+                f'local_rank: {local_rank}, outputs size:{len(generated_outputs)}, top5: {generated_outputs[:5]}'
             )
 
         all_responses = [None] * world_size
@@ -168,7 +168,7 @@ def main():
         # Write responses only on the main process
         if local_rank <= 0:
             all_responses_flat = [response for process_responses in all_responses for response in process_responses]
-            logger.debug(f"all_responses size:{len(all_responses_flat)}, top3: {all_responses_flat[:3]}")
+            logger.debug(f"all_responses size:{len(all_responses_flat)}, top5: {all_responses_flat[:5]}")
             with open(args.output_file, 'a', encoding='utf-8') as f:
                 writer = csv.writer(f, delimiter='\t')
                 for text, response in zip(batch, all_responses_flat):
