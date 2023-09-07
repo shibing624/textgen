@@ -183,7 +183,6 @@ class GptModel:
         self.peft_name = peft_name
         if self.args.use_peft and self.peft_name:
             self.load_peft_model()
-        self.is_inference = False
 
     def load_peft_model(self):
         """Load peft model"""
@@ -511,7 +510,6 @@ class GptModel:
             temperature: float = None,
             repetition_penalty: float = None,
             eval_batch_size: int = None,
-            enable_deepspeed: bool = False,
             **kwargs
     ) -> List[str]:
         """
@@ -525,7 +523,6 @@ class GptModel:
             temperature: The value used to module the next token probabilities.
             repetition_penalty: The parameter for repetition penalty. 1.0 means no penalty.
             eval_batch_size: Batch size to use for evaluation.
-            enable_deepspeed: Whether to enable deepspeed.
             **kwargs: Additional arguments for generating sequences.
 
         Returns:
@@ -535,21 +532,6 @@ class GptModel:
         self.model.eval()
         if self.args.fp16:
             self.model.half()
-        if enable_deepspeed and not self.is_inference:
-            try:
-                import deepspeed
-
-                model = deepspeed.init_inference(
-                    self.model,
-                    tensor_parallel=dict(tp_size=self.world_size),
-                    dtype=torch.half,
-                    replace_with_kernel_inject=True
-                )
-                self.model = model.module
-            except ImportError:
-                logger.warning("Please install deepspeed to use accelerated inference. `pip install deepspeed`")
-                logger.debug("Using PyTorch native inference")
-            self.is_inference = True
         prompt_template = get_conv_template(prompt_template_name or self.args.prompt_template_name)
         if not eval_batch_size:
             eval_batch_size = self.args.eval_batch_size
@@ -567,7 +549,7 @@ class GptModel:
             if prompt_template_name:
                 batch = [prompt_template.get_prompt(messages=[[s, '']]) for s in batch]
             inputs = self.tokenizer(batch, padding=True, return_tensors='pt')
-            input_ids = inputs['input_ids'].to(self.local_rank)
+            input_ids = inputs['input_ids'].to(self.device)
             generation_kwargs = dict(
                 max_new_tokens=max_length if max_length else self.args.max_length,
                 temperature=temperature if temperature is not None else self.args.temperature,

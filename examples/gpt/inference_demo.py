@@ -4,7 +4,7 @@
 @description: use deepspeed to inference with multi-gpus
 
 usage:
-deepspeed --include localhost:0,1,2,3 inference_demo.py --model_type bloom --base_model bigscience/bloom-560m
+CUDA_VISIBLE_DEVICES=0 python inference_demo.py --model_type baichuan --base_model shibing624/vicuna-baichuan-13b-chat --interactive
 """
 import argparse
 import json
@@ -16,12 +16,11 @@ from textgen import GptModel
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_type', default='llama', type=str)
-    parser.add_argument('--base_model', default='shibing624/chinese-alpaca-plus-7b-hf', type=str)
+    parser.add_argument('--model_type', default='baichuan', type=str)
+    parser.add_argument('--base_model', default='shibing624/vicuna-baichuan-13b-chat', type=str)
     parser.add_argument('--lora_model', default="", type=str, help="If not set, perform inference on the base model")
     parser.add_argument('--prompt_template_name', default="vicuna", type=str,
                         help="Prompt template name, eg: alpaca, vicuna, baichuan-chat, chatglm2 etc.")
-    parser.add_argument("--local_rank", type=int, help="used by dist launchers")
     parser.add_argument('--interactive', action='store_true', help="run in the instruction mode")
     parser.add_argument('--single_round', action='store_true',
                         help="Whether to generate single round dialogue, default is multi-round dialogue")
