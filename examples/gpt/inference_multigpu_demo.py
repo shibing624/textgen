@@ -8,7 +8,6 @@ CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node 2 inference_demo.py --model_t
 """
 import argparse
 import csv
-import os
 import sys
 
 import torch
@@ -64,16 +63,10 @@ def main():
     parser.add_argument("--max_new_tokens", type=int, default=128)
     parser.add_argument("--batch_size", type=int, default=4)
     parser.add_argument('--data_file', default=None, type=str, help="Predict file, one example per line")
-    parser.add_argument('--interactive', action='store_true', help="run in the instruction mode (single-turn)")
     parser.add_argument('--output_file', default='./predictions_result.jsonl', type=str)
     parser.add_argument('--resize_emb', action='store_true', help='Whether to resize model token embeddings')
-    parser.add_argument('--gpus', default="0", type=str)
-    parser.add_argument('--only_cpu', action='store_true', help='only use CPU for inference')
     args = parser.parse_args()
-    print(args)
-    if args.only_cpu is True:
-        args.gpus = ""
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpus
+    logger.info(args)
     load_type = torch.float16
     if torch.cuda.is_available():
         device = torch.device(0)
@@ -84,6 +77,7 @@ def main():
     torch.distributed.init_process_group(backend='nccl', init_method='env://')
     local_rank = torch.distributed.get_rank()
     world_size = torch.distributed.get_world_size()
+    logger.info(f"local_rank: {local_rank}, world_size: {world_size}")
     model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_path, trust_remote_code=True)
     base_model = model_class.from_pretrained(
@@ -114,7 +108,7 @@ def main():
         model = base_model
     if device == torch.device('cpu'):
         model.float()
-    model.eval()
+    model.eval().requires_grad_(False)
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
     logger.info(tokenizer)
     # test data
@@ -150,7 +144,7 @@ def main():
         responses = []
         for texts in data_loader:
             logger.info(f'{local_rank}, texts size:{len(texts)}, {texts}')
-            inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(device)
+            inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(local_rank)
             generated_outputs = model.module.generate(**inputs, **generation_kwargs)
             responses.extend(tokenizer.batch_decode(generated_outputs, skip_special_tokens=True))
 
