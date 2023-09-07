@@ -157,6 +157,8 @@ def main():
             logger.debug(f'local_rank: {local_rank}, inputs size:{len(texts)}, top5: {texts[:5]}')
             inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(local_rank)
             outputs = model.generate(**inputs, **generation_kwargs)
+            prompt_len = len(inputs['input_ids'][0])
+            outputs = [i[prompt_len:] for i in outputs]
             generated_outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
             responses.extend(generated_outputs)
             logger.debug(
