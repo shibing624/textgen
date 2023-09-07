@@ -69,14 +69,14 @@ def main():
     logger.info(args)
     load_type = torch.float16
     if torch.cuda.is_available():
-        device = torch.device(0)
+        device = 0
     else:
-        device = torch.device('cpu')
+        raise ValueError("No GPU available, this script is only for GPU inference.")
     if args.tokenizer_path is None:
         args.tokenizer_path = args.base_model
-    torch.distributed.init_process_group(backend='nccl', init_method='env://')
-    local_rank = torch.distributed.get_rank()
-    world_size = torch.distributed.get_world_size()
+    dist.init_process_group(backend='nccl', init_method='env://')
+    local_rank = dist.get_rank()
+    world_size = dist.get_world_size()
     logger.info(f"local_rank: {local_rank}, world_size: {world_size}")
     model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_path, trust_remote_code=True)
@@ -85,7 +85,7 @@ def main():
         load_in_8bit=False,
         torch_dtype=load_type,
         low_cpu_mem_usage=True,
-        device_map='auto',
+        device_map={"": device},
         trust_remote_code=True,
     )
     try:
@@ -106,10 +106,11 @@ def main():
         logger.info("Loaded lora model")
     else:
         model = base_model
-    if device == torch.device('cpu'):
-        model.float()
-    model.eval().requires_grad_(False)
-    model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
+    model.eval()
+    # Use DataParallel for multi-GPU inference
+    # DistributedDataParallel for multi-node inference (which deepspeed better supports)
+    model = torch.nn.DataParallel(model, device_ids=[local_rank])
+    model = model.module
     logger.info(tokenizer)
     # test data
     if args.data_file is None:
@@ -119,7 +120,7 @@ def main():
             examples = [l.strip() for l in f.readlines()]
         logger.info(f"first 10 examples: {examples[:10]}")
 
-    prompt_template = get_conv_template(args.template_name)
+    prompt_template = get_conv_template(args.prompt_template_name)
     write_batch_size = args.batch_size * world_size * 10
     generation_kwargs = dict(
         max_new_tokens=args.max_new_tokens,
@@ -145,7 +146,7 @@ def main():
         for texts in data_loader:
             logger.info(f'{local_rank}, texts size:{len(texts)}, {texts}')
             inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(local_rank)
-            generated_outputs = model.module.generate(**inputs, **generation_kwargs)
+            generated_outputs = model.generate(**inputs, **generation_kwargs)
             responses.extend(tokenizer.batch_decode(generated_outputs, skip_special_tokens=True))
 
         # Gather responses from all processes
