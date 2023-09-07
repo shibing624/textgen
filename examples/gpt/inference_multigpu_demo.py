@@ -7,7 +7,7 @@ usage:
 CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node 2 inference_multigpu_demo.py --model_type bloom --base_model bigscience/bloom-560m
 """
 import argparse
-import csv
+import json
 import os
 import sys
 
@@ -139,9 +139,9 @@ def main():
         repetition_penalty=args.repetition_penalty,
     )
     stop_str = tokenizer.eos_token if tokenizer.eos_token else prompt_template.stop_str
-    with open(args.output_file, 'w', encoding='utf-8') as f:
-        writer = csv.writer(f, delimiter='\t')
-        writer.writerow(['input', 'output'])
+    if os.path.exists(args.output_file):
+        os.remove(args.output_file)
+    count = 0
     for batch in tqdm(
             [
                 examples[i: i + write_batch_size]
@@ -151,13 +151,15 @@ def main():
     ):
         dataset = TextDataset(batch)
         sampler = DistributedSampler(dataset, num_replicas=world_size, rank=local_rank, shuffle=False)
-        data_loader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler, drop_last=True)
+        data_loader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler)
+
         responses = []
+        inputs = []
         for texts in data_loader:
             logger.debug(f'local_rank: {local_rank}, inputs size:{len(texts)}, top5: {texts[:5]}')
             texts = [prompt_template.get_prompt(messages=[[s, '']]) for s in texts]
-            inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=True)
-            input_ids = inputs['input_ids'].to(local_rank)
+            inputs_tokens = tokenizer(texts, return_tensors="pt", padding=True, truncation=True)
+            input_ids = inputs_tokens['input_ids'].to(local_rank)
             outputs = model.generate(input_ids=input_ids, **generation_kwargs)
             prompt_len = len(input_ids[0])
             outputs = [i[prompt_len:] for i in outputs]
@@ -166,17 +168,28 @@ def main():
             logger.debug(
                 f'local_rank: {local_rank}, outputs size:{len(generated_outputs)}, top5: {generated_outputs[:5]}'
             )
+            inputs.extend(texts)
 
         all_responses = [None] * world_size
+        all_inputs = [None] * world_size
         dist.all_gather_object(all_responses, responses)
+        dist.all_gather_object(all_inputs, inputs)
+
         # Write responses only on the main process
         if local_rank <= 0:
             all_responses_flat = [response for process_responses in all_responses for response in process_responses]
+            all_inputs_flat = [inp for process_inputs in all_inputs for inp in process_inputs]
             logger.debug(f"all_responses size:{len(all_responses_flat)}, top5: {all_responses_flat[:5]}")
+            results = []
+            for example, response in zip(all_inputs_flat, all_responses_flat):
+                results.append({"Input": example, "Output": response})
             with open(args.output_file, 'a', encoding='utf-8') as f:
-                writer = csv.writer(f, delimiter='\t')
-                for text, response in zip(batch, all_responses_flat):
-                    writer.writerow([text, response])
+                for entry in results:
+                    json.dump(entry, f, ensure_ascii=False)
+                    f.write('\n')
+                    count += 1
+
+    logger.info(f'save to {args.output_file}, total count: {count}')
 
 
 if __name__ == '__main__':

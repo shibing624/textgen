@@ -159,7 +159,7 @@ CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node 2 training_chatglm_demo.py --
 多卡推理：
 ```shell
 cd examples/gpt
-CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node 2 inference_demo.py inference_demo.py --model_type chatglm --base_model THUDM/chatglm-6b --lora_model outputs_chatglm_v1
+CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node 2 inference_multigpu_demo.py --model_type chatglm --base_model THUDM/chatglm-6b
 ```
 
 
