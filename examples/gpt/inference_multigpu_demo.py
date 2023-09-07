@@ -4,10 +4,11 @@
 @description: use deepspeed to inference with multi-gpus
 
 usage:
-CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node 2 inference_demo.py --model_type bloom --base_model bigscience/bloom-560m
+CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node 2 inference_multigpu_demo.py --model_type bloom --base_model bigscience/bloom-560m
 """
 import argparse
 import csv
+import os
 import sys
 
 import torch
@@ -67,25 +68,27 @@ def main():
     parser.add_argument('--resize_emb', action='store_true', help='Whether to resize model token embeddings')
     args = parser.parse_args()
     logger.info(args)
-    load_type = torch.float16
-    if torch.cuda.is_available():
-        device = 0
-    else:
+
+    world_size = int(os.environ.get("WORLD_SIZE", 1))
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+    logger.info(f"local_rank: {local_rank}, world_size: {world_size}")
+    torch.cuda.set_device(local_rank)
+    dist.init_process_group(backend='nccl', init_method='env://')
+
+    if not torch.cuda.is_available():
         raise ValueError("No GPU available, this script is only for GPU inference.")
     if args.tokenizer_path is None:
         args.tokenizer_path = args.base_model
-    dist.init_process_group(backend='nccl', init_method='env://')
-    local_rank = dist.get_rank()
-    world_size = dist.get_world_size()
-    logger.info(f"local_rank: {local_rank}, world_size: {world_size}")
+
     model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_path, trust_remote_code=True)
+    load_type = torch.float16
     base_model = model_class.from_pretrained(
         args.base_model,
         load_in_8bit=False,
         torch_dtype=load_type,
         low_cpu_mem_usage=True,
-        device_map={"": device},
+        device_map={"": local_rank},
         trust_remote_code=True,
     )
     try:
@@ -102,19 +105,27 @@ def main():
             base_model.resize_token_embeddings(tokenzier_vocab_size)
 
     if args.lora_model:
-        model = PeftModel.from_pretrained(base_model, args.lora_model, torch_dtype=load_type, device_map='auto')
+        model = PeftModel.from_pretrained(base_model, args.lora_model, torch_dtype=load_type,
+                                          device_map={"": local_rank})
         logger.info("Loaded lora model")
     else:
         model = base_model
     model.eval()
     # Use DataParallel for multi-GPU inference
-    # DistributedDataParallel for multi-node inference (which deepspeed better supports)
     model = torch.nn.DataParallel(model, device_ids=[local_rank])
     model = model.module
     logger.info(tokenizer)
     # test data
     if args.data_file is None:
-        examples = ["介绍下北京", "乙肝和丙肝的区别？"]
+        examples = [
+            "介绍下北京",
+            "乙肝和丙肝的区别？",
+            "失眠怎么办？",
+            '用一句话描述地球为什么是独一无二的。',
+            "Tell me about alpacas.",
+            "Tell me about the president of Mexico in 2019.",
+            "hello.",
+        ]
     else:
         with open(args.data_file, 'r', encoding='utf-8') as f:
             examples = [l.strip() for l in f.readlines()]
@@ -140,23 +151,24 @@ def main():
     ):
         dataset = TextDataset(batch)
         sampler = DistributedSampler(dataset, num_replicas=world_size, rank=local_rank, shuffle=False)
-
-        data_loader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler)
+        data_loader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler, drop_last=True)
         responses = []
         for texts in data_loader:
-            logger.info(f'{local_rank}, texts size:{len(texts)}, {texts}')
+            logger.debug(f'local_rank: {local_rank}, texts size:{len(texts)}, top3: {texts[:3]}')
             inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(local_rank)
-            generated_outputs = model.generate(**inputs, **generation_kwargs)
-            responses.extend(tokenizer.batch_decode(generated_outputs, skip_special_tokens=True))
+            outputs = model.generate(**inputs, **generation_kwargs)
+            generated_outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            responses.extend(generated_outputs)
+            logger.debug(
+                f'local_rank: {local_rank}, outputs size:{len(generated_outputs)}, top3: {generated_outputs[:3]}'
+            )
 
-        # Gather responses from all processes
         all_responses = [None] * world_size
         dist.all_gather_object(all_responses, responses)
-
         # Write responses only on the main process
         if local_rank <= 0:
             all_responses_flat = [response for process_responses in all_responses for response in process_responses]
-            logger.info(all_responses_flat)
+            logger.debug(f"all_responses size:{len(all_responses_flat)}, top3: {all_responses_flat[:3]}")
             with open(args.output_file, 'a', encoding='utf-8') as f:
                 writer = csv.writer(f, delimiter='\t')
                 for text, response in zip(batch, all_responses_flat):
