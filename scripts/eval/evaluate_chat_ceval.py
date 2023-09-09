@@ -66,10 +66,10 @@ def count_substr(gen, pattern):
 def extract_choice(gen, prompt, choice_list):
     # 答案是A | 选项是A | 应该选A选项
     res = re.search(r"(?:(?:选|选择|选定)|(?:(?:答案|选项)(?![^ABCD]{0,10}?(?:不|非)[^ABCD]{0,10}?(?:是|为|：|:|】))[^ABCD]{0,10}?(?:是|为|：|:|】))[^ABCD]{0,10}?)(A|B|C|D)(?:选项)?(?:\)|。|\.|，|,|．|、|A|B|C|D|$)", gen)
-        
+
     # A选项正确 | A选项符合题意
     if res is None:
-        res = re.search(r"(A|B|C|D)(?:选?项)?(?![^ABCD]{0,4}?(?:不|非)[^ABCD]{0,4}?(?:正确|对|符合))[^ABCD]{0,4}?(?:正确|对|符合)", gen)        
+        res = re.search(r"(A|B|C|D)(?:选?项)?(?![^ABCD]{0,4}?(?:不|非)[^ABCD]{0,4}?(?:正确|对|符合))[^ABCD]{0,4}?(?:正确|对|符合)", gen)
 
     # 直接输出 A
     if res is None:
@@ -87,7 +87,7 @@ def extract_choice(gen, prompt, choice_list):
 def format_example(line):
     example = line['question'] + "\n\n"
     for choice in choices:
-        example += f'{choice}. {line[f"{choice}"]}\n' 
+        example += f'{choice}. {line[f"{choice}"]}\n'
     return example
 
 def extract_answer(response, row):
@@ -137,7 +137,7 @@ def eval_subject(
         pred = extract_answer(response, row)
         print(pred)
         print("======================")
-        
+
         if 'answer' in row:
             correct = 1 if pred == row['answer'] else 0
             score.append(correct)
@@ -255,8 +255,10 @@ def main(args):
     print("loading model weights")
     if args.checkpoint_path:
         model, tokenizer = load_models_tokenizer(args)
+        model_name = args.checkpoint_path.split("/")[-1]
     else:
         model, tokenizer = None, None
+        model_name = "random"
     print("model loaded")
     dev_result = {}
     for subject_name in tqdm(TASK_NAME_MAPPING.keys()):
@@ -268,7 +270,7 @@ def main(args):
         # test_df = pd.read_csv(test_file_path) 
 
         score = eval_subject(model, tokenizer, subject_name, val_df,
-                             save_result_dir=f"outs_chat/ceval_eval_result", overwrite=args.overwrite)
+                             save_result_dir=f"outs_chat/ceval_eval_result/{model_name}", overwrite=args.overwrite)
         dev_result[subject_name] = score
     cal_ceval(dev_result)
 
