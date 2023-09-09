@@ -1,29 +1,36 @@
-import os
-import pandas as pd
-import numpy as np
-import argparse
-import datasets
-import torch
+# -*- coding: utf-8 -*-
+"""
+@author:XuMing(xuming624@qq.com)
+@description:
 
-from typing import List
-from tqdm import tqdm
-from transformers.trainer_utils import set_seed
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers import GenerationConfig
+code from https://github.com/QwenLM/Qwen-7B/blob/main/eval/EVALUATION.md
 
-
-'''
+usage:
 wget https://huggingface.co/datasets/ceval/ceval-exam/resolve/main/ceval-exam.zip
 mkdir data/ceval
 mv ceval-exam.zip data/ceval
 cd data/ceval; unzip ceval-exam.zip
 cd ../../
 python evaluate_ceval.py -d data/ceval/
-'''
+"""
+
+import argparse
+import os
+from typing import List
+
+import numpy as np
+import pandas as pd
+import torch
+from tqdm import tqdm
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import GenerationConfig
+from transformers.trainer_utils import set_seed
+
 
 def load_models_tokenizer(args):
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_path, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(args.checkpoint_path, device_map="auto", trust_remote_code=True).eval()
+    model = AutoModelForCausalLM.from_pretrained(
+        args.checkpoint_path, device_map="auto", trust_remote_code=True, torch_dtype=torch.float16).eval()
     try:
         model.generation_config = GenerationConfig.from_pretrained(args.checkpoint_path, trust_remote_code=True)
     except:
@@ -35,7 +42,7 @@ def format_example(line, include_answer=True):
     example = '问题：' + line['question']
     for choice in choices:
         example += f'\n{choice}. {line[f"{choice}"]}'
-   
+
     if include_answer:
         example += '\n答案：' + line["answer"] + '\n\n'
     else:
@@ -95,16 +102,16 @@ def eval_subject(
         logits = output.flatten()
 
         softval = torch.nn.functional.softmax(
-                torch.tensor(
-                    [
-                        logits[tokenizer("A")['input_ids']],
-                        logits[tokenizer("B")['input_ids']],
-                        logits[tokenizer("C")['input_ids']],
-                        logits[tokenizer("D")['input_ids']],
-                    ]
-                ),
-                dim=0,
-            )
+            torch.tensor(
+                [
+                    logits[tokenizer("A")['input_ids']],
+                    logits[tokenizer("B")['input_ids']],
+                    logits[tokenizer("C")['input_ids']],
+                    logits[tokenizer("D")['input_ids']],
+                ]
+            ),
+            dim=0,
+        )
         if softval.dtype in {torch.bfloat16, torch.float16}:
             softval = softval.to(dtype=torch.float32)
         probs = softval.detach().cpu().numpy()
@@ -112,16 +119,18 @@ def eval_subject(
         for i, choice in enumerate(choices):
             all_probs[f'prob_{choice}'].append(probs[i])
         pred = {0: "A", 1: "B", 2: "C", 3: "D"}[np.argmax(probs)]
-        
+
         if 'answer' in row:
             correct = 1 if pred == row['answer'] else 0
             score.append(correct)
-            if args.debug: print(f'{question} pred: {pred} ref: {row["answer"]}')
+            if args.debug:
+                print(f'{question} pred: {pred} ref: {row["answer"]}')
         result.append(pred)
 
     if score:
         correct_ratio = 100 * sum(score) / len(score)
-        if args.debug: print(subject_name, correct_ratio)
+        if args.debug:
+            print(subject_name, correct_ratio)
     else:
         correct_ratio = 0
     if save_result_dir:
@@ -193,7 +202,9 @@ TASK_NAME_MAPPING = {
     "college_economics": ["College Economics", "\u5927\u5b66\u7ecf\u6d4e\u5b66", "Social Science"],
     "business_administration": ["Business Administration", "\u5de5\u5546\u7ba1\u7406", "Social Science"],
     "marxism": ["Marxism", "\u9a6c\u514b\u601d\u4e3b\u4e49\u57fa\u672c\u539f\u7406", "Social Science"],
-    "mao_zedong_thought": ["Mao Zedong Thought", "\u6bdb\u6cfd\u4e1c\u601d\u60f3\u548c\u4e2d\u56fd\u7279\u8272\u793e\u4f1a\u4e3b\u4e49\u7406\u8bba\u4f53\u7cfb\u6982\u8bba", "Social Science"],
+    "mao_zedong_thought": ["Mao Zedong Thought",
+                           "\u6bdb\u6cfd\u4e1c\u601d\u60f3\u548c\u4e2d\u56fd\u7279\u8272\u793e\u4f1a\u4e3b\u4e49\u7406\u8bba\u4f53\u7cfb\u6982\u8bba",
+                           "Social Science"],
     "education_science": ["Education Science", "\u6559\u80b2\u5b66", "Social Science"],
     "teacher_qualification": ["Teacher Qualification", "\u6559\u5e08\u8d44\u683c", "Social Science"],
     "high_school_politics": ["High School Politics", "\u9ad8\u4e2d\u653f\u6cbb", "Social Science"],
@@ -201,10 +212,13 @@ TASK_NAME_MAPPING = {
     "middle_school_politics": ["Middle School Politics", "\u521d\u4e2d\u653f\u6cbb", "Social Science"],
     "middle_school_geography": ["Middle School Geography", "\u521d\u4e2d\u5730\u7406", "Social Science"],
     "modern_chinese_history": ["Modern Chinese History", "\u8fd1\u4ee3\u53f2\u7eb2\u8981", "Humanities"],
-    "ideological_and_moral_cultivation": ["Ideological and Moral Cultivation", "\u601d\u60f3\u9053\u5fb7\u4fee\u517b\u4e0e\u6cd5\u5f8b\u57fa\u7840", "Humanities"],
+    "ideological_and_moral_cultivation": ["Ideological and Moral Cultivation",
+                                          "\u601d\u60f3\u9053\u5fb7\u4fee\u517b\u4e0e\u6cd5\u5f8b\u57fa\u7840",
+                                          "Humanities"],
     "logic": ["Logic", "\u903b\u8f91\u5b66", "Humanities"],
     "law": ["Law", "\u6cd5\u5b66", "Humanities"],
-    "chinese_language_and_literature": ["Chinese Language and Literature", "\u4e2d\u56fd\u8bed\u8a00\u6587\u5b66", "Humanities"],
+    "chinese_language_and_literature": ["Chinese Language and Literature", "\u4e2d\u56fd\u8bed\u8a00\u6587\u5b66",
+                                        "Humanities"],
     "art_studies": ["Art Studies", "\u827a\u672f\u5b66", "Humanities"],
     "professional_tour_guide": ["Professional Tour Guide", "\u5bfc\u6e38\u8d44\u683c", "Humanities"],
     "legal_professional": ["Legal Professional", "\u6cd5\u5f8b\u804c\u4e1a\u8d44\u683c", "Humanities"],
@@ -219,11 +233,13 @@ TASK_NAME_MAPPING = {
     "urban_and_rural_planner": ["Urban and Rural Planner", "\u6ce8\u518c\u57ce\u4e61\u89c4\u5212\u5e08", "Other"],
     "accountant": ["Accountant", "\u6ce8\u518c\u4f1a\u8ba1\u5e08", "Other"],
     "fire_engineer": ["Fire Engineer", "\u6ce8\u518c\u6d88\u9632\u5de5\u7a0b\u5e08", "Other"],
-    "environmental_impact_assessment_engineer": ["Environmental Impact Assessment Engineer", "\u73af\u5883\u5f71\u54cd\u8bc4\u4ef7\u5de5\u7a0b\u5e08", "Other"],
+    "environmental_impact_assessment_engineer": ["Environmental Impact Assessment Engineer",
+                                                 "\u73af\u5883\u5f71\u54cd\u8bc4\u4ef7\u5de5\u7a0b\u5e08", "Other"],
     "tax_accountant": ["Tax Accountant", "\u7a0e\u52a1\u5e08", "Other"],
     "physician": ["Physician", "\u533b\u5e08\u8d44\u683c", "Other"]
 }
-hard_list = ['advanced_mathematics', 'discrete_mathematics', 'probability_and_statistics', 'college_physics', 'college_chemistry', 'high_school_mathematics', 'high_school_physics', 'high_school_chemistry']
+hard_list = ['advanced_mathematics', 'discrete_mathematics', 'probability_and_statistics', 'college_physics',
+             'college_chemistry', 'high_school_mathematics', 'high_school_physics', 'high_school_chemistry']
 choices = ["A", "B", "C", "D"]
 
 

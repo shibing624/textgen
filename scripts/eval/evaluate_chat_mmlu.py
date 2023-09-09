@@ -1,16 +1,11 @@
-import os
-import pandas as pd
-import numpy as np
-import argparse
-import datasets
-import torch
-import re
-from thefuzz import process
-from typing import List
-from tqdm import tqdm
-from transformers.trainer_utils import set_seed
+# -*- coding: utf-8 -*-
+"""
+@author:XuMing(xuming624@qq.com)
+@description:
 
-'''
+code from https://github.com/QwenLM/Qwen-7B/blob/main/eval/EVALUATION.md
+
+usage:
 wget https://people.eecs.berkeley.edu/~hendrycks/data.tar
 mkdir data/mmlu
 mv data.tar data/mmlu
@@ -19,14 +14,26 @@ cd ../../
 
 pip install thefuzz
 python eval/evaluate_chat_mmlu.py -d data/mmlu/data/
-'''
+"""
+
+import argparse
+import os
+import re
+
+import pandas as pd
+import torch
+from thefuzz import process
+from tqdm import tqdm
+from transformers.trainer_utils import set_seed
+
 
 def load_models_tokenizer(args):
     from transformers import AutoModelForCausalLM, AutoTokenizer
     from transformers.generation import GenerationConfig
 
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_path, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(args.checkpoint_path, device_map="auto", trust_remote_code=True, bf16=True, use_flash_attn=args.attn).eval()
+    model = AutoModelForCausalLM.from_pretrained(args.checkpoint_path, device_map="auto", trust_remote_code=True,
+                                                 torch_dtype=torch.float16).eval()
     try:
         model.generation_config = GenerationConfig.from_pretrained(args.checkpoint_path, trust_remote_code=True)
         model.generation_config.do_sample = False  # use greedy decoding
@@ -36,7 +43,8 @@ def load_models_tokenizer(args):
 
 
 def format_example(line):
-    example = 'The following is a multiple-choice question. Please choose the most suitable one among A, B, C and D as the answer to this question.\n\n' + line['question'] + "\n"
+    example = 'The following is a multiple-choice question. Please choose the most suitable one among A, B, C and D as the answer to this question.\n\n' + \
+              line['question'] + "\n"
     for choice in choices:
         example += f'{choice}. {line[f"{choice}"]}\n'
     return example
@@ -50,13 +58,18 @@ def process_before_extraction(gen, choice_dict):
         gen = pattern.sub(key, gen)
     return gen
 
+
 def extract_choice(gen, choice_list):
     # answer is A | choice is A | choose A
-    res = re.search(r"(?:(?:[Cc]hoose)|(?:(?:[Aa]nswer|[Cc]hoice)(?![^ABCD]{0,20}?(?:n't|not))[^ABCD]{0,10}?\b(?:|is|:|be))\b)[^ABCD]{0,20}?\b(A|B|C|D)\b", gen)
+    res = re.search(
+        r"(?:(?:[Cc]hoose)|(?:(?:[Aa]nswer|[Cc]hoice)(?![^ABCD]{0,20}?(?:n't|not))[^ABCD]{0,10}?\b(?:|is|:|be))\b)[^ABCD]{0,20}?\b(A|B|C|D)\b",
+        gen)
 
     # A is correct | A is right
     if res is None:
-        res = re.search(r"\b(A|B|C|D)\b(?![^ABCD]{0,8}?(?:n't|not)[^ABCD]{0,5}?(?:correct|right))[^ABCD]{0,10}?\b(?:correct|right)\b", gen)
+        res = re.search(
+            r"\b(A|B|C|D)\b(?![^ABCD]{0,8}?(?:n't|not)[^ABCD]{0,5}?(?:correct|right))[^ABCD]{0,10}?\b(?:correct|right)\b",
+            gen)
 
     # straight answer: A
     if res is None:
@@ -71,12 +84,23 @@ def extract_choice(gen, choice_list):
     else:
         return res.group(1)
 
+
 def extract_answer(response, row):
     gen = process_before_extraction(response, {choice: row[choice] for choice in choices})
     pred = extract_choice(gen, [row[choice] for choice in choices])
     return pred
 
+
 @torch.no_grad()
+def model_predict(model, tokenizer, question, max_new_tokens=512, **kwargs):
+    inputs = tokenizer(question, return_tensors="pt")
+    input_ids = inputs['input_ids'].to(model.device)
+    outputs = model.generate(input_ids=input_ids, max_new_tokens=max_new_tokens, **kwargs)
+    generated_sequence = outputs[0][len(input_ids[0]):]
+    output_text = tokenizer.decode(generated_sequence, skip_special_tokens=True)
+    return output_text.strip()
+
+
 def eval_subject(
         model,
         tokenizer,
@@ -103,21 +127,19 @@ def eval_subject(
     for _, row in tqdm(test_df.iterrows(), total=len(test_df)):
         question = format_example(row)
 
-        response, history = model.chat(
-            tokenizer,
-            question,
-            history=None,
-        )
+        response = model_predict(model, tokenizer, question, **kwargs)
         print(question)
         print(response)
         pred = extract_answer(response, row)
         print(pred)
-        print("======================")
+        print("=======")
 
         if 'answer' in row:
             correct = 1 if pred == row['answer'] else 0
             score.append(correct)
-            if args.debug: print(f'{question} pred: {pred} ref: {row["answer"]}')
+            if args.debug:
+                print(f'{question} pred: {pred} ref: {row["answer"]}')
+                print("============================")
         result.append(pred)
 
     if save_result_dir:
@@ -158,8 +180,8 @@ def cal_mmlu(res):
         if k in cnt_dict:
             print('%s ACC: %.2f ' % (
                 k, acc_sum_dict[k] * 100 / cnt_dict[k]))
-    print('AVERAGE ACC:%.2f ' % (acc_sum *100 / cnt))
-    
+    print('AVERAGE ACC:%.2f ' % (acc_sum * 100 / cnt))
+
 
 def main(args):
     print("loading model weights")
@@ -176,17 +198,31 @@ def main(args):
         test_file_path = os.path.join(args.eval_data_path, 'test', f'{subject_name}_test.csv')
         # val_df = pd.read_csv(val_file_path, names=['question','A','B','C','D','answer'])
         # dev_df = pd.read_csv(dev_file_path, names=['question','A','B','C','D','answer'])
-        test_df = pd.read_csv(test_file_path, names=['question','A','B','C','D','answer'])
+        test_df = pd.read_csv(test_file_path, names=['question', 'A', 'B', 'C', 'D', 'answer'])
 
-        score = eval_subject(model, tokenizer, subject_name, test_df, save_result_dir=f"outs_chat/mmlu_eval_result", overwrite=args.overwrite)
+        score = eval_subject(model, tokenizer, subject_name, test_df, save_result_dir=f"outs_chat/mmlu_eval_result",
+                             overwrite=args.overwrite)
         dev_result[subject_name] = score
     cal_mmlu(dev_result)
 
 
-TASK_NAME_MAPPING = {'stem': ['abstract_algebra', 'anatomy', 'astronomy', 'college_biology', 'college_chemistry', 'college_computer_science', 'college_mathematics', 'college_physics', 'computer_security', 'conceptual_physics', 'electrical_engineering', 'elementary_mathematics', 'high_school_biology', 'high_school_chemistry', 'high_school_computer_science', 'high_school_mathematics', 'high_school_physics', 'high_school_statistics', 'machine_learning'],
- 'Humanities': ['formal_logic', 'high_school_european_history', 'high_school_us_history', 'high_school_world_history', 'international_law', 'jurisprudence', 'logical_fallacies', 'moral_disputes', 'moral_scenarios', 'philosophy', 'prehistory', 'professional_law', 'world_religions'],
- 'other': ['business_ethics', 'college_medicine', 'human_aging', 'management', 'marketing', 'medical_genetics', 'miscellaneous', 'nutrition', 'professional_accounting', 'professional_medicine', 'virology', 'global_facts', 'clinical_knowledge'],
- 'social': ['econometrics', 'high_school_geography', 'high_school_government_and_politics', 'high_school_macroeconomics', 'high_school_microeconomics', 'high_school_psychology', 'human_sexuality', 'professional_psychology', 'public_relations', 'security_studies', 'sociology', 'us_foreign_policy']}
+TASK_NAME_MAPPING = {'stem': ['abstract_algebra', 'anatomy', 'astronomy', 'college_biology', 'college_chemistry',
+                              'college_computer_science', 'college_mathematics', 'college_physics', 'computer_security',
+                              'conceptual_physics', 'electrical_engineering', 'elementary_mathematics',
+                              'high_school_biology', 'high_school_chemistry', 'high_school_computer_science',
+                              'high_school_mathematics', 'high_school_physics', 'high_school_statistics',
+                              'machine_learning'],
+                     'Humanities': ['formal_logic', 'high_school_european_history', 'high_school_us_history',
+                                    'high_school_world_history', 'international_law', 'jurisprudence',
+                                    'logical_fallacies', 'moral_disputes', 'moral_scenarios', 'philosophy',
+                                    'prehistory', 'professional_law', 'world_religions'],
+                     'other': ['business_ethics', 'college_medicine', 'human_aging', 'management', 'marketing',
+                               'medical_genetics', 'miscellaneous', 'nutrition', 'professional_accounting',
+                               'professional_medicine', 'virology', 'global_facts', 'clinical_knowledge'],
+                     'social': ['econometrics', 'high_school_geography', 'high_school_government_and_politics',
+                                'high_school_macroeconomics', 'high_school_microeconomics', 'high_school_psychology',
+                                'human_sexuality', 'professional_psychology', 'public_relations', 'security_studies',
+                                'sociology', 'us_foreign_policy']}
 SUBJECTS = [v for vl in TASK_NAME_MAPPING.values() for v in vl]
 choices = ["A", "B", "C", "D"]
 

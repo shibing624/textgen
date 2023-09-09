@@ -18,8 +18,8 @@ import os
 import re
 
 import pandas as pd
-import thefuzz
 import torch
+from thefuzz import process
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import GenerationConfig
@@ -91,7 +91,7 @@ def extract_choice(gen, prompt, choice_list):
         res = re.search(r"(?<![a-zA-Z])(A|B|C|D)(?![a-zA-Z=])", gen)
 
     if res is None:
-        return choices[choice_list.index(thefuzz.process.extractOne(gen, choice_list)[0])]
+        return choices[choice_list.index(process.extractOne(gen, choice_list)[0])]
     else:
         return res.group(1)
 
@@ -117,7 +117,8 @@ def model_predict(model, tokenizer, question, max_new_tokens=512, **kwargs):
     inputs = tokenizer(question, return_tensors="pt")
     input_ids = inputs['input_ids'].to(model.device)
     outputs = model.generate(input_ids=input_ids, max_new_tokens=max_new_tokens, **kwargs)
-    output_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    generated_sequence = outputs[0][len(input_ids[0]):]
+    output_text = tokenizer.decode(generated_sequence, skip_special_tokens=True)
     return output_text.strip()
 
 
@@ -149,16 +150,18 @@ def eval_subject(
         question = format_example(row)
 
         response = model_predict(model, tokenizer, question, **kwargs)
-        print(question)
-        print(response)
+        print('\nquestion: ', question)
+        print('response: ', response)
         pred = extract_answer(response, row)
-        print(pred)
-        print("======================")
+        print('extract_answer: ', pred)
+        print("=" * 20)
 
         if 'answer' in row:
             correct = 1 if pred == row['answer'] else 0
             score.append(correct)
-            if args.debug: print(f'{question} pred: {pred} ref: {row["answer"]}')
+            if args.debug:
+                print(f'{question} pred: {pred} ref: {row["answer"]}')
+                print("=" * 30)
         responses.append(response)
         result.append(pred)
 

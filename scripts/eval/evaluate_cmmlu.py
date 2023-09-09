@@ -1,31 +1,36 @@
-import os
-import pandas as pd
-import numpy as np
-import argparse
-import datasets
-import torch
-from collections import defaultdict
+# -*- coding: utf-8 -*-
+"""
+@author:XuMing(xuming624@qq.com)
+@description:
 
-from typing import List
-from tqdm import tqdm
-from transformers.trainer_utils import set_seed
+code from https://github.com/QwenLM/Qwen-7B/blob/main/eval/EVALUATION.md
 
-
-'''
+usage:
 wget https://huggingface.co/datasets/haonan-li/cmmlu/resolve/main/cmmlu_v1_0_1.zip
 mkdir data/cmmlu
 mv cmmlu_v1_0_1.zip data/cmmlu
 cd data/cmmlu; unzip cmmlu_v1_0_1.zip
 cd ../../
 python evaluate_cmmlu.py -d data/cmmlu/
-'''
+"""
+import argparse
+import os
+from collections import defaultdict
+from typing import List
+
+import numpy as np
+import pandas as pd
+import torch
+from tqdm import tqdm
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import GenerationConfig
+from transformers.trainer_utils import set_seed
+
 
 def load_models_tokenizer(args):
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    from transformers.generation import GenerationConfig
-
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_path, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(args.checkpoint_path, device_map="auto", trust_remote_code=True).eval()
+    model = AutoModelForCausalLM.from_pretrained(
+        args.checkpoint_path, device_map="auto", trust_remote_code=True, torch_dtype=torch.float16).eval()
     try:
         model.generation_config = GenerationConfig.from_pretrained(args.checkpoint_path, trust_remote_code=True)
     except:
@@ -86,7 +91,8 @@ def eval_subject(
     few_shot_prompt = generate_few_shot_prompt(
         k, subject_name, dev_df) if few_shot else []
     all_probs = {'prob_A': [], 'prob_B': [], 'prob_C': [], 'prob_D': []}
-    if args.debug: print(f"few_shot_prompt: {few_shot_prompt}")
+    if args.debug:
+        print(f"few_shot_prompt: {few_shot_prompt}")
 
     for _, row in tqdm(test_df.iterrows(), total=len(test_df)):
         question = format_example(row, include_answer=False)
@@ -97,16 +103,16 @@ def eval_subject(
         logits = output.flatten()
 
         softval = torch.nn.functional.softmax(
-                torch.tensor(
-                    [
-                        logits[tokenizer("A")['input_ids']],
-                        logits[tokenizer("B")['input_ids']],
-                        logits[tokenizer("C")['input_ids']],
-                        logits[tokenizer("D")['input_ids']],
-                    ]
-                ),
-                dim=0,
-            )
+            torch.tensor(
+                [
+                    logits[tokenizer("A")['input_ids']],
+                    logits[tokenizer("B")['input_ids']],
+                    logits[tokenizer("C")['input_ids']],
+                    logits[tokenizer("D")['input_ids']],
+                ]
+            ),
+            dim=0,
+        )
         if softval.dtype in {torch.bfloat16, torch.float16}:
             softval = softval.to(dtype=torch.float32)
         probs = softval.detach().cpu().numpy()
@@ -118,7 +124,8 @@ def eval_subject(
         if 'Answer' in row:
             correct = 1 if pred == row['Answer'] else 0
             score.append(correct)
-            if args.debug: print(f'{question} pred: {pred} ref: {row["Answer"]}')
+            if args.debug:
+                print(f'{question} pred: {pred} ref: {row["Answer"]}')
         result.append(pred)
 
     if score:
@@ -142,7 +149,7 @@ def eval_subject(
 
 def cal_cmmlu(res):
     print('\n\n\n')
-    res = {k.split('-')[-1]:float(v) for k,v in res.items()}
+    res = {k.split('-')[-1]: float(v) for k, v in res.items()}
     for k, v in TASK_NAME_MAPPING.items():
         avg_acc = np.mean(list(map(lambda x: res[x], v)))
         print(f"{k} acc: {avg_acc:.2f}")
@@ -153,37 +160,37 @@ def cal_cmmlu(res):
 subcategories = {
     "agronomy": ['other'],
     "anatomy": ['biology'],
-    "ancient_chinese": ['linguistics','china specific'],
+    "ancient_chinese": ['linguistics', 'china specific'],
     "arts": ['arts'],
     "astronomy": ['physics'],
     "business_ethics": ['business'],
-    "chinese_civil_service_exam": ['politics','china specific'],
-    "chinese_driving_rule": ['other','china specific'],
-    "chinese_food_culture": ['culture','china specific'],
-    "chinese_foreign_policy": ['politics','china specific'],
-    "chinese_history":['history','china specific'],
-    "chinese_literature": ['literature','china specific'],
-    "chinese_teacher_qualification": ['education','china specific'],
-    "college_actuarial_science":['math'],
-    "college_education":['education'],
+    "chinese_civil_service_exam": ['politics', 'china specific'],
+    "chinese_driving_rule": ['other', 'china specific'],
+    "chinese_food_culture": ['culture', 'china specific'],
+    "chinese_foreign_policy": ['politics', 'china specific'],
+    "chinese_history": ['history', 'china specific'],
+    "chinese_literature": ['literature', 'china specific'],
+    "chinese_teacher_qualification": ['education', 'china specific'],
+    "college_actuarial_science": ['math'],
+    "college_education": ['education'],
     "college_engineering_hydrology": ['engineering'],
     "college_law": ['law'],
     "college_mathematics": ['math'],
-    "college_medical_statistics":['statistics'],
+    "college_medical_statistics": ['statistics'],
     "clinical_knowledge": ['other'],
     "college_medicine": ['other'],
     "computer_science": ['computer science'],
     "computer_security": ['other'],
     "conceptual_physics": ['physics'],
-    "construction_project_management": ['other','china specific'],
+    "construction_project_management": ['other', 'china specific'],
     "economics": ['economics'],
     "education": ['education'],
-    "elementary_chinese":['linguistics','china specific'],
-    "elementary_commonsense":['other','china specific'],
+    "elementary_chinese": ['linguistics', 'china specific'],
+    "elementary_commonsense": ['other', 'china specific'],
     "elementary_information_and_technology": ['other'],
     "electrical_engineering": ['engineering'],
     "elementary_mathematics": ['math'],
-    "ethnology": ['culture','china specific'],
+    "ethnology": ['culture', 'china specific'],
     "food_science": ['other'],
     "genetics": ['biology'],
     "global_facts": ['global'],
@@ -192,7 +199,7 @@ subcategories = {
     "high_school_geography": ['geography'],
     "high_school_mathematics": ['math'],
     "high_school_physics": ['physics'],
-    "high_school_politics": ['politics','china specific'],
+    "high_school_politics": ['politics', 'china specific'],
     "human_sexuality": ['other'],
     "international_law": ['law'],
     "journalism": ['sociology'],
@@ -203,7 +210,7 @@ subcategories = {
     "management": ['business'],
     "marketing": ['business'],
     "marxist_theory": ['philosophy'],
-    "modern_chinese": ['linguistics','china specific'],
+    "modern_chinese": ['linguistics', 'china specific'],
     "nutrition": ['other'],
     "philosophy": ['philosophy'],
     "professional_accounting": ['business'],
@@ -214,27 +221,27 @@ subcategories = {
     "security_study": ['politics'],
     "sociology": ['culture'],
     "sports_science": ['other'],
-    "traditional_chinese_medicine": ['other','china specific'],
+    "traditional_chinese_medicine": ['other', 'china specific'],
     "virology": ['biology'],
-    "world_history":['history'],
+    "world_history": ['history'],
     "world_religions": ['global'],
 }
 
 categories = {
     "STEM": ["physics", "chemistry", "biology", "computer science", "math", "engineering", "statistics"],
     "Humanities": ["history", "philosophy", "law", "arts", "literature", "global"],
-    "Social Science": ['linguistics',"business", "politics", "culture", "economics", "geography", "psychology", "education", "sociology"],
-    "Other":["other"],
+    "Social Science": ['linguistics', "business", "politics", "culture", "economics", "geography", "psychology",
+                       "education", "sociology"],
+    "Other": ["other"],
     "China specific": ["china specific"],
 }
 
 TASK_NAME_MAPPING = defaultdict(list)
-for k,v in categories.items():
+for k, v in categories.items():
     for subject, subcat in subcategories.items():
         for c in subcat:
             if c in v:
                 TASK_NAME_MAPPING[k].append(subject)
-
 
 choices = ["A", "B", "C", "D"]
 

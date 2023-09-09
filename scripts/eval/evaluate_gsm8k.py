@@ -1,4 +1,13 @@
-import re
+# -*- coding: utf-8 -*-
+"""
+@author:XuMing(xuming624@qq.com)
+@description:
+
+code from https://github.com/QwenLM/Qwen-7B/blob/main/eval/EVALUATION.md
+
+usage:
+python eval/evaluate_chat_gsm8k.py [--use-fewshot]
+"""
 import argparse
 import re
 
@@ -18,13 +27,12 @@ def doc_to_text(doc):
     return fewshot_prompt + "\nQuestion: " + doc["question"] + "\nLet's think step by step\n"
 
 
-def decode(tokens_list, tokenizer, raw_text_len):
+def post_decode(tokens_list, tokenizer, raw_text_len):
     sents = []
     # print(len(tokens_list))
     for tokens in tokens_list:
         tokens = tokens.cpu().numpy().tolist()
-        sent = tokenizer.tokenizer.decode(
-            tokens[raw_text_len:])
+        sent = tokenizer.decode(tokens[raw_text_len:])
         sent = sent.split('<|endoftext|>')[0]
         sent = sent.split('\n\n\n')[0]
         sent = sent.split("\n\n")[0]
@@ -34,12 +42,12 @@ def decode(tokens_list, tokenizer, raw_text_len):
 
 
 def generate_sample(model, tokenizer, input_txt):
-    input_ids = tokenizer.tokenizer.encode(input_txt)
+    input_ids = tokenizer.encode(input_txt)
     raw_text_len = len(input_ids)
     context_enc = torch.tensor([input_ids]).to(model.device)
     print(f"Input text: {input_txt}\n")
     outputs = model.generate(context_enc)
-    output_text = decode(outputs, tokenizer, raw_text_len)[0]
+    output_text = post_decode(outputs, tokenizer, raw_text_len)[0]
     print(f"\nOutput text: {output_text}\n")
     return output_text
 
@@ -69,7 +77,6 @@ def is_correct(completion, answer):
 
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser(description='Test HF checkpoint.')
     parser.add_argument("-c", "--checkpoint-path", type=str, help="Checkpoint path", default="Qwen/Qwen-7B")
     parser.add_argument("-f", "--sample-input-file", type=str, default=None)
@@ -90,7 +97,8 @@ if __name__ == '__main__':
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_path, trust_remote_code=True)
 
     print('Loading model ...')
-    model = AutoModelForCausalLM.from_pretrained(args.checkpoint_path, device_map="auto", trust_remote_code=True).eval()
+    model = AutoModelForCausalLM.from_pretrained(
+        args.checkpoint_path, device_map="auto", trust_remote_code=True, torch_dtype=torch.float16).eval()
     try:
         model.generation_config = GenerationConfig.from_pretrained(args.checkpoint_path, trust_remote_code=True)
         model.generation_config.do_sample = False  # use greedy decoding

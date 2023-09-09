@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+@author:XuMing(xuming624@qq.com)
+@description:
+
+code from https://github.com/QwenLM/Qwen-7B/blob/main/eval/EVALUATION.md
+
+"""
+
 import argparse
 import json
 import os
@@ -12,8 +21,10 @@ from transformers.generation import GenerationConfig
 from transformers.tools.evaluate_agent import evaluate_agent
 from transformers.trainer_utils import set_seed
 
-data_root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                              'data')
+data_root_path = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    'data'
+)
 
 
 def is_callable(response, golden):
@@ -30,7 +41,6 @@ def process_res(response):
     action_input = response[response.find('Action Input:') +
                             len('Action Input:'):response.find('Observation:'
                                                                )].strip()
-    #TODO: This parsing result is incorrect if the response contains multiple Actions. To be fixed in the future.
     observation = response[response.find('Observation:') +
                            len('Observation:'):response.rfind('Thought:'
                                                               )].strip()
@@ -124,6 +134,7 @@ class QWenAgent(Agent):
     agent.run("Draw me a picture of rivers and lakes.")
     ```
     """
+
     def __init__(self,
                  chat_prompt_template=None,
                  run_prompt_template=None,
