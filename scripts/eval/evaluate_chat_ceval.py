@@ -1,12 +1,9 @@
 import os
 import pandas as pd
-import numpy as np
 import argparse
-import datasets
 import torch
 import re
 from thefuzz import process
-from typing import List
 from tqdm import tqdm
 from transformers.trainer_utils import set_seed
 
@@ -21,12 +18,15 @@ pip install thefuzz
 python eval/evaluate_chat_ceval.py -d data/ceval
 '''
 
+
 def load_models_tokenizer(args):
     from transformers import AutoModelForCausalLM, AutoTokenizer
     from transformers.generation import GenerationConfig
 
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_path, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(args.checkpoint_path, device_map="auto", trust_remote_code=True, bf16=True, use_flash_attn=True).eval()
+    model = AutoModelForCausalLM.from_pretrained(
+        args.checkpoint_path, device_map="auto", trust_remote_code=True, torch_dtype=torch.float16
+    ).eval()
     try:
         model.generation_config = GenerationConfig.from_pretrained(args.checkpoint_path, trust_remote_code=True)
         model.generation_config.do_sample = False  # use greedy decoding
