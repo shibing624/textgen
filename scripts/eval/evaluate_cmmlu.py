@@ -123,7 +123,8 @@ def eval_subject(
 
     if score:
         correct_ratio = 100 * sum(score) / len(score)
-        if args.debug: print(subject_name, correct_ratio)
+        if args.debug:
+            print(subject_name, correct_ratio)
     else:
         correct_ratio = 0
     if save_result_dir:

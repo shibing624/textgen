@@ -1,13 +1,8 @@
-import os
-import pandas as pd
-import argparse
-import torch
-import re
-from thefuzz import process
-from tqdm import tqdm
-from transformers.trainer_utils import set_seed
+# -*- coding: utf-8 -*-
+"""
+@author:XuMing(xuming624@qq.com)
+@description:
 
-'''
 wget https://huggingface.co/datasets/ceval/ceval-exam/resolve/main/ceval-exam.zip
 mkdir data/ceval
 mv ceval-exam.zip data/ceval
@@ -16,13 +11,22 @@ cd ../../
 
 pip install thefuzz
 python eval/evaluate_chat_ceval.py -d data/ceval
-'''
+"""
+
+import argparse
+import os
+import re
+
+import pandas as pd
+import thefuzz
+import torch
+from tqdm import tqdm
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import GenerationConfig
+from transformers.trainer_utils import set_seed
 
 
 def load_models_tokenizer(args):
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    from transformers.generation import GenerationConfig
-
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_path, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
         args.checkpoint_path, device_map="auto", trust_remote_code=True, torch_dtype=torch.float16
@@ -33,6 +37,7 @@ def load_models_tokenizer(args):
     except:
         print("GenerationConfig not found, use default config.")
     return model, tokenizer
+
 
 def process_before_extraction(gen, question, choice_dict):
     # Example Prompt:
@@ -55,21 +60,27 @@ def process_before_extraction(gen, question, choice_dict):
         gen = gen.replace(question_split[-1], "")
 
     # replace the choice by letter in the generated sentence
-    # from longest one to shortest one
+    # from the longest one to the shortest one
     for key, val in sorted(choice_dict.items(), key=lambda x: len(x[1]), reverse=True):
         gen = gen.replace(val.rstrip("。"), key)
     return gen
 
+
 def count_substr(gen, pattern):
     return len(re.findall(pattern, gen))
 
+
 def extract_choice(gen, prompt, choice_list):
     # 答案是A | 选项是A | 应该选A选项
-    res = re.search(r"(?:(?:选|选择|选定)|(?:(?:答案|选项)(?![^ABCD]{0,10}?(?:不|非)[^ABCD]{0,10}?(?:是|为|：|:|】))[^ABCD]{0,10}?(?:是|为|：|:|】))[^ABCD]{0,10}?)(A|B|C|D)(?:选项)?(?:\)|。|\.|，|,|．|、|A|B|C|D|$)", gen)
+    res = re.search(
+        r"(?:(?:选|选择|选定)|(?:(?:答案|选项)(?![^ABCD]{0,10}?(?:不|非)[^ABCD]{0,10}?(?:是|为|：|:|】))[^ABCD]{0,10}?(?:是|为|：|:|】))[^ABCD]{0,10}?)(A|B|C|D)(?:选项)?(?:\)|。|\.|，|,|．|、|A|B|C|D|$)",
+        gen)
 
     # A选项正确 | A选项符合题意
     if res is None:
-        res = re.search(r"(A|B|C|D)(?:选?项)?(?![^ABCD]{0,4}?(?:不|非)[^ABCD]{0,4}?(?:正确|对|符合))[^ABCD]{0,4}?(?:正确|对|符合)", gen)
+        res = re.search(
+            r"(A|B|C|D)(?:选?项)?(?![^ABCD]{0,4}?(?:不|非)[^ABCD]{0,4}?(?:正确|对|符合))[^ABCD]{0,4}?(?:正确|对|符合)",
+            gen)
 
     # 直接输出 A
     if res is None:
@@ -80,15 +91,17 @@ def extract_choice(gen, prompt, choice_list):
         res = re.search(r"(?<![a-zA-Z])(A|B|C|D)(?![a-zA-Z=])", gen)
 
     if res is None:
-        return choices[choice_list.index(process.extractOne(gen, choice_list)[0])]
+        return choices[choice_list.index(thefuzz.process.extractOne(gen, choice_list)[0])]
     else:
         return res.group(1)
+
 
 def format_example(line):
     example = line['question'] + "\n\n"
     for choice in choices:
         example += f'{choice}. {line[f"{choice}"]}\n'
     return example
+
 
 def extract_answer(response, row):
     prompt = row['question']
@@ -98,7 +111,16 @@ def extract_answer(response, row):
     pred = extract_choice(gen, prompt, [row[choice] for choice in choices])
     return pred
 
+
 @torch.no_grad()
+def model_predict(model, tokenizer, question, max_new_tokens=512, **kwargs):
+    inputs = tokenizer(question, return_tensors="pt")
+    input_ids = inputs['input_ids'].to(model.device)
+    outputs = model.generate(input_ids=input_ids, max_new_tokens=max_new_tokens, **kwargs)
+    output_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return output_text.strip()
+
+
 def eval_subject(
         model,
         tokenizer,
@@ -108,7 +130,6 @@ def eval_subject(
         overwrite=False,
         **kwargs
 ):
-
     result_path = os.path.join(save_result_dir, f'{subject_name}_result.csv')
     if not overwrite and os.path.exists(result_path):
         print(f"{result_path} existed, skip!")
@@ -127,11 +148,7 @@ def eval_subject(
     for _, row in tqdm(test_df.iterrows(), total=len(test_df)):
         question = format_example(row)
 
-        response, history = model.chat(
-            tokenizer,
-            question,
-            history=None,
-        )
+        response = model_predict(model, tokenizer, question, **kwargs)
         print(question)
         print(response)
         pred = extract_answer(response, row)
@@ -217,7 +234,9 @@ TASK_NAME_MAPPING = {
     "college_economics": ["College Economics", "\u5927\u5b66\u7ecf\u6d4e\u5b66", "Social Science"],
     "business_administration": ["Business Administration", "\u5de5\u5546\u7ba1\u7406", "Social Science"],
     "marxism": ["Marxism", "\u9a6c\u514b\u601d\u4e3b\u4e49\u57fa\u672c\u539f\u7406", "Social Science"],
-    "mao_zedong_thought": ["Mao Zedong Thought", "\u6bdb\u6cfd\u4e1c\u601d\u60f3\u548c\u4e2d\u56fd\u7279\u8272\u793e\u4f1a\u4e3b\u4e49\u7406\u8bba\u4f53\u7cfb\u6982\u8bba", "Social Science"],
+    "mao_zedong_thought": ["Mao Zedong Thought",
+                           "\u6bdb\u6cfd\u4e1c\u601d\u60f3\u548c\u4e2d\u56fd\u7279\u8272\u793e\u4f1a\u4e3b\u4e49\u7406\u8bba\u4f53\u7cfb\u6982\u8bba",
+                           "Social Science"],
     "education_science": ["Education Science", "\u6559\u80b2\u5b66", "Social Science"],
     "teacher_qualification": ["Teacher Qualification", "\u6559\u5e08\u8d44\u683c", "Social Science"],
     "high_school_politics": ["High School Politics", "\u9ad8\u4e2d\u653f\u6cbb", "Social Science"],
@@ -225,10 +244,13 @@ TASK_NAME_MAPPING = {
     "middle_school_politics": ["Middle School Politics", "\u521d\u4e2d\u653f\u6cbb", "Social Science"],
     "middle_school_geography": ["Middle School Geography", "\u521d\u4e2d\u5730\u7406", "Social Science"],
     "modern_chinese_history": ["Modern Chinese History", "\u8fd1\u4ee3\u53f2\u7eb2\u8981", "Humanities"],
-    "ideological_and_moral_cultivation": ["Ideological and Moral Cultivation", "\u601d\u60f3\u9053\u5fb7\u4fee\u517b\u4e0e\u6cd5\u5f8b\u57fa\u7840", "Humanities"],
+    "ideological_and_moral_cultivation": ["Ideological and Moral Cultivation",
+                                          "\u601d\u60f3\u9053\u5fb7\u4fee\u517b\u4e0e\u6cd5\u5f8b\u57fa\u7840",
+                                          "Humanities"],
     "logic": ["Logic", "\u903b\u8f91\u5b66", "Humanities"],
     "law": ["Law", "\u6cd5\u5b66", "Humanities"],
-    "chinese_language_and_literature": ["Chinese Language and Literature", "\u4e2d\u56fd\u8bed\u8a00\u6587\u5b66", "Humanities"],
+    "chinese_language_and_literature": ["Chinese Language and Literature", "\u4e2d\u56fd\u8bed\u8a00\u6587\u5b66",
+                                        "Humanities"],
     "art_studies": ["Art Studies", "\u827a\u672f\u5b66", "Humanities"],
     "professional_tour_guide": ["Professional Tour Guide", "\u5bfc\u6e38\u8d44\u683c", "Humanities"],
     "legal_professional": ["Legal Professional", "\u6cd5\u5f8b\u804c\u4e1a\u8d44\u683c", "Humanities"],
@@ -243,11 +265,13 @@ TASK_NAME_MAPPING = {
     "urban_and_rural_planner": ["Urban and Rural Planner", "\u6ce8\u518c\u57ce\u4e61\u89c4\u5212\u5e08", "Other"],
     "accountant": ["Accountant", "\u6ce8\u518c\u4f1a\u8ba1\u5e08", "Other"],
     "fire_engineer": ["Fire Engineer", "\u6ce8\u518c\u6d88\u9632\u5de5\u7a0b\u5e08", "Other"],
-    "environmental_impact_assessment_engineer": ["Environmental Impact Assessment Engineer", "\u73af\u5883\u5f71\u54cd\u8bc4\u4ef7\u5de5\u7a0b\u5e08", "Other"],
+    "environmental_impact_assessment_engineer": ["Environmental Impact Assessment Engineer",
+                                                 "\u73af\u5883\u5f71\u54cd\u8bc4\u4ef7\u5de5\u7a0b\u5e08", "Other"],
     "tax_accountant": ["Tax Accountant", "\u7a0e\u52a1\u5e08", "Other"],
     "physician": ["Physician", "\u533b\u5e08\u8d44\u683c", "Other"]
 }
-hard_list = ['advanced_mathematics', 'discrete_mathematics', 'probability_and_statistics', 'college_physics', 'college_chemistry', 'high_school_mathematics', 'high_school_physics', 'high_school_chemistry']
+hard_list = ['advanced_mathematics', 'discrete_mathematics', 'probability_and_statistics', 'college_physics',
+             'college_chemistry', 'high_school_mathematics', 'high_school_physics', 'high_school_chemistry']
 choices = ["A", "B", "C", "D"]
 
 
@@ -257,8 +281,7 @@ def main(args):
         model, tokenizer = load_models_tokenizer(args)
         model_name = args.checkpoint_path.split("/")[-1]
     else:
-        model, tokenizer = None, None
-        model_name = "random"
+        raise ValueError("Please provide a checkpoint path.")
     print("model loaded")
     dev_result = {}
     for subject_name in tqdm(TASK_NAME_MAPPING.keys()):

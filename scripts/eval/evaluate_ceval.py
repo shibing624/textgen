@@ -8,6 +8,8 @@ import torch
 from typing import List
 from tqdm import tqdm
 from transformers.trainer_utils import set_seed
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import GenerationConfig
 
 
 '''
@@ -20,9 +22,6 @@ python evaluate_ceval.py -d data/ceval/
 '''
 
 def load_models_tokenizer(args):
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    from transformers.generation import GenerationConfig
-
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_path, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(args.checkpoint_path, device_map="auto", trust_remote_code=True).eval()
     try:
@@ -230,7 +229,7 @@ choices = ["A", "B", "C", "D"]
 
 def main(args):
     model, tokenizer = load_models_tokenizer(args)
-    
+    model_name = args.checkpoint_path.split("/")[-1]
     dev_result = {}
     for subject_name in tqdm(TASK_NAME_MAPPING.keys()):
         val_file_path = os.path.join(args.eval_data_path, 'val', f'{subject_name}_val.csv')
@@ -241,7 +240,7 @@ def main(args):
         # test_df = pd.read_csv(test_file_path)
 
         score = eval_subject(model, tokenizer, subject_name, val_df, dev_df=dev_df, k=5, few_shot=True,
-                             save_result_dir=f"outs/ceval_eval_result")
+                             save_result_dir=f"outs/ceval_eval_result/{model_name}/")
         dev_result[subject_name] = score
     cal_ceval(dev_result)
 
