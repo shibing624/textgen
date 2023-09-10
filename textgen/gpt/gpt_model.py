@@ -564,7 +564,7 @@ class GptModel:
                 # Decode text
                 prompt_len = len(input_ids[0])
                 generated_sequence = generated_sequence[prompt_len:]
-                gen_text = self.tokenizer.decode(generated_sequence, skip_special_tokens=False)
+                gen_text = self.tokenizer.decode(generated_sequence, skip_special_tokens=True)
                 stop_str = self.tokenizer.eos_token or prompt_template.stop_str
                 pos = gen_text.find(stop_str)
                 if pos != -1:
@@ -596,7 +596,7 @@ class GptModel:
         history.append([query, ''])
         prompt = prompt_template.get_prompt(messages=history)
         streamer = TextIteratorStreamer(
-            self.tokenizer, timeout=60.0, skip_prompt=skip_prompt, skip_special_tokens=False)
+            self.tokenizer, timeout=60.0, skip_prompt=skip_prompt, skip_special_tokens=True)
         input_ids = self.tokenizer(prompt).input_ids
         max_src_len = context_len - max_new_tokens - 8
         input_ids = input_ids[-max_src_len:]
