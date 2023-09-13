@@ -52,8 +52,10 @@ def main():
     parser.add_argument('--model_type', default='llama', type=str)
     parser.add_argument('--base_model', default='shibing624/chinese-alpaca-plus-7b-hf', type=str)
     parser.add_argument('--lora_model', default="", type=str, help="If not set, perform inference on the base model")
-    parser.add_argument('--template_name', default="vicuna", type=str,
+    parser.add_argument('--template_name', default="alpaca", type=str,
                         help="Prompt template name, eg: alpaca, vicuna, baichuan-chat, chatglm2 etc.")
+    parser.add_argument('--share', default=False, help='Share gradio')
+    parser.add_argument('--port', default=8081, type=int, help='Port of gradio demo')
     args = parser.parse_args()
     print(args)
     m = GptModel(args.model_type, args.base_model, peft_name=args.lora_model)
@@ -70,6 +72,38 @@ def main():
 
     gr.Chatbot.postprocess = postprocess
 
+    def parse_text(text):
+        """copy from https://github.com/GaiZhenbiao/ChuanhuChatGPT/"""
+        lines = text.split("\n")
+        lines = [line for line in lines if line != ""]
+        count = 0
+        for i, line in enumerate(lines):
+            if "```" in line:
+                count += 1
+                items = line.split('`')
+                if count % 2 == 1:
+                    lines[i] = f'<pre><code class="language-{items[-1]}">'
+                else:
+                    lines[i] = f'<br></code></pre>'
+            else:
+                if i > 0:
+                    if count % 2 == 1:
+                        line = line.replace("`", "\`")
+                        line = line.replace("<", "&lt;")
+                        line = line.replace(">", "&gt;")
+                        line = line.replace(" ", "&nbsp;")
+                        line = line.replace("*", "&ast;")
+                        line = line.replace("_", "&lowbar;")
+                        line = line.replace("-", "&#45;")
+                        line = line.replace(".", "&#46;")
+                        line = line.replace("!", "&#33;")
+                        line = line.replace("(", "&#40;")
+                        line = line.replace(")", "&#41;")
+                        line = line.replace("$", "&#36;")
+                    lines[i] = "<br>" + line
+        text = "".join(lines)
+        return text
+
     def reset_user_input():
         return gr.update(value='')
 
@@ -79,15 +113,14 @@ def main():
     prompt_template = get_conv_template(args.template_name)
 
     def predict(
-            input,
+            now_input,
             chatbot,
             history,
             max_new_tokens,
             temperature,
             top_p
     ):
-        now_input = input
-        chatbot.append((input, ""))
+        chatbot.append((parse_text(now_input), ""))
         history = history or []
         history.append([now_input, ''])
 
@@ -103,12 +136,12 @@ def main():
                 top_p=top_p,
         ):
             response += new_text
-            new_history = history + [(now_input, response)]
-            chatbot[-1] = (now_input, response)
-            yield chatbot, new_history
+            history[-1][-1] = response
+            chatbot[-1] = (parse_text(now_input), parse_text(response))
+            yield chatbot, history
 
     with gr.Blocks() as demo:
-        gr.HTML("""<h1 align="center">TextGen</h1>""")
+        gr.HTML("""<h1 align="center">TextGen repo [textgen](https://github.com/shibing624/textgen)</h1>""")
         gr.Markdown(
             "> TextGen gradio demo")
         chatbot = gr.Chatbot()
@@ -132,7 +165,7 @@ def main():
                         show_progress=True)
         submitBtn.click(reset_user_input, [], [user_input])
         emptyBtn.click(reset_state, outputs=[chatbot, history], show_progress=True)
-    demo.queue().launch(share=False, inbrowser=True, server_name='0.0.0.0', server_port=8082)
+    demo.queue().launch(share=args.share, inbrowser=True, server_name='0.0.0.0', server_port=args.port)
 
 
 if __name__ == '__main__':
