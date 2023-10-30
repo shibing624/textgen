@@ -365,7 +365,6 @@ class GptArgs(ModelArgs):
     model_name_or_path: Optional[str] = field(default="shibing624/chinese-alpaca-plus-7b-hf")
     use_peft: bool = True
     peft_type: str = "LORA"
-    peft_bin_name: str = "adapter_model.bin"
     lora_r: int = 8
     lora_alpha = 16
     lora_dropout = 0.05

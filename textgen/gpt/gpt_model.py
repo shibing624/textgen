@@ -17,7 +17,7 @@ from peft import (
     LoraConfig,
     TaskType,
     PeftModel,
-    prepare_model_for_int8_training,
+    prepare_model_for_kbit_training,
     set_peft_model_state_dict,
 )
 from tqdm import tqdm
@@ -144,6 +144,7 @@ class GptModel:
             model_name,
             config=self.config,
             load_in_8bit=self.args.int8,
+            load_in_4bit=self.args.int4,
             torch_dtype=self.torch_dtype,
             low_cpu_mem_usage=(not is_deepspeed_zero3_enabled()),
             device_map=self.device_map,
@@ -298,6 +299,9 @@ class GptModel:
             self.args.lora_target_modules = self.find_all_linear_names(self.args.int4, self.args.int8)
         # setup peft
         if self.args.use_peft:
+            if self.args.int8 or self.args.int4:
+                self.model = prepare_model_for_kbit_training(self.model, self.args.gradient_checkpointing)
+
             peft_type = self.args.peft_type.upper()
             logger.info(f"Using PEFT type: {peft_type}")
             # add peft config
@@ -366,9 +370,6 @@ class GptModel:
                     target_modules=self.args.lora_target_modules,
                     bias=self.args.lora_bias,
                 )
-
-            if self.args.int8:
-                self.model = prepare_model_for_int8_training(self.model)
 
             if isinstance(self.model, PeftModel):
                 logger.debug("Merge peft weights to base model")
