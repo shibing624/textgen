@@ -507,6 +507,7 @@ class GptModel:
             skip_prompt: bool = True,
             prompt_template_name: str = 'vicuna',
             max_length: int = None,
+            do_sample: bool = None,
             temperature: float = None,
             repetition_penalty: float = None,
             eval_batch_size: int = None,
@@ -520,6 +521,7 @@ class GptModel:
             skip_prompt: Whether to skip the prompt when generating text.
             prompt_template_name: The name of the prompt template to use.
             max_length: The maximum length of the generated text.
+            do_sample: Whether or not to use sampling ; use greedy decoding otherwise.
             temperature: The value used to module the next token probabilities.
             repetition_penalty: The parameter for repetition penalty. 1.0 means no penalty.
             eval_batch_size: Batch size to use for evaluation.
@@ -552,6 +554,7 @@ class GptModel:
             input_ids = inputs['input_ids'].to(self.device)
             generation_kwargs = dict(
                 max_new_tokens=max_length if max_length else self.args.max_length,
+                do_sample=do_sample if do_sample is not None else self.args.do_sample,
                 temperature=temperature if temperature is not None else self.args.temperature,
                 repetition_penalty=repetition_penalty if repetition_penalty else self.args.repetition_penalty,
             )

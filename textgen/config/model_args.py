@@ -357,6 +357,7 @@ class GptArgs(ModelArgs):
     max_eval_samples: int = 20
     num_return_sequences: int = 1
     repetition_penalty: float = 1.0
+    do_sample: bool = True
     temperature: float = 0.7
     special_tokens_list: list = field(default_factory=list)
     top_k: float = 40
