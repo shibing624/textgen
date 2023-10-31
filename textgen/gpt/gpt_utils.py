@@ -172,6 +172,7 @@ register_conv_template(
 )
 
 """ChatGLM2 template
+Support: https://huggingface.co/THUDM/chatglm2-6b
 source: https://huggingface.co/THUDM/chatglm2-6b/blob/main/modeling_chatglm.py#L1007
 """
 register_conv_template(
@@ -183,6 +184,22 @@ register_conv_template(
         roles=("问", "答"),
         prompt="问：{query}\n\n答：",
         sep="\n\n",
+    )
+)
+
+"""ChatGLM3 template
+Support: https://huggingface.co/THUDM/chatglm3-6b
+source: https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenization_chatglm.py#L179
+"""
+register_conv_template(
+    Conversation(
+        name="chatglm3",
+        system_prompt="",
+        messages=[],
+        roles=("<|user|>", "<|assistant|>"),
+        prompt="<|user|>\n{query}<|assistant|>",
+        sep="\n",
+        stop_str="<|user|>",
     )
 )
 
