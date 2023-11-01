@@ -672,19 +672,11 @@ class GptModel:
             model_to_save = model.module if hasattr(model, "module") else model
             model_to_save.save_pretrained(output_dir)
             self.tokenizer.save_pretrained(output_dir)
-            torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
-            if optimizer and scheduler and self.args.save_optimizer_and_scheduler:
-                torch.save(
-                    optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt")
-                )
-                torch.save(
-                    scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt")
-                )
-            # save model
+            torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
+            # save model args
             self.save_model_args(output_dir)
 
     def save_model_args(self, output_dir):
-        os.makedirs(output_dir, exist_ok=True)
         self.args.save(output_dir)
 
     def _load_model_args(self, input_dir):
