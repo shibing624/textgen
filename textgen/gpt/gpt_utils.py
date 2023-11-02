@@ -100,7 +100,7 @@ register_conv_template(
                       "The assistant gives helpful, detailed, and polite answers to the user's questions.",
         messages=[],
         roles=("USER", "ASSISTANT"),
-        prompt="USER: {query} ASSISTANT: ",
+        prompt="USER: {query} ASSISTANT:",
         sep="</s>",
     )
 )
@@ -118,17 +118,32 @@ register_conv_template(
     )
 )
 
-"""Baichuan-13B-Chat template
-source: https://huggingface.co/baichuan-inc/Baichuan-13B-Chat/blob/f5f47be2adbbdceb784f334d6fa1ca2c73e65097/modeling_baichuan.py#L507
+"""Baichuan template
+source: https://huggingface.co/baichuan-inc/Baichuan-13B-Chat/blob/main/generation_utils.py#L31
 Support: https://huggingface.co/baichuan-inc/Baichuan-13B-Chat
 """
 register_conv_template(
     Conversation(
-        name="baichuan-chat",
+        name="baichuan",
         system_prompt="",
         messages=[],
         roles=("<reserved_102>", "<reserved_103>"),
-        prompt=" <reserved_102> {query} <reserved_103> ",
+        prompt="<reserved_102>{query}<reserved_103>",
+        sep="</s>",
+    )
+)
+
+"""Baichuan2 template
+Support: https://huggingface.co/baichuan-inc/Baichuan2-7B-Chat
+         https://huggingface.co/baichuan-inc/Baichuan2-13B-Chat
+"""
+register_conv_template(
+    Conversation(
+        name="baichuan2",
+        system_prompt="",
+        messages=[],
+        roles=("<reserved_106>", "<reserved_107>"),
+        prompt="<reserved_106>{query}<reserved_107>",
         sep="</s>",
     )
 )
@@ -158,6 +173,7 @@ register_conv_template(
 )
 
 """ChatGLM1 template
+Support: https://huggingface.co/THUDM/chatglm-6b
 source: https://huggingface.co/THUDM/chatglm-6b/blob/main/modeling_chatglm.py#L1307
 """
 register_conv_template(
@@ -176,7 +192,6 @@ Support: https://huggingface.co/THUDM/chatglm2-6b
 source: https://huggingface.co/THUDM/chatglm2-6b/blob/main/modeling_chatglm.py#L1007
 """
 register_conv_template(
-    # source:
     Conversation(
         name="chatglm2",
         system_prompt="",
@@ -207,7 +222,8 @@ register_conv_template(
 register_conv_template(
     Conversation(
         name="phoenix",
-        system_prompt="A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.\n\n",
+        system_prompt="A chat between a curious human and an artificial intelligence assistant. "
+                      "The assistant gives helpful, detailed, and polite answers to the human's questions.\n\n",
         messages=[],
         roles=("Human", "Assistant"),
         prompt="Human: <s>{query}</s>Assistant: ",
@@ -231,6 +247,7 @@ register_conv_template(
 
 """aquila template
 Supports: https://huggingface.co/qhduan/aquilachat-7b
+          https://huggingface.co/BAAI/AquilaChat2-34B
 """
 register_conv_template(
     Conversation(
@@ -239,13 +256,14 @@ register_conv_template(
                       "The assistant gives helpful, detailed, and polite answers to the human's questions.",
         messages=[],
         roles=("Human", "Assistant"),
-        prompt="Human: {query}###Assistant: ",
+        prompt="Human: {query}###Assistant:",
         sep="###",
     )
 )
 
 """intern template
 Supports: https://huggingface.co/internlm/internlm-chat-7b
+          https://huggingface.co/internlm/internlm-chat-20b
 """
 register_conv_template(
     Conversation(
@@ -259,7 +277,10 @@ register_conv_template(
     )
 )
 
-"""StarChat template"""
+"""StarChat template
+Supports: https://huggingface.co/HuggingFaceH4/starchat-alpha
+          https://huggingface.co/HuggingFaceH4/starchat-beta
+"""
 register_conv_template(
     Conversation(
         name="starchat",
@@ -273,6 +294,9 @@ register_conv_template(
 )
 
 """llama2 template
+Supports: https://huggingface.co/meta-llama/Llama-2-7b-chat-hf
+          https://huggingface.co/meta-llama/Llama-2-13b-chat-hf
+          https://huggingface.co/meta-llama/Llama-2-70b-chat-hf
 reference: https://github.com/facebookresearch/llama/blob/cfc3fc8c1968d390eb830e65c63865e980873a06/llama/generation.py#L212
 """
 register_conv_template(
@@ -288,13 +312,13 @@ register_conv_template(
                       "If you don't know the answer to a question, please don't share false information.\n<</SYS>>\n\n",
         messages=[],
         roles=("[INST]", "[/INST]"),
-        prompt="[INST] {query} [/INST] ",
+        prompt="[INST] {query} [/INST]",
         sep="</s>",
     )
 )
 
 """llama2-zh template
-Sources: https://github.com/ymcui/Chinese-LLaMA-Alpaca-2
+source: https://github.com/ymcui/Chinese-LLaMA-Alpaca-2
 Supports: https://huggingface.co/ziqingyang/chinese-alpaca-2-7b
 """
 register_conv_template(
@@ -303,7 +327,23 @@ register_conv_template(
         system_prompt="[INST] <<SYS>>\nYou are a helpful assistant. 你是一个乐于助人的助手。\n<</SYS>>\n\n [/INST]",
         messages=[],
         roles=("[INST]", "[/INST]"),
-        prompt="[INST] {query} [/INST] ",
+        prompt="[INST] {query} [/INST]",
+        sep="</s>",
+    )
+)
+
+"""mistral template
+Supports: https://huggingface.co/mistralai/Mistral-7B-v0.1
+          https://huggingface.co/HuggingFaceH4/zephyr-7b-beta
+source: https://docs.mistral.ai/llm/mistral-instruct-v0.1
+"""
+register_conv_template(
+    Conversation(
+        name="mistral",
+        system_prompt="<s>",
+        messages=[],
+        roles=("[INST]", "[/INST]"),
+        prompt="[INST] {query} [/INST]",
         sep="</s>",
     )
 )
