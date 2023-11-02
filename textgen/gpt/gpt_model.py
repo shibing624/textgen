@@ -7,8 +7,9 @@ import math
 import os
 import random
 from threading import Thread
-from typing import List, Tuple, Optional, Union
 from types import MethodType
+from typing import List, Tuple, Optional, Union
+
 import numpy as np
 import torch
 from loguru import logger

@@ -30,6 +30,7 @@ def main():
     parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     parser.add_argument('--eval_steps', default=50, type=int, help='Eval every X steps')
     parser.add_argument('--save_steps', default=50, type=int, help='Save checkpoint every X steps')
+    parser.add_argument('--neft_alpha', default=0, type=int, help='Use NE Finetune with noise embedding')
     parser.add_argument("--local_rank", type=int, help="Used by dist launchers")
     args = parser.parse_args()
     logger.info(args)
@@ -52,6 +53,7 @@ def main():
             "save_steps": args.save_steps,
             "bf16": args.bf16,
             "prompt_template_name": args.prompt_template_name,
+            "neft_alpha": args.neft_alpha,
         }
         model = GptModel(args.model_type, args.model_name, args=model_args)
         model.train_model(args.train_file)
