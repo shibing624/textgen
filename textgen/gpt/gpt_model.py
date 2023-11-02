@@ -7,8 +7,8 @@ import math
 import os
 import random
 from threading import Thread
-from typing import List, Tuple, Optional
-
+from typing import List, Tuple, Optional, Union
+from types import MethodType
 import numpy as np
 import torch
 from loguru import logger
@@ -140,23 +140,6 @@ class GptModel:
             torch_dtype=self.torch_dtype,
             **kwargs
         )
-        self.model = model_class.from_pretrained(
-            model_name,
-            config=self.config,
-            load_in_8bit=self.args.int8,
-            load_in_4bit=self.args.int4,
-            torch_dtype=self.torch_dtype,
-            low_cpu_mem_usage=(not is_deepspeed_zero3_enabled()),
-            device_map=self.device_map,
-            trust_remote_code=self.args.trust_remote_code,
-            quantization_config=BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=self.torch_dtype,
-            ) if self.args.qlora else None,
-        )
-
         self.tokenizer_class = tokenizer_class
         if self.args.tokenizer_name:
             self.tokenizer = tokenizer_class.from_pretrained(
@@ -174,6 +157,38 @@ class GptModel:
             else:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
             logger.debug("Add pad token: {}".format(self.tokenizer.pad_token))
+        # Load model
+        self.model = model_class.from_pretrained(
+            model_name,
+            config=self.config,
+            load_in_8bit=self.args.int8,
+            load_in_4bit=self.args.int4,
+            torch_dtype=self.torch_dtype,
+            low_cpu_mem_usage=(not is_deepspeed_zero3_enabled()),
+            device_map=self.device_map,
+            trust_remote_code=self.args.trust_remote_code,
+            quantization_config=BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=self.torch_dtype,
+            ) if self.args.qlora else None,
+        )
+        # Set NEFTune trick for fine-tuning
+        if self.args.neft_alpha > 0:
+            input_embed = self.model.get_input_embeddings()
+            if isinstance(input_embed, torch.nn.Embedding):
+                def noisy_forward(self: torch.nn.Embedding, x: torch.Tensor) -> torch.Tensor:
+                    embeddings = input_embed.__class__.forward(self, x)
+                    dims = self.num_embeddings * self.embedding_dim
+                    mag_norm = self.args.neft_alpha / (dims ** 0.5)
+                    embeddings += torch.zeros_like(embeddings).uniform_(-mag_norm, mag_norm)
+                    return embeddings
+
+                input_embed.forward = MethodType(noisy_forward, input_embed)
+                logger.info("Using noisy embedding with alpha={:.2f}".format(self.args.neft_alpha))
+            else:
+                logger.warning("Input embeddings are not normal nn.Embedding, cannot transform into noisy embedding.")
 
         self.args.model_type = model_type
         if model_name is None:
@@ -183,18 +198,14 @@ class GptModel:
 
         self.peft_name = peft_name
         if self.args.use_peft and self.peft_name:
-            self.load_peft_model()
-
-    def load_peft_model(self):
-        """Load peft model"""
-        self.model = PeftModel.from_pretrained(
-            self.model,
-            self.peft_name,
-            torch_dtype=self.torch_dtype,
-            device_map=self.device_map,
-        )
-        self.model = self.model.merge_and_unload()
-        logger.info(f"Loaded peft model from {self.peft_name}")
+            """Load peft model"""
+            self.model = PeftModel.from_pretrained(
+                self.model,
+                self.peft_name,
+                torch_dtype=self.torch_dtype,
+                device_map=self.device_map,
+            )
+            logger.info(f"Loaded peft model from {self.peft_name}")
 
     def find_all_linear_names(self, int4=False, int8=False):
         cls = torch.nn.Linear
@@ -585,7 +596,8 @@ class GptModel:
     def chat(
             self,
             query: str,
-            history: List[Tuple[str, str]] = None,
+            history: Union[List, List[Tuple[str, str]]] = None,
+            stream: bool = False,
             skip_prompt: bool = True,
             prompt_template_name: str = "vicuna",
             max_new_tokens: int = None,
@@ -602,37 +614,42 @@ class GptModel:
             history = []
         history.append([query, ''])
         prompt = prompt_template.get_prompt(messages=history)
-        streamer = TextIteratorStreamer(
-            self.tokenizer, timeout=60.0, skip_prompt=skip_prompt, skip_special_tokens=True)
+
         input_ids = self.tokenizer(prompt).input_ids
         max_new_tokens = max_new_tokens if max_new_tokens is not None else self.args.max_length
         max_src_len = context_len - max_new_tokens - 8
         input_ids = input_ids[-max_src_len:]
-        generation_kwargs = dict(
-            input_ids=torch.as_tensor([input_ids]).to(self.device),
-            max_new_tokens=max_new_tokens,
-            do_sample=do_sample if do_sample is not None else self.args.do_sample,
-            temperature=temperature if temperature is not None else self.args.temperature,
-            repetition_penalty=repetition_penalty if repetition_penalty is not None else self.args.repetition_penalty,
-            streamer=streamer,
-            **kwargs,
-        )
-        thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
-        thread.start()
-        stop_str = self.tokenizer.eos_token or prompt_template.stop_str
-        generated_text = ""
-        for new_text in streamer:
-            stop = False
-            pos = new_text.find(stop_str)
-            if pos != -1:
-                new_text = new_text[:pos]
-                stop = True
-            generated_text += new_text
-            if stop:
-                break
-        response = generated_text.strip()
-        history = history + [[query, response]]
-        return response, history
+        if stream:
+            streamer = TextIteratorStreamer(
+                self.tokenizer, timeout=60.0, skip_prompt=skip_prompt, skip_special_tokens=True
+            )
+            generation_kwargs = dict(
+                input_ids=torch.as_tensor([input_ids]).to(self.device),
+                max_new_tokens=max_new_tokens,
+                do_sample=do_sample if do_sample is not None else self.args.do_sample,
+                temperature=temperature if temperature is not None else self.args.temperature,
+                repetition_penalty=repetition_penalty if repetition_penalty is not None else self.args.repetition_penalty,
+                streamer=streamer,
+                **kwargs,
+            )
+            thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
+            thread.start()
+            yield from streamer
+        else:
+            generation_kwargs = dict(
+                max_new_tokens=max_new_tokens if max_new_tokens is not None else self.args.max_length,
+                do_sample=do_sample if do_sample is not None else self.args.do_sample,
+                temperature=temperature if temperature is not None else self.args.temperature,
+                repetition_penalty=repetition_penalty if repetition_penalty is not None else self.args.repetition_penalty,
+            )
+            outputs = self.model.generate(
+                input_ids=torch.as_tensor([input_ids]).to(self.device),
+                **generation_kwargs,
+                **kwargs,
+            )
+            output_tensor = outputs[0][len(input_ids[0]):] if skip_prompt else outputs[0]
+            response = self.tokenizer.decode(output_tensor, skip_special_tokens=True)
+            return response
 
     def load_and_cache_examples(
             self, data, evaluate=False, no_cache=False, verbose=True, silent=False

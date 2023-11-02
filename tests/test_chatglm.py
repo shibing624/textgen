@@ -5,15 +5,14 @@
 """
 
 import sys
-import pytest
 
 sys.path.append('..')
-from textgen import ChatGlmArgs, ChatGlmModel
+from textgen import GptModel
 
 
 def test_csc():
     from pycorrector.utils import eval
-    model = ChatGlmModel(
+    model = GptModel(
         'chatglm', "THUDM/chatglm-6b", peft_name="shibing624/chatglm-6b-csc-zh-lora",
         args={'use_peft': True, 'eval_batch_size': 8, "max_length": 128}
     )
@@ -35,27 +34,11 @@ def test_csc():
 
 
 def test_origin():
-    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b", args={'use_peft': False})
-    response, history = m.chat("你好", history=[])
+    m = GptModel('chatglm', "THUDM/chatglm-6b", args={'use_peft': False})
+    response = m.chat("你好", history=[])
     print(response)
     assert len(response) > 0
-    response, history = m.chat("晚上睡不着应该怎么办", history=history)
-    print(response)
-    assert len(response) > 0
-
-
-def test_origin_int4():
-    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b-int4", args={'use_peft': False, "quantization_bit": None},
-                     cuda_device=0)
-    response, history = m.chat("你好", history=[], max_length=20)
-    print(response)
-    assert len(response) > 0
-
-
-def test_origin_int4_cpu():
-    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b-int4", use_cuda=False,
-                     args={'use_peft': False, "quantization_bit": None},
-                     cuda_device=0)
-    response, history = m.chat("你好", history=[], max_length=20)
+    history = ["你好", response]
+    response = m.chat("晚上睡不着应该怎么办", history=history)
     print(response)
     assert len(response) > 0

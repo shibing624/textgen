@@ -4,10 +4,9 @@
 @description:
 """
 import argparse
-import pandas as pd
-from loguru import logger
-import os
 import sys
+
+from loguru import logger
 
 sys.path.append('../..')
 from textgen.seq2seq import Seq2SeqModel

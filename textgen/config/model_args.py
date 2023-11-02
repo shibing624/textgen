@@ -392,3 +392,4 @@ class GptArgs(ModelArgs):
     qlora: bool = False
     preprocessing_num_workers: int = 4
     prompt_template_name: str = "vicuna"
+    neft_alpha: int = 0  # 5

@@ -11,7 +11,7 @@ from loguru import logger
 from transformers import AutoTokenizer
 
 sys.path.append('..')
-from textgen.llama.llama_utils import LlamaPretrainingDataset
+from textgen import GptSupervisedDataset
 from textgen import GptArgs
 
 
@@ -29,7 +29,7 @@ def test_data():
     train_data = load_data('../examples/data/pt.txt')
     train_df = pd.DataFrame(train_data, columns=["text"])
     eval_df = train_df[:10]
-    ds = LlamaPretrainingDataset(
+    ds = GptSupervisedDataset(
         tokenizer,
         args,
         train_df,

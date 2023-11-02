@@ -10,7 +10,7 @@ import sys
 import pandas as pd
 
 sys.path.append('..')
-from textgen import GptModel, ChatGlmModel
+from textgen import GptModel
 
 pwd_path = os.path.abspath(os.path.dirname(__file__))
 
@@ -76,7 +76,7 @@ def test_llama_13b_alpaca_plus():
 
 
 def test_chatglm_6b():
-    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b", peft_name=None, args={'use_peft': False})
+    m = GptModel('chatglm', "THUDM/chatglm-6b", peft_name=None, args={'use_peft': False})
     predict_sentences = [get_chatglm_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)
     for s, i in zip(sentences, res):
@@ -91,7 +91,7 @@ def test_chatglm_6b():
 
 
 def test_chatglm_6b_lora():
-    m = ChatGlmModel('chatglm', "THUDM/chatglm-6b", peft_name='shibing624/chatglm-6b-belle-zh-lora',
+    m = GptModel('chatglm', "THUDM/chatglm-6b", peft_name='shibing624/chatglm-6b-belle-zh-lora',
                      args={'use_peft': True}, )
     predict_sentences = [get_chatglm_prompt(s) for s in sentences]
     res = m.predict(predict_sentences)

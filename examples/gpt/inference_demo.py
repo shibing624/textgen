@@ -22,11 +22,9 @@ def main():
     parser.add_argument('--prompt_template_name', default="vicuna", type=str,
                         help="Prompt template name, eg: alpaca, vicuna, baichuan-chat, chatglm2 etc.")
     parser.add_argument('--interactive', action='store_true', help="run in the instruction mode")
-    parser.add_argument('--single_round', action='store_true',
-                        help="Whether to generate single round dialogue, default is multi-round dialogue")
     parser.add_argument('--data_file', default=None, type=str,
                         help="A file that contains instructions (one instruction per line)")
-    parser.add_argument('--predictions_file', default='./predictions_result.jsonl', type=str)
+    parser.add_argument('--output_file', default='./predictions_result.jsonl', type=str)
     parser.add_argument('--batch_size', default=8, type=int, help='Batch size')
     args = parser.parse_args()
     print(args)
@@ -49,19 +47,41 @@ def main():
         for example in examples[:10]:
             print(example)
     if args.interactive:
-        print(f"Start inference with interactive mode. enable multi round: {not args.single_round}")
+        print(f"Start inference with interactive mode.")
         history = []
         while True:
-            raw_input_text = input("Input:")
-            if len(raw_input_text.strip()) == 0:
+            try:
+                query = input("Input:")
+            except UnicodeDecodeError:
+                print("Detected decoding error at the inputs, please try again.")
+                continue
+            except Exception:
+                raise
+            if query == "":
+                print("Please input text, try again.")
+                continue
+            if query.strip() == "clear":
+                history = []
+                print("history cleared.")
+                continue
+            if query.strip() == 'exit':
                 break
-            if args.single_round:
-                response = model.predict([raw_input_text], prompt_template_name=args.prompt_template_name)[0]
-            else:
-                response, history = model.chat(
-                    raw_input_text, history=history, prompt_template_name=args.prompt_template_name)
-            print("Response: ", response)
-            print("\n")
+            print("Response:", end='', flush=True)
+            try:
+                response = ""
+                for new_token in model.chat(
+                        query,
+                        history=history,
+                        prompt_template_name=args.prompt_template_name,
+                        stream=True
+                ):
+                    print(new_token, end='', flush=True)
+                    response += new_token
+                history = history + [[query, response]]
+            except KeyboardInterrupt:
+                print("KeyboardInterrupt detected, stop.")
+                continue
+            print()
     else:
         print("Start inference.")
         results = []
@@ -75,11 +95,11 @@ def main():
             print(f"Input: {example}\n")
             print(f"Output: {response}\n")
             results.append({"Input": example, "Output": response})
-        with open(args.predictions_file, 'w', encoding='utf-8') as f:
+        with open(args.output_file, 'w', encoding='utf-8') as f:
             for entry in results:
                 json.dump(entry, f, ensure_ascii=False)
                 f.write('\n')
-        print(f'save to {args.predictions_file}, size: {len(results)}')
+        print(f'save to {args.output_file}, size: {len(results)}')
 
 
 if __name__ == '__main__':

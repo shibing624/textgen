@@ -4,12 +4,13 @@
 @description: 
 """
 import sys
+import os
 import pytest
 from torch.utils.data import Dataset
 from datasets import load_dataset, load_from_disk
 
 sys.path.append('..')
-from textgen import ChatGlmModel
+from textgen import GptModel
 
 
 def preprocess_batch_for_hf_dataset(example, tokenizer, args):
@@ -51,7 +52,7 @@ class MyDataset(Dataset):
 
 
 def test_train_name():
-    model = ChatGlmModel(
+    model = GptModel(
         "chatglm", "THUDM/chatglm-6b",
         args={
             "dataset_class": MyDataset,
@@ -74,7 +75,7 @@ def test_train_name():
 
 
 def test_second_predict():
-    model = ChatGlmModel("chatglm", "THUDM/chatglm-6b",
+    model = GptModel("chatglm", "THUDM/chatglm-6b",
                          args={"use_peft": True}, peft_name='tmp_outputs')
     # load model from peft_name is equal to load model from output_dir
     sents = ['我要开一家美妆店，帮我起一个店铺名\n答：']

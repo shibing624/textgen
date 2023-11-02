@@ -23,6 +23,8 @@
 
 ## 🔥 News
 
+[2023/11/02] v1.1.2版本: GPT模型支持了[NEFTune](https://github.com/neelsjain/NEFTune)给embedding加噪SFT训练方法，SFT中使用 `--neft_alpha` 参数启用 NEFTune，例如 `--neft_alpha 5`。详见[Release-v1.1.2](https://github.com/shibing624/textgen/releases/tag/1.1.2)
+
 [2023/09/05] v1.1.1版本: 支持多卡推理，推理速度加倍，调库textgen做batch推理，多卡推理更方便、快速。详见[Release-v1.1.1](https://github.com/shibing624/textgen/releases/tag/1.1.1)
 
 [2023/08/23] v1.1.0版本: 发布基于ShareGPT4数据集微调的中英文Vicuna-13B模型[shibing624/vicuna-baichuan-13b-chat](https://huggingface.co/shibing624/vicuna-baichuan-13b-chat)，和对应的LoRA模型[shibing624/vicuna-baichuan-13b-chat-lora](https://huggingface.co/shibing624/vicuna-baichuan-13b-chat-lora)，支持多轮对话，评测效果有提升，详见[Release-v1.1.0](https://github.com/shibing624/textgen/releases/tag/1.1.0)
@@ -36,7 +38,7 @@
 
 ## 😊 Feature
 
-- [GPT](textgen/gpt)：本项目基于PyTorch实现了ChatGLM-6B/Baichuan/LLaMA2/BLOOM等GPT模型LoRA微调训练和预测，可以用于对话生成任务和领域微调训练
+- [GPT](textgen/gpt)：本项目基于PyTorch实现了 ChatGLM-6B 1,2,3 / Baichuan 1,2 / LLaMA 1,2 / BLOOM / Mistral / QWen 等GPT模型LoRA微调训练和预测，可以用于对话生成任务和领域微调训练
 - [UDA/EDA](textgen/augment/word_level_augment.py)：本项目实现了UDA(非核心词替换)、EDA和Back Translation(回译)算法，基于TF-IDF将句子中部分不重要词替换为同义词，随机词插入、删除、替换等方法，产生新的文本，实现了文本扩增
 - [Seq2Seq](textgen/seq2seq)：本项目基于PyTorch实现了Seq2Seq、ConvSeq2Seq、BART模型的训练和预测，可以用于文本翻译、对话生成、摘要生成等文本生成任务
 - [T5](textgen/t5)：本项目基于PyTorch实现了T5和CopyT5模型训练和预测，可以用于文本翻译、对话生成、对联生成、文案撰写等文本生成任务
