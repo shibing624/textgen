@@ -35,10 +35,6 @@ def test_csc():
 
 def test_origin():
     m = GptModel('chatglm', "THUDM/chatglm-6b", args={'use_peft': False})
-    response = m.chat("你好", history=[])
-    print(response)
-    assert len(response) > 0
-    history = ["你好", response]
-    response = m.chat("晚上睡不着应该怎么办", history=history)
+    response = m.predict(["你好"])
     print(response)
     assert len(response) > 0

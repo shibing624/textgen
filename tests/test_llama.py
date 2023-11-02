@@ -38,6 +38,6 @@ def test_origin_7b():
     r = m.predict([predict_sentence])
     print(r)
     assert len(r) > 0
-    response = m.chat("你好", history=[])
-    print(response)
+    response, history = m.chat("你好", history=None)
+    print(response, history)
     assert len(response) > 0
