@@ -4,19 +4,18 @@
 @description:
 """
 
+import os
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import os
-import sys
-import numpy as np
 from loguru import logger
 
-sys.path.append('..')
 from textgen.seq2seq.data_reader import (
     gen_examples, read_vocab, create_dataset,
     one_hot, save_word_dict, load_word_dict,
-    SOS_TOKEN, EOS_TOKEN, UNK_TOKEN, PAD_TOKEN
+    SOS_TOKEN, EOS_TOKEN
 )
 
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
@@ -240,7 +239,7 @@ class Seq2SeqModel:
             self.trg_2_ids = None
             self.id_2_trgs = None
 
-    def train_model(self,train_data,eval_data=None):
+    def train_model(self, train_data, eval_data=None):
         """
         Trains the model using 'train_data'
 
@@ -327,7 +326,6 @@ class Seq2SeqModel:
                     logger.info('Epoch:{}, save new bert model:{}'.format(epoch, self.model_path))
                 if eval_data:
                     self.eval_model(eval_data)
-
 
         return train_losses
 

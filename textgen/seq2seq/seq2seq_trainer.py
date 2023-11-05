@@ -15,9 +15,9 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
+from loguru import logger
 from torch import nn
 from torch.utils.data import DistributedSampler, RandomSampler
-
 from transformers import PreTrainedModel, Trainer
 from transformers.file_utils import is_torch_tpu_available
 from transformers.models.fsmt.configuration_fsmt import FSMTConfig
@@ -33,7 +33,6 @@ from transformers.optimization import (
 )
 from transformers.trainer_pt_utils import get_tpu_sampler
 from transformers.training_args import ParallelMode
-from loguru import logger
 
 arg_to_scheduler = {
     "linear": get_linear_schedule_with_warmup,
@@ -62,7 +61,7 @@ class Seq2SeqTrainer(Trainer):
 
         if self.args.label_smoothing != 0 or (self.data_args is not None and self.data_args.ignore_pad_token_for_loss):
             assert (
-                self.config.pad_token_id is not None
+                    self.config.pad_token_id is not None
             ), "Make sure that `config.pad_token_id` is correcly defined when ignoring `pad_token` for loss calculation or doing label smoothing."
 
         if self.config.pad_token_id is None and self.config.eos_token_id is not None:
@@ -162,11 +161,11 @@ class Seq2SeqTrainer(Trainer):
         return loss
 
     def prediction_step(
-        self,
-        model: nn.Module,
-        inputs: Dict[str, Union[torch.Tensor, Any]],
-        prediction_loss_only: bool,
-        ignore_keys: Optional[List[str]] = None,
+            self,
+            model: nn.Module,
+            inputs: Dict[str, Union[torch.Tensor, Any]],
+            prediction_loss_only: bool,
+            ignore_keys: Optional[List[str]] = None,
     ) -> Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
         """
         Perform an evaluation step on :obj:`model` using obj:`inputs`.

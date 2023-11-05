@@ -3,19 +3,18 @@
 @author:XuMing(xuming624@qq.com)
 @description: Conv Seq2Seq model
 """
+import os
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import os
-import sys
-import numpy as np
 from loguru import logger
 
-sys.path.append('..')
 from textgen.seq2seq.data_reader import (
     gen_examples, read_vocab, create_dataset,
     one_hot, save_word_dict, load_word_dict,
-    SOS_TOKEN, EOS_TOKEN, UNK_TOKEN, PAD_TOKEN
+    SOS_TOKEN, EOS_TOKEN, PAD_TOKEN
 )
 
 os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
@@ -23,15 +22,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Encoder(nn.Module):
-    def __init__(self,
-                 input_dim,
-                 emb_dim=256,
-                 hid_dim=512,
-                 n_layers=2,
-                 kernel_size=3,
-                 dropout=0.25,
-                 device=torch.device('cuda'),
-                 max_length=128):
+    def __init__(
+            self,
+            input_dim,
+            emb_dim=256,
+            hid_dim=512,
+            n_layers=2,
+            kernel_size=3,
+            dropout=0.25,
+            device=torch.device('cuda'),
+            max_length=128
+    ):
         super().__init__()
         assert kernel_size % 2 == 1, "Kernel size must be odd!"
         self.device = device
@@ -92,16 +93,18 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self,
-                 output_dim,
-                 emb_dim=256,
-                 hid_dim=512,
-                 n_layers=2,
-                 kernel_size=3,
-                 dropout=0.25,
-                 trg_pad_idx=0,
-                 device=torch.device('cuda'),
-                 max_length=128):
+    def __init__(
+            self,
+            output_dim,
+            emb_dim=256,
+            hid_dim=512,
+            n_layers=2,
+            kernel_size=3,
+            dropout=0.25,
+            trg_pad_idx=0,
+            device=torch.device('cuda'),
+            max_length=128
+    ):
         super().__init__()
         self.kernel_size = kernel_size
         self.trg_pad_idx = trg_pad_idx
@@ -210,17 +213,18 @@ class Decoder(nn.Module):
 
 
 class ConvSeq2Seq(nn.Module):
-    def __init__(self,
-                 encoder_vocab_size,
-                 decoder_vocab_size,
-                 embed_size,
-                 enc_hidden_size,
-                 dec_hidden_size,
-                 dropout=0.25,
-                 trg_pad_idx=0,
-                 device=device,
-                 max_length=128
-                 ):
+    def __init__(
+            self,
+            encoder_vocab_size,
+            decoder_vocab_size,
+            embed_size,
+            enc_hidden_size,
+            dec_hidden_size,
+            dropout=0.25,
+            trg_pad_idx=0,
+            device=device,
+            max_length=128
+    ):
         super().__init__()
         self.encoder = Encoder(input_dim=encoder_vocab_size,
                                emb_dim=embed_size,
@@ -288,9 +292,14 @@ class ConvSeq2Seq(nn.Module):
 
 class ConvSeq2SeqModel:
     def __init__(
-            self, embed_size=128, hidden_size=128,
-            dropout=0.25, epochs=10, batch_size=32,
-            model_dir="outputs/", max_length=128,
+            self,
+            embed_size=128,
+            hidden_size=128,
+            dropout=0.25,
+            epochs=10,
+            batch_size=32,
+            model_dir="outputs/",
+            max_length=128,
     ):
         self.epochs = epochs
         self.batch_size = batch_size
@@ -471,12 +480,12 @@ class ConvSeq2SeqModel:
         logger.info(f"Evaluation loss: {loss}")
         return {'loss': loss}
 
-    def predict(self, sentence_list):
+    def predict(self, sentences):
         """
         Performs predictions on a list of text.
 
         Args:
-            sentence_list: A python list of text (str) to be sent to the model for prediction. 
+            sentences: A python list of text (str) to be sent to the model for prediction. 
 
         Returns:
             preds: A python list of the generated sequences.
@@ -505,7 +514,7 @@ class ConvSeq2SeqModel:
                 raise ValueError("Model not found at {}".format(self.model_path))
         self.model.eval()
         result = []
-        for query in sentence_list:
+        for query in sentences:
             out = []
             tokens = [token.lower() for token in query]
             tokens = [SOS_TOKEN] + tokens + [EOS_TOKEN]

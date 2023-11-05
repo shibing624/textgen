@@ -6,7 +6,7 @@
 
 import sys
 from collections import Counter
-from loguru import logger
+
 import numpy as np
 
 # Define constants associated with the usual special tokens.
