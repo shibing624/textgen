@@ -24,8 +24,6 @@ from peft import (
 from tqdm import tqdm
 from transformers import (
     AutoConfig,
-    LlamaForCausalLM,
-    LlamaTokenizer,
     BloomTokenizerFast,
     BloomForCausalLM,
     AutoModelForCausalLM,
@@ -48,7 +46,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "FALSE"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 MODEL_CLASSES = {
-    "llama": (AutoConfig, LlamaForCausalLM, LlamaTokenizer),
+    "llama": (AutoConfig, AutoModelForCausalLM, AutoTokenizer),
     "chatglm": (AutoConfig, AutoModel, AutoTokenizer),
     "bloom": (AutoConfig, BloomForCausalLM, BloomTokenizerFast),
     "baichuan": (AutoConfig, AutoModelForCausalLM, AutoTokenizer),

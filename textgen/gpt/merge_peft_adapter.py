@@ -24,14 +24,12 @@ from transformers import (
     BloomForCausalLM,
     BloomTokenizerFast,
     AutoModelForCausalLM,
-    LlamaTokenizer,
-    LlamaForCausalLM,
 )
 
 MODEL_CLASSES = {
     "bloom": (BloomForCausalLM, BloomTokenizerFast),
     "chatglm": (AutoModel, AutoTokenizer),
-    "llama": (LlamaForCausalLM, LlamaTokenizer),
+    "llama": (AutoModelForCausalLM, AutoTokenizer),
     "baichuan": (AutoModelForCausalLM, AutoTokenizer),
     "auto": (AutoModelForCausalLM, AutoTokenizer),
 }
